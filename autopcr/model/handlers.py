@@ -766,6 +766,17 @@ class SubStorySkeConfirmResponse(responses.SubStorySkeConfirmResponse):
                 sub_story.status = eEventSubStoryStatus.UNREAD
 
 @handles
+class SubStoryAisConfirmResponse(responses.SubStoryAisConfirmResponse):
+    async def update(self, mgr: datamgr, request):
+        for sub_story in mgr.event_sub_story[10136].sub_story_info_list:
+            if sub_story.status == eEventSubStoryStatus.ADDED:
+                sub_story.status = eEventSubStoryStatus.UNREAD
+        for sub_story in mgr.event_sub_story[10137].sub_story_info_list:
+            if sub_story.status == eEventSubStoryStatus.ADDED:
+                sub_story.status = eEventSubStoryStatus.UNREAD
+
+
+@handles
 class SubStoryXehReadStoryResponse(responses.SubStoryXehReadStoryResponse):
     async def update(self, mgr: datamgr, request):
         if self.reward_info:

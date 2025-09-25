@@ -1071,6 +1071,10 @@ async def find_pure_memory(botev: BotEvent):
     await botev.send("请稍等")
     return {}
 
+@register_tool("返钻", "return_jewel")
+async def return_jewel(botev: BotEvent):
+    return {}
+
 @register_tool(f"来发十连", "gacha_start")
 @require_super_admin
 async def shilian(botev: BotEvent):
