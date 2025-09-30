@@ -711,6 +711,13 @@ class SeasonPassMissionAcceptResponse(responses.SeasonPassMissionAcceptResponse)
                 mgr.update_inventory(reward)
 
 @handles
+class SubStoryAisReadStoryResponse(responses.SubStoryAisReadStoryResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.reward_info:
+            for reward in self.reward_info:
+                mgr.update_inventory(reward)
+
+@handles
 class SubStoryNydReadStoryResponse(responses.SubStoryNydReadStoryResponse):
     async def update(self, mgr: datamgr, request):
         if self.reward_info:
@@ -756,16 +763,6 @@ class SubStoryBmyReadStoryResponse(responses.SubStoryBmyReadStoryResponse):
                 mgr.update_inventory(reward)
 
 @handles
-class SubStorySkeConfirmResponse(responses.SubStorySkeConfirmResponse):
-    async def update(self, mgr: datamgr, request):
-        for sub_story in mgr.event_sub_story[10058].sub_story_info_list:
-            if sub_story.status == eEventSubStoryStatus.ADDED:
-                sub_story.status = eEventSubStoryStatus.UNREAD
-        for sub_story in mgr.event_sub_story[10059].sub_story_info_list:
-            if sub_story.status == eEventSubStoryStatus.ADDED:
-                sub_story.status = eEventSubStoryStatus.UNREAD
-
-@handles
 class SubStoryAisConfirmResponse(responses.SubStoryAisConfirmResponse):
     async def update(self, mgr: datamgr, request):
         for sub_story in mgr.event_sub_story[10136].sub_story_info_list:
@@ -775,6 +772,15 @@ class SubStoryAisConfirmResponse(responses.SubStoryAisConfirmResponse):
             if sub_story.status == eEventSubStoryStatus.ADDED:
                 sub_story.status = eEventSubStoryStatus.UNREAD
 
+@handles
+class SubStorySkeConfirmResponse(responses.SubStorySkeConfirmResponse):
+    async def update(self, mgr: datamgr, request):
+        for sub_story in mgr.event_sub_story[10058].sub_story_info_list:
+            if sub_story.status == eEventSubStoryStatus.ADDED:
+                sub_story.status = eEventSubStoryStatus.UNREAD
+        for sub_story in mgr.event_sub_story[10059].sub_story_info_list:
+            if sub_story.status == eEventSubStoryStatus.ADDED:
+                sub_story.status = eEventSubStoryStatus.UNREAD
 
 @handles
 class SubStoryXehReadStoryResponse(responses.SubStoryXehReadStoryResponse):
@@ -827,13 +833,6 @@ class SubStoryNopReadStoryResponse(responses.SubStoryNopReadStoryResponse):
 
 @handles
 class SubStoryDvsReadStoryResponse(responses.SubStoryDvsReadStoryResponse):
-    async def update(self, mgr: datamgr, request):
-        if self.reward_info:
-            for reward in self.reward_info:
-                mgr.update_inventory(reward)
-
-@handles
-class SubStoryAisReadStoryResponse(responses.SubStoryAisReadStoryResponse):
     async def update(self, mgr: datamgr, request):
         if self.reward_info:
             for reward in self.reward_info:
@@ -1150,6 +1149,7 @@ class EquipmentEnhanceExResponse(responses.EquipmentEnhanceExResponse):
             mgr.ex_equips.pop(ex_serial_id, None)
         mgr.ex_equips[request.serial_id].enhancement_pt = request.after_enhancement_pt
 
+
 @handles
 class UnitMultiEvolutionResponse(responses.UnitMultiEvolutionResponse):
     async def update(self, mgr: datamgr, request: UnitMultiEvolutionRequest):
@@ -1161,13 +1161,14 @@ class UnitMultiEvolutionResponse(responses.UnitMultiEvolutionResponse):
             for item in self.item_data:
                 mgr.update_inventory(item)
 
+
 # 菜 就别玩
-def custom_dict(self, *args, **kwargs):
-    original_dict = super(TravelStartRequest, self).dict(*args, **kwargs)
-    if self.action_type is not None:
-        original_dict['action_type'] = {"value__": self.action_type.value}
-    return original_dict
-TravelStartRequest.dict = custom_dict
+# def custom_dict(self, *args, **kwargs):
+#     original_dict = super(TravelStartRequest, self).dict(*args, **kwargs)
+#     if self.action_type is not None:
+#         original_dict['action_type'] = {"value__": self.action_type.value}
+#     return original_dict
+# TravelStartRequest.dict = custom_dict
 
 HatsuneTopResponse.__annotations__['event_status'] = HatsuneEventStatus
 HatsuneTopResponse.__fields__['event_status'].type_ = Optional[HatsuneEventStatus]

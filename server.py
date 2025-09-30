@@ -167,6 +167,7 @@ sv_help = f"""
 - {prefix}公会支援 查询公会支援角色配置
 - {prefix}卡池 查看当前卡池
 - {prefix}半月刊
+- {prefix}返钻
 - {prefix}刷新box
 - {prefix}查缺称号 查看缺少的称号
 - {prefix}jjc透视 查前51名

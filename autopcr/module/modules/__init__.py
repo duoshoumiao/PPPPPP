@@ -73,6 +73,7 @@ daily_modules = ModuleList(
         tower_cloister_sweep,
         smart_very_hard_sweep,
         jjc_reward,
+        xinsui8_sweep,
         xinsui7_sweep,
         xinsui6_sweep,
         xinsui5_sweep,
@@ -102,8 +103,8 @@ daily_modules = ModuleList(
 
         jjc_daily,
         pjjc_daily,
-        unit_equip_enhance_up,
-        unit_skill_level_up,
+        # unit_equip_enhance_up,
+        # unit_skill_level_up,
 
         mission_receive_last,
         seasonpass_accept,

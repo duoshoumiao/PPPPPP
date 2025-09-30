@@ -534,3 +534,4 @@ class datamgr(BaseModel, Component[apiclient]):
             await resp.update(self, request)
         self.data_time = apiclient.time
         return resp
+

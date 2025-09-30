@@ -55,7 +55,7 @@ class sdkclient:
     def header(self):
         if self._account.type == platform.Android:
             headers = deepcopy(DEFAULT_HEADERS)
-            headers['DEVICE-ID'] = hashlib.md5(self.account.encode('utf-8')).hexdigest()            
+            headers['DEVICE-ID'] = hashlib.md5(self.account.encode('utf-8')).hexdigest()
         elif self._account.type == platform.IOS:
             headers = deepcopy(IOS_HEADERS)
             headers['DEVICE-ID'] = str(uuid.uuid5(UUID_NAMESPACE, self.account)).upper()
@@ -84,7 +84,7 @@ class sdkclient:
     @property
     def account(self):
         return self._account.username
-    
+
     @property
     def id(self):
         return hashlib.md5(

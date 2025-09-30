@@ -1097,3 +1097,4 @@ class caravan_shop_buy(Module):
             self._log("无可购买的物品")
         else:
             self._log(f"花费了商店币 {cost}，购买了\n{await client.serlize_reward(rewards)}")
+

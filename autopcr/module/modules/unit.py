@@ -12,6 +12,7 @@ from ...db.database import db
 from ...db.models import GrowthParameter, GrowthParameterUnique
 from ...model.enums import *
 from ...model.common import ExtraEquipChangeSlot, ExtraEquipChangeUnit, InventoryInfoPost, SkillLevelInfo, SkillLevelUpDetail, UnitData
+
 class UnitController(Module):
 
     unit_id: int
@@ -21,10 +22,9 @@ class UnitController(Module):
     auto_unique1_slot: bool = True
     to_max_level: bool = True
     use_raw_ore : bool = True
-
-
-    E = 100_000_000
     
+    E = 100_000_000
+
     skill_name = {
         eSkillLocationCategory.UNION_BURST_SKILL: "UB",
         eSkillLocationCategory.MAIN_SKILL_1: "S1",
@@ -785,6 +785,7 @@ class unit_promote(UnitController):
         self.auto_rank_up = bool(self.get_config('unit_promote_rank_when_fail_to_unique_equip'))
         self.use_raw_ore = bool(self.get_config('unit_promote_rank_use_raw_ore'))
         self.auto_unique1_slot = bool(self.get_config('unit_promote_unique2_when_fail_to_unique_equip2'))
+        self.to_max_level = bool(self.get_config('unit_promote_to_max_level'))
 
         target_level = int(self.get_config('unit_promote_level'))
         target_promotion_rank = int(self.get_config('unit_promote_rank'))
@@ -795,7 +796,6 @@ class unit_promote(UnitController):
         target_skill_ex_level = int(self.get_config('unit_promote_skill_ex'))
         target_unique1_level = int(self.get_config('unit_promote_unique_equip1_level'))
         target_unique2_level = int(self.get_config('unit_promote_unique_equip2_level'))
-        self.to_max_level = bool(self.get_config('unit_promote_to_max_level'))
 
         for unit_id in unit_list:
             try:
@@ -963,9 +963,6 @@ class unit_memory_buy_batch(UnitController):
 
         if summary:
             self._warn(f"将购买记忆碎片:\n" + '\n'.join(summary))
-            
-
-
 
 
 @description(
@@ -994,7 +991,7 @@ class unit_exceed(UnitController):
             if self.unit.exceed_stage:
                 self._warn(f"{self.unit_name}已突破，无需突破")
                 continue
-
+            
             if self.unit.unit_rarity < 5:
                 self._warn(f"{self.unit_name}不是5星角色，无法突破")
                 continue
@@ -1131,4 +1128,3 @@ class unit_evolution(UnitController):
                 current_memory_piece_num=memory_inventory,
             )
             self._log(f"{self.unit_name}升星至{to_rarity}星")
-         

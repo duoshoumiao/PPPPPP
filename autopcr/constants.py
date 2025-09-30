@@ -18,8 +18,8 @@ CHANNEL_OPTION = [BSDK, QSDK]
 
 DEBUG_LOG = strtobool(os.getenv("AUTOPCR_SERVER_DEBUG_LOG", "false"))
 
-ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'True'))
-SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", "你的QQ"))
+ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'false'))
+SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", "645364231"))
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), '..')
 CACHE_DIR = os.path.join(ROOT_DIR, './cache/')
@@ -60,7 +60,7 @@ IOS_HEADERS = {
     'Accept-Encoding': 'gzip',
     'User-Agent': 'priconne/24 CFNetwork/1492.0.1 Darwin/23.3.0',
     'X-Unity-Version': '2021.3.20f1c1',
-    'APP-VER': "7.7.1",
+    'APP-VER': "10.7.1",
     'BATTLE-LOGIC-VERSION': '4',
     'BUNDLE-VER': '',
     'DEVICE': '1',
