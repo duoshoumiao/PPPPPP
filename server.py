@@ -185,6 +185,7 @@ sv_help = f"""
 - {prefix}公会点赞
 - {prefix}领每日体力
 - {prefix}领取礼物箱
+- {prefix}查公会深域进度
 - {prefix}收菜  探险续航哦
 - {prefix}设置编队 默认 第一页 第一队 即 设置编队 1 1 内容
 - {prefix}一键编队 第几页 第几队  如 #一键编队 1 1  ，代表第一页第一队
@@ -1277,6 +1278,12 @@ async def redeem_unit_swap(botev: BotEvent):
         "redeem_unit_swap_do": really_do
     }
     return config
+
+@register_tool("查公会深域进度", "query_deep_progress")
+async def query_deep_progress(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}
+
 
 @register_tool("兑天井", "gacha_exchange_chara")
 async def gacha_exchange_chara(botev: BotEvent):

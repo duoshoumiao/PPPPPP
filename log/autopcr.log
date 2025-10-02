@@ -6723,3 +6723,24 @@ FROM unlock_unit_condition]
 2025-09-30 14:46:40,383 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/请点击左边圆点 - 200 - 127.0.0.1
 2025-09-30 14:46:43,144 - [INFO]: DELETE http://127.0.0.1:8040/daily/api/account/请点击左边圆点 - 200 - 127.0.0.1
 2025-09-30 14:46:43,271 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-09-30 15:40:32,521 - [INFO]: manifest version 202509291846 loaded from cache
+2025-09-30 15:40:32,572 - [INFO]: Start Unhashing DB.
+2025-09-30 15:40:32,968 - [INFO]: Unhashing complete.
+2025-09-30 15:40:38,017 - [INFO]: POST http://127.0.0.1:8040/daily/api/register - 400 - 127.0.0.1
+2025-09-30 15:41:41,864 - [INFO]: manifest version 202509291846 loaded from cache
+2025-09-30 15:41:41,919 - [INFO]: Start Unhashing DB.
+2025-09-30 15:41:42,270 - [INFO]: Unhashing complete.
+2025-09-30 15:41:46,517 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 400 - 127.0.0.1
+2025-09-30 15:41:49,644 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-09-30 15:41:49,679 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-09-30 15:41:50,589 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-09-30 15:41:50,596 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-09-30 15:41:50,600 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-09-30 15:41:51,752 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/莱宝 - 200 - 127.0.0.1
+2025-09-30 15:41:52,295 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/莱宝 - 200 - 127.0.0.1
+2025-09-30 15:42:08,096 - [INFO]: PUT http://127.0.0.1:8040/daily/api/account/莱宝 - 200 - 127.0.0.1
+2025-09-30 15:42:08,128 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/莱宝 - 200 - 127.0.0.1
+2025-09-30 15:42:09,328 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-09-30 15:42:12,271 - [INFO]: doing cron check in 15 41
+2025-09-30 15:42:12,271 - [INFO]: doing cron check in 15 42
+2025-09-30 15:42:23,845 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1

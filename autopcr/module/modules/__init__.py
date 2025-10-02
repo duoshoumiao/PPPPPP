@@ -19,6 +19,7 @@ from .tower import *
 from .tools import *
 from .travel import *
 from .unit import *
+from .talent import *
 
 @dataclass
 class ModuleList:
@@ -73,6 +74,7 @@ daily_modules = ModuleList(
         tower_cloister_sweep,
         smart_very_hard_sweep,
         jjc_reward,
+        talent_sweep,
         xinsui8_sweep,
         xinsui7_sweep,
         xinsui6_sweep,
@@ -216,6 +218,7 @@ tool_modules = ModuleList(
         remove_cb_ex_equip,
         remove_cb_support,
         redeem_unit_swap,
+        query_deep_progress,
         jjc_back,
         pjjc_back,
         jjc_info,
