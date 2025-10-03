@@ -195,6 +195,7 @@ sv_help = f"""
   示例：{prefix}大富翁 30 不止搬空商店 | {prefix}大富翁所有 0 搬空商店为止  （需要去批量运行里保存账号）
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
   示例：{prefix}商店购买 上期 | {prefix}商店购买所有 当期 （需要去批量运行里保存账号）
+- {prefix}查玩家 uid
 """.strip()
 
 if address is None:
@@ -1209,7 +1210,26 @@ async def pjjc_def_shuffle_team(botev: BotEvent):
 async def pjjc_atk_shuffle_team(botev: BotEvent):
     await botev.send("请稍等")
     return {}
-
+    
+@register_tool("查玩家", "query_player_profile")
+async def query_player_profile(botev: BotEvent):
+    await botev.send("请稍等")
+    msg = await botev.message()
+    target_viewer_id = ""
+    try:
+        target_viewer_id = msg[0]
+        del msg[0]
+    except:
+        await botev.finish("请输入玩家ID")
+    
+    if not target_viewer_id.isdigit():
+        await botev.finish("玩家ID必须是数字")
+    
+    config = {
+        "target_viewer_id": target_viewer_id
+    }
+    return config
+    
 @register_tool("查缺角色", "missing_unit")
 async def find_missing_unit(botev: BotEvent):
     await botev.send("请稍等")
