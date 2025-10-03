@@ -1,7 +1,7 @@
 from typing import List, Set
 
 from ...util.ilp_solver import memory_use_average
-
+import time
 from ...model.common import ChangeRarityUnit, DeckListData, GachaPointInfo, GrandArenaHistoryDetailInfo, GrandArenaHistoryInfo, GrandArenaSearchOpponent, ProfileUserInfo, RankingSearchOpponent, RedeemUnitInfo, RedeemUnitSlotInfo, VersusResult, VersusResultDetail
 from ...model.responses import GachaIndexResponse, PsyTopResponse
 from ...db.models import GachaExchangeLineup
@@ -17,12 +17,24 @@ from ...util.arena import instance as ArenaQuery
 import random
 import itertools
 from collections import Counter
+import datetime
+import time
 
 @texttype("target_viewer_id", "玩家ID", "")
 @description('通过玩家ID查询玩家公开信息')
 @name('查询玩家资料')
 @default(False)
 class query_player_profile(Module):
+    # 新增深域进度格式化方法
+    def format_talent_quest(self, progress_value: int) -> str:
+        """将深域进度值转换为a-b格式的字符串"""
+        if progress_value > 0:
+            big_stage = (progress_value - 1) // 10 + 1
+            small_stage = (progress_value - 1) % 10 + 1
+            return f"{big_stage}-{small_stage}"
+        else:
+            return "0-0"
+            
     async def do_task(self, client: pcrclient):
         viewer_id_str: str = self.get_config("target_viewer_id").strip()
 
@@ -43,19 +55,47 @@ class query_player_profile(Module):
         try:
             # 调用get_profile接口
             profile_data = await client.get_profile(viewer_id)
-
             # 直接打印原始数据
-            self._log(f"查询成功！玩家数据:")
-            self._log(f"原始响应数据: {profile_data}")
+            # self._log(f"查询成功！玩家数据:")
+            # self._log(f"原始响应数据: {profile_data}")
 
             # 如果有user_info，显示基础信息
             if hasattr(profile_data, 'user_info') and profile_data.user_info:
                 user_info = profile_data.user_info
                 self._log(f"玩家名称: {user_info.user_name}")
+                self._log(f"个人签名: {user_info.user_comment}")
+                self._log(f"竞技场排名: {user_info.arena_rank}")
+                self._log(f"竞技场分组: {user_info.arena_group}")
+                self._log(f"公主竞技场排名: {user_info.grand_arena_rank}")
+                self._log(f"公主竞技场分组: {user_info.grand_arena_group}")
+                self._log(f"已解锁剧情数: {user_info.open_story_num}")
+                self._log(f"持有角色数: {user_info.unit_num}")
+                self._log(f"已通关塔层数: {user_info.tower_cleared_floor_num}")
+                self._log(f"已通关塔额外关卡数: {user_info.tower_cleared_ex_quest_count}")
+                if hasattr(user_info, 'last_login_time') and user_info.last_login_time > 0:
+                    timestamp = user_info.last_login_time
+                    if timestamp > 10**12:  
+                        timestamp = timestamp // 1000
+                    login_time = time.localtime(timestamp)
+                    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", login_time)
+                    self._log(f"上次登录时间: {formatted_time}")
+                else:
+                    self._log(f"上次登录时间: 未知")
+                self._log(f"好友数: {user_info.friend_num}")
+                normal_quest = profile_data.quest_info.normal_quest
+                self._log(f"普通关卡进度: {normal_quest[-1] if isinstance(normal_quest, (list, tuple)) else normal_quest}")
+                hard_quest = profile_data.quest_info.hard_quest
+                self._log(f"困难关卡进度: {hard_quest[-1] if isinstance(hard_quest, (list, tuple)) else hard_quest}")
+                very_hard_quest = profile_data.quest_info.very_hard_quest
+                self._log(f"Very Hard关卡进度: {very_hard_quest[-1] if isinstance(very_hard_quest, (list, tuple)) else very_hard_quest}")
+                self._log(f"支线关卡进度: {profile_data.quest_info.byway_quest}")
+                self._log(f"深域火属性进度: {self.format_talent_quest(profile_data.quest_info.talent_quest[0].clear_count)}")
+                self._log(f"深域水属性进度: {self.format_talent_quest(profile_data.quest_info.talent_quest[1].clear_count)}")
+                self._log(f"深域风属性进度: {self.format_talent_quest(profile_data.quest_info.talent_quest[2].clear_count)}")
+                self._log(f"深域光属性进度: {self.format_talent_quest(profile_data.quest_info.talent_quest[3].clear_count)}")
+                self._log(f"深域暗属性进度: {self.format_talent_quest(profile_data.quest_info.talent_quest[4].clear_count)}")
                 self._log(f"团队等级: {user_info.team_level}")
                 self._log(f"总战力: {user_info.total_power}")
-
-                # 如果有公会信息
                 if hasattr(profile_data, 'clan_name') and profile_data.clan_name:
                     self._log(f"公会: {profile_data.clan_name}")
 
