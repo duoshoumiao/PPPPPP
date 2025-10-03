@@ -1944,7 +1944,7 @@ class ProfileQuestInfo(BaseModel):
     hard_quest: List[int] = None
     very_hard_quest: List[int] = None
     byway_quest: int = None
-     talent_quest: List[TalentQuestData] = None
+    talent_quest: List[TalentQuestData] = None
 class SupportUnitForProfile(BaseModel):
     position: int = None
     unit_data: UnitDataLight = None
