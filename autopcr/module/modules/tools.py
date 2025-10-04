@@ -19,7 +19,7 @@ import itertools
 from collections import Counter
 import datetime
 import time
-
+from datetime import datetime
 @texttype("target_viewer_id", "玩家ID", "")
 @description('通过玩家ID查询玩家公开信息')
 @name('查询玩家资料')
