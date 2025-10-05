@@ -102,7 +102,7 @@ class Account(ModuleManager):
             f.write(self.data.to_json())
 
     async def push_result(self, result_list: List[Any], result: ResultInfo) -> List[Any]:
-        while len(result_list) >= 4:
+        while len(result_list) >= 12:
             result_list.pop().delete_result()
         return [result] + result_list
 

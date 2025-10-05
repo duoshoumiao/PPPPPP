@@ -66,7 +66,7 @@ class search_unit(Module):
             kizuna_unit = set()
             for story in db.chara2story[unit]:
                 kizuna_unit |= set(story.get_effect_unit_ids())
-            
+
             love = []
             for other in kizuna_unit:
                 if other not in db.unlock_unit_condition: continue

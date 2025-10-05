@@ -1,6 +1,8 @@
 from pydantic.class_validators import make_generic_validator
 from pydantic.fields import ModelField
 from pydantic.validators import int_validator
+
+from ..model.custom import TalentQuestData
 from . import responses, sdkrequests
 from .common import *
 from .requests import *
@@ -48,6 +50,16 @@ class TravelResultRoundEventResponse(responses.TravelResultRoundEventResponse):
             mgr.gold = self.user_gold
         if self.user_jewel:
             mgr.jewel = self.user_jewel
+
+@handles
+class CaravanCoinShopBuyBulkResponse(responses.CaravanCoinShopBuyBulkResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.purchase_list:
+            for item in self.purchase_list:
+                mgr.update_inventory(item)
+        if self.item_data:
+            for item in self.item_data:
+                mgr.update_inventory(item)
 
 @handles
 class CaravanCoinShopBuyResponse(responses.CaravanCoinShopBuyResponse):
@@ -489,13 +501,12 @@ class HomeIndexResponse(responses.HomeIndexResponse):
             mgr.missions = self.missions
         shiori_dict = {q.quest_id: q for q in self.shiori_quest_info.quest_list} if self.shiori_quest_info and self.shiori_quest_info.quest_list else {}
         mgr.quest_dict.update(shiori_dict)
-        if self.talent_quest_area_info is not None:
+
+        if request.is_first:
             mgr.talent_quest_area_info = {
                 v.talent_id: v for v in self.talent_quest_area_info
             }
-        
-        if self.cleared_talent_quest_id_list is not None:
-            mgr.cleared_talent_quest_id_set |= set(self.cleared_talent_quest_id_list)
+            mgr.cleared_talent_quest_ids = {db.get_talent_id_from_quest_id(qid): qid for qid in self.cleared_talent_quest_id_list}
 
         mgr.ready = True
 
@@ -1246,3 +1257,14 @@ field = ModelField.infer(
 )
 ExtraEquipSlot.__fields__['slot'] = field
 setattr(ExtraEquipSlot, 'slot', None)
+
+ProfileQuestInfo.__annotations__['talent_quest'] = Optional[List[TalentQuestData]]
+field = ModelField.infer(
+    name='talent_quest',
+    value=None,
+    annotation=List[TalentQuestData],
+    class_validators=None,
+    config=ProfileQuestInfo.__config__,
+)
+ProfileQuestInfo.__fields__['talent_quest'] = field
+setattr(ProfileQuestInfo, 'talent_quest', None)

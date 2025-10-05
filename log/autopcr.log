@@ -1,6 +1,1036 @@
-2025-10-03 09:15:13,930 - [INFO]: manifest version 202509291854 loaded from cache
-2025-10-03 09:15:14,001 - [INFO]: Start Unhashing DB.
-2025-10-03 09:15:14,392 - [INFO]: Unhashing complete.
-2025-10-03 09:15:50,266 - [INFO]: manifest version 202509291854 loaded from cache
-2025-10-03 09:15:50,319 - [INFO]: Start Unhashing DB.
-2025-10-03 09:15:50,684 - [INFO]: Unhashing complete.
+2025-10-05 10:55:54,773 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 10:55:54,830 - [INFO]: Start Unhashing DB.
+2025-10-05 10:55:55,217 - [INFO]: Unhashing complete.
+2025-10-05 10:56:03,188 - [INFO]: GET http://127.0.0.1:8040/daily/login - 200 - 127.0.0.1
+2025-10-05 10:56:03,242 - [INFO]: GET http://127.0.0.1:8040/daily/assets/index-D9-wj85q.js - 200 - 127.0.0.1
+2025-10-05 10:56:03,248 - [INFO]: GET http://127.0.0.1:8040/daily/assets/vendor-Bw0u_78V.js - 200 - 127.0.0.1
+2025-10-05 10:56:03,256 - [INFO]: GET http://127.0.0.1:8040/daily/assets/motion-B5tsqiBA.js - 200 - 127.0.0.1
+2025-10-05 10:56:03,550 - [INFO]: GET http://127.0.0.1:8040/daily/assets/chakra-Dk1nzh3W.js - 200 - 127.0.0.1
+2025-10-05 10:56:03,563 - [INFO]: GET http://127.0.0.1:8040/daily/assets/xlsx-DrgRuPKf.js - 200 - 127.0.0.1
+2025-10-05 10:56:03,766 - [INFO]: GET http://127.0.0.1:8040/daily/assets/autopcr-x7688d1P.svg - 200 - 127.0.0.1
+2025-10-05 10:56:04,663 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 10:56:05,354 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 10:56:05,373 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 10:56:05,374 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 10:56:05,379 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:56:05,995 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 10:56:06,381 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 10:56:06,395 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 10:56:11,969 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 10:56:12,897 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/daily - 200 - 127.0.0.1
+2025-10-05 10:56:17,395 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 10:56:25,234 - [INFO]: doing cron check in 10 55
+2025-10-05 10:56:25,234 - [INFO]: doing cron check in 10 56
+2025-10-05 10:56:38,640 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:57:11,885 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:57:25,233 - [INFO]: doing cron check in 10 57
+2025-10-05 10:57:45,115 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:58:18,345 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:58:22,983 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 10:58:23,170 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 10:58:23,284 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 10:58:23,453 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 10:58:23,575 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 10:58:24,961 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 10:58:25,237 - [INFO]: doing cron check in 10 58
+2025-10-05 10:58:25,458 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 10:58:25,707 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 10:58:25,970 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:26,200 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:26,389 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:26,587 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:26,771 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:26,985 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:27,211 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:27,410 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:27,596 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:27,772 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:27,957 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:28,152 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:28,325 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:28,513 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:28,699 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:28,891 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:29,071 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:29,268 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:29,447 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:29,633 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:29,817 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:30,010 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:30,192 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:30,404 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:30,597 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:30,816 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:31,007 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:31,193 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:31,395 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 10:58:31,643 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 10:58:34,252 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005105831?text=true - 200 - 127.0.0.1
+2025-10-05 10:58:48,539 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:59:19,745 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 10:59:25,249 - [INFO]: doing cron check in 10 59
+2025-10-05 10:59:50,992 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:00:22,201 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:00:25,266 - [INFO]: doing cron check in 11 0
+2025-10-05 11:00:53,388 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:01:24,573 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:01:25,262 - [INFO]: doing cron check in 11 1
+2025-10-05 11:01:53,742 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:01:53,797 - [INFO]: Start Unhashing DB.
+2025-10-05 11:01:54,150 - [INFO]: Unhashing complete.
+2025-10-05 11:01:54,470 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:01:55,704 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 200 - 127.0.0.1
+2025-10-05 11:01:55,753 - [INFO]: GET http://127.0.0.1:8040/daily/assets/index-D9-wj85q.js - 200 - 127.0.0.1
+2025-10-05 11:01:55,760 - [INFO]: GET http://127.0.0.1:8040/daily/assets/vendor-Bw0u_78V.js - 200 - 127.0.0.1
+2025-10-05 11:01:55,763 - [INFO]: GET http://127.0.0.1:8040/daily/assets/motion-B5tsqiBA.js - 200 - 127.0.0.1
+2025-10-05 11:01:55,768 - [INFO]: GET http://127.0.0.1:8040/daily/assets/chakra-Dk1nzh3W.js - 200 - 127.0.0.1
+2025-10-05 11:01:55,772 - [INFO]: GET http://127.0.0.1:8040/daily/assets/xlsx-DrgRuPKf.js - 200 - 127.0.0.1
+2025-10-05 11:01:56,021 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:01:56,053 - [INFO]: GET http://127.0.0.1:8040/daily/login - 200 - 127.0.0.1
+2025-10-05 11:01:56,065 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:01:56,111 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:01:57,089 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:01:58,056 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:01:58,070 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:01:58,072 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:01:58,073 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:01:58,168 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:01:58,602 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:01:58,612 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:01:59,805 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/unit - 200 - 127.0.0.1
+2025-10-05 11:02:00,326 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:02:18,566 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:02:18,731 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:02:18,852 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:02:19,009 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:02:19,137 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:02:20,069 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:02:20,552 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:02:20,793 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:02:21,028 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:21,221 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:21,407 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:21,606 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:21,804 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:21,992 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:22,187 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:22,382 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:22,572 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:22,778 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:22,979 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:23,181 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:23,369 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:23,539 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:23,725 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:23,915 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:24,091 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:24,170 - [INFO]: doing cron check in 11 1
+2025-10-05 11:02:24,170 - [INFO]: doing cron check in 11 2
+2025-10-05 11:02:24,295 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:24,487 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:24,678 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:24,878 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:25,072 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:25,259 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:25,427 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:25,614 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:25,826 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:26,006 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:26,194 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:26,395 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:02:26,620 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:02:28,200 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005110226?text=true - 200 - 127.0.0.1
+2025-10-05 11:02:28,326 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:02:52,169 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005105831?text=true - 200 - 127.0.0.1
+2025-10-05 11:02:59,634 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:03:24,179 - [INFO]: doing cron check in 11 3
+2025-10-05 11:03:30,924 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:03:53,007 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005110226?text=true - 200 - 127.0.0.1
+2025-10-05 11:03:57,725 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005110226?text=true - 200 - 127.0.0.1
+2025-10-05 11:04:02,230 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:04:24,189 - [INFO]: doing cron check in 11 4
+2025-10-05 11:04:33,529 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:05:04,792 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:05:24,179 - [INFO]: doing cron check in 11 5
+2025-10-05 11:05:36,083 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:05:48,371 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:05:48,421 - [INFO]: Start Unhashing DB.
+2025-10-05 11:05:48,772 - [INFO]: Unhashing complete.
+2025-10-05 11:05:49,464 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:05:50,213 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:05:50,517 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:05:51,426 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:05:52,379 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:05:52,393 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:05:52,395 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:05:52,399 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:05:52,994 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:05:53,232 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:05:53,240 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:05:53,965 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:05:58,464 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:05:58,653 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:05:58,780 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:05:58,935 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:05:59,062 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:06:00,104 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:06:00,588 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:06:00,821 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:06:01,067 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:01,263 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:01,468 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:01,669 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:01,880 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:02,075 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:02,262 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:02,500 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:02,719 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:02,906 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:03,106 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:03,298 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:03,486 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:03,696 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:03,881 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:04,104 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:04,297 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:04,496 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:04,685 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:04,888 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:05,083 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:05,275 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:05,475 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:05,666 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:05,859 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:06,092 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:06,287 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:06,490 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:06,689 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:06:06,924 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:06:08,846 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005110606?text=true - 200 - 127.0.0.1
+2025-10-05 11:06:18,795 - [INFO]: doing cron check in 11 5
+2025-10-05 11:06:18,796 - [INFO]: doing cron check in 11 6
+2025-10-05 11:06:22,618 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:06:53,893 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:07:18,803 - [INFO]: doing cron check in 11 7
+2025-10-05 11:07:28,465 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:07:28,517 - [INFO]: Start Unhashing DB.
+2025-10-05 11:07:28,865 - [INFO]: Unhashing complete.
+2025-10-05 11:07:29,090 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:07:29,776 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:07:30,076 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:07:31,030 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:07:31,561 - [ERROR]: invalid syntax (tools.py, line 156)
+Traceback (most recent call last):
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1440, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1536, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 100, in inner
+    return await func(*args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 85, in inner
+    return await func(accountmgr = mgr, *args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 195, in get_info
+    return await accountmgr.generate_info(), 200
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 420, in generate_info
+    async with self.load(account, readonly = True) as acc:
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\validator.py", line 94, in accountmgr_load
+    result = accountmgr_load_legacy(account=account, readonly=readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 356, in load
+    return Account(self, self.qid, account, readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 80, in __init__
+    super().__init__(self.data.config)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulemgr.py", line 85, in __init__
+    from .modulelistmgr import ModuleListManager
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulelistmgr.py", line 2, in <module>
+    from .modules import cron_modules, daily_modules, clan_modules, danger_modules, tool_modules, ModuleList, Module, CronModule, planning_modules, unit_modules, table_modules
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\__init__.py", line 19, in <module>
+    from .tools import *
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\tools.py", line 156
+    deep_progress_msg = f" 深域进度：join(progress_list)" + " ".{player_identifier}
+                                                                     ^
+SyntaxError: invalid syntax
+2025-10-05 11:07:31,575 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 500 - 127.0.0.1
+2025-10-05 11:07:31,576 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:07:31,580 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:07:58,880 - [INFO]: doing cron check in 11 7
+2025-10-05 11:08:04,913 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:08:12,259 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:08:12,310 - [INFO]: Start Unhashing DB.
+2025-10-05 11:08:12,658 - [INFO]: Unhashing complete.
+2025-10-05 11:08:13,704 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 200 - 127.0.0.1
+2025-10-05 11:08:13,902 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 401 - 127.0.0.1
+2025-10-05 11:08:13,904 - [INFO]: GET http://127.0.0.1:8040/daily/assets/autopcr-x7688d1P.svg - 200 - 127.0.0.1
+2025-10-05 11:08:13,906 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:08:13,910 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:08:14,931 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:08:15,453 - [ERROR]: invalid syntax (tools.py, line 156)
+Traceback (most recent call last):
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1440, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1536, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 100, in inner
+    return await func(*args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 85, in inner
+    return await func(accountmgr = mgr, *args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 195, in get_info
+    return await accountmgr.generate_info(), 200
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 420, in generate_info
+    async with self.load(account, readonly = True) as acc:
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\validator.py", line 94, in accountmgr_load
+    result = accountmgr_load_legacy(account=account, readonly=readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 356, in load
+    return Account(self, self.qid, account, readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 80, in __init__
+    super().__init__(self.data.config)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulemgr.py", line 85, in __init__
+    from .modulelistmgr import ModuleListManager
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulelistmgr.py", line 2, in <module>
+    from .modules import cron_modules, daily_modules, clan_modules, danger_modules, tool_modules, ModuleList, Module, CronModule, planning_modules, unit_modules, table_modules
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\__init__.py", line 19, in <module>
+    from .tools import *
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\tools.py", line 156
+    deep_progress_msg = f" 深域进度：join(progress_list)" + " "{player_identifier}
+                                                                    ^
+SyntaxError: invalid syntax
+2025-10-05 11:08:15,456 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 500 - 127.0.0.1
+2025-10-05 11:08:15,457 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:08:15,461 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:08:36,007 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:08:36,057 - [INFO]: Start Unhashing DB.
+2025-10-05 11:08:36,404 - [INFO]: Unhashing complete.
+2025-10-05 11:08:36,596 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 304 - 127.0.0.1
+2025-10-05 11:08:36,691 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 304 - 127.0.0.1
+2025-10-05 11:08:36,876 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 401 - 127.0.0.1
+2025-10-05 11:08:36,877 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:08:36,882 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:08:37,863 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:08:38,758 - [ERROR]: invalid syntax (tools.py, line 156)
+Traceback (most recent call last):
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1440, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1536, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 100, in inner
+    return await func(*args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 85, in inner
+    return await func(accountmgr = mgr, *args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 195, in get_info
+    return await accountmgr.generate_info(), 200
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 420, in generate_info
+    async with self.load(account, readonly = True) as acc:
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\validator.py", line 94, in accountmgr_load
+    result = accountmgr_load_legacy(account=account, readonly=readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 356, in load
+    return Account(self, self.qid, account, readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 80, in __init__
+    super().__init__(self.data.config)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulemgr.py", line 85, in __init__
+    from .modulelistmgr import ModuleListManager
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulelistmgr.py", line 2, in <module>
+    from .modules import cron_modules, daily_modules, clan_modules, danger_modules, tool_modules, ModuleList, Module, CronModule, planning_modules, unit_modules, table_modules
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\__init__.py", line 19, in <module>
+    from .tools import *
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\tools.py", line 156
+    deep_progress_msg = f" 深域进度：.join(progress_list)" + " ".{player_identifier}
+                                                                      ^
+SyntaxError: invalid syntax
+2025-10-05 11:08:38,760 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 500 - 127.0.0.1
+2025-10-05 11:08:38,763 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:08:38,765 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:09:07,949 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:09:08,000 - [INFO]: Start Unhashing DB.
+2025-10-05 11:09:08,349 - [INFO]: Unhashing complete.
+2025-10-05 11:09:08,835 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:09:10,254 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 304 - 127.0.0.1
+2025-10-05 11:09:10,438 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 401 - 127.0.0.1
+2025-10-05 11:09:10,438 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:09:10,444 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:09:11,354 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:09:11,876 - [ERROR]: invalid syntax (tools.py, line 156)
+Traceback (most recent call last):
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1440, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1536, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 100, in inner
+    return await func(*args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 85, in inner
+    return await func(accountmgr = mgr, *args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 195, in get_info
+    return await accountmgr.generate_info(), 200
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 420, in generate_info
+    async with self.load(account, readonly = True) as acc:
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\validator.py", line 94, in accountmgr_load
+    result = accountmgr_load_legacy(account=account, readonly=readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 356, in load
+    return Account(self, self.qid, account, readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 80, in __init__
+    super().__init__(self.data.config)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulemgr.py", line 85, in __init__
+    from .modulelistmgr import ModuleListManager
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulelistmgr.py", line 2, in <module>
+    from .modules import cron_modules, daily_modules, clan_modules, danger_modules, tool_modules, ModuleList, Module, CronModule, planning_modules, unit_modules, table_modules
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\__init__.py", line 19, in <module>
+    from .tools import *
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\tools.py", line 156
+    deep_progress_msg = f" 深域进度：" + " ".join(progress_list){player_identifier}
+                                                                     ^
+SyntaxError: invalid syntax
+2025-10-05 11:09:11,879 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 500 - 127.0.0.1
+2025-10-05 11:09:11,880 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:09:11,885 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:09:38,351 - [INFO]: doing cron check in 11 9
+2025-10-05 11:09:45,154 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:10:14,844 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:10:14,895 - [INFO]: Start Unhashing DB.
+2025-10-05 11:10:15,249 - [INFO]: Unhashing complete.
+2025-10-05 11:10:15,673 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 304 - 127.0.0.1
+2025-10-05 11:10:15,868 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 401 - 127.0.0.1
+2025-10-05 11:10:15,870 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:10:15,871 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:10:16,721 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:10:17,267 - [ERROR]: invalid syntax (tools.py, line 156)
+Traceback (most recent call last):
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1440, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1536, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 100, in inner
+    return await func(*args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 85, in inner
+    return await func(accountmgr = mgr, *args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 195, in get_info
+    return await accountmgr.generate_info(), 200
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 420, in generate_info
+    async with self.load(account, readonly = True) as acc:
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\validator.py", line 94, in accountmgr_load
+    result = accountmgr_load_legacy(account=account, readonly=readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 356, in load
+    return Account(self, self.qid, account, readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 80, in __init__
+    super().__init__(self.data.config)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulemgr.py", line 85, in __init__
+    from .modulelistmgr import ModuleListManager
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulelistmgr.py", line 2, in <module>
+    from .modules import cron_modules, daily_modules, clan_modules, danger_modules, tool_modules, ModuleList, Module, CronModule, planning_modules, unit_modules, table_modules
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\__init__.py", line 19, in <module>
+    from .tools import *
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\tools.py", line 156
+    deep_progress_msg = f" 深域进度：" + " ".join(progress_list)"{player_identifier}"
+                                                                     ^
+SyntaxError: invalid syntax
+2025-10-05 11:10:17,269 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 500 - 127.0.0.1
+2025-10-05 11:10:17,271 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:10:17,276 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:10:44,048 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:10:44,100 - [INFO]: Start Unhashing DB.
+2025-10-05 11:10:44,467 - [INFO]: Unhashing complete.
+2025-10-05 11:10:44,905 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 304 - 127.0.0.1
+2025-10-05 11:10:45,068 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 401 - 127.0.0.1
+2025-10-05 11:10:45,069 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:10:45,084 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:10:45,844 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:10:46,775 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:10:46,790 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:10:46,791 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:10:46,795 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:10:47,953 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:10:48,176 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:10:48,185 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:10:49,288 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/unit - 200 - 127.0.0.1
+2025-10-05 11:10:50,852 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:10:55,408 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:10:55,597 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:10:55,723 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:10:55,884 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:10:56,053 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:10:56,998 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:10:57,483 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:10:57,711 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:10:57,969 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:58,163 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:58,348 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:58,552 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:58,752 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:58,946 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:59,141 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:59,341 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:59,553 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:59,753 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:10:59,962 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:00,170 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:00,360 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:00,554 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:00,757 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:00,958 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:01,151 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:01,386 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:01,605 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:01,808 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:02,035 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:02,235 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:02,426 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:02,612 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:02,796 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:02,997 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:03,183 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:03,386 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:03,584 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:11:03,830 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:11:05,066 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111103?text=true - 200 - 127.0.0.1
+2025-10-05 11:11:14,472 - [INFO]: doing cron check in 11 10
+2025-10-05 11:11:14,472 - [INFO]: doing cron check in 11 11
+2025-10-05 11:11:17,031 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:11:45,254 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:11:45,307 - [INFO]: Start Unhashing DB.
+2025-10-05 11:11:45,704 - [INFO]: Unhashing complete.
+2025-10-05 11:11:46,659 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:11:46,662 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 200 - 127.0.0.1
+2025-10-05 11:11:47,087 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:11:47,247 - [INFO]: GET http://127.0.0.1:8040/daily/login - 304 - 127.0.0.1
+2025-10-05 11:11:48,182 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:11:48,788 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:11:48,805 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:11:48,807 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:11:48,811 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:11:49,300 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:11:49,404 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:11:49,414 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:11:50,238 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/daily - 200 - 127.0.0.1
+2025-10-05 11:11:53,538 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:11:57,205 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:11:57,401 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:11:57,493 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:11:57,658 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:11:57,794 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:11:59,413 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:11:59,914 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:12:00,169 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:12:00,468 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:00,658 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:00,876 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:01,082 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:01,286 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:01,487 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:01,712 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:01,915 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:02,133 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:02,365 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:02,567 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:02,825 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:03,022 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:03,229 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:03,434 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:03,634 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:03,828 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:04,027 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:04,258 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:04,456 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:04,659 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:04,858 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:05,066 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:05,288 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:05,527 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:05,734 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:05,968 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:06,173 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:06,370 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:06,609 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:12:07,679 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111206?text=true - 200 - 127.0.0.1
+2025-10-05 11:12:15,737 - [INFO]: doing cron check in 11 11
+2025-10-05 11:12:15,737 - [INFO]: doing cron check in 11 12
+2025-10-05 11:12:19,558 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:12:35,536 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:12:35,591 - [INFO]: Start Unhashing DB.
+2025-10-05 11:12:35,937 - [INFO]: Unhashing complete.
+2025-10-05 11:12:36,147 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 200 - 127.0.0.1
+2025-10-05 11:12:36,382 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:12:36,416 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:12:37,325 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:12:38,286 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:12:38,299 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:12:38,301 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:12:38,306 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:12:38,489 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:12:38,810 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:12:38,822 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:12:39,667 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/daily - 200 - 127.0.0.1
+2025-10-05 11:12:40,213 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:12:44,480 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:12:44,668 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:12:44,752 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:12:44,948 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:12:45,090 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:12:45,990 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:12:46,486 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:12:46,755 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:12:47,002 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:47,191 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:47,364 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:47,558 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:47,761 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:47,960 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:48,168 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:48,361 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:48,586 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:48,764 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:48,942 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:49,134 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:49,337 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:49,518 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:49,714 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:49,903 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:50,155 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:50,360 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:50,563 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:50,738 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:50,934 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:51,124 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:51,302 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:51,475 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:51,655 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:51,846 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:52,037 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:52,234 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:52,420 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:12:52,653 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:12:53,756 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111252?text=true - 200 - 127.0.0.1
+2025-10-05 11:13:05,956 - [INFO]: doing cron check in 11 12
+2025-10-05 11:13:05,956 - [INFO]: doing cron check in 11 13
+2025-10-05 11:13:08,554 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:13:39,841 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:13:49,748 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:13:49,804 - [INFO]: Start Unhashing DB.
+2025-10-05 11:13:50,171 - [INFO]: Unhashing complete.
+2025-10-05 11:13:50,570 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:13:50,573 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:13:50,752 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:13:50,801 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:13:50,843 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:13:51,601 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:13:52,188 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:13:52,201 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:13:52,204 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:13:52,205 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:13:52,610 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:13:52,808 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:13:52,818 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:13:54,106 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:13:58,746 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:13:59,015 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:13:59,133 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:13:59,295 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:13:59,416 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:14:00,402 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:14:00,877 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:14:01,074 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:14:01,338 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:01,565 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:01,748 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:01,963 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:02,167 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:02,356 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:02,546 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:02,739 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:02,941 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:03,141 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:03,349 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:03,550 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:03,734 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:03,926 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:04,119 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:04,334 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:04,518 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:04,710 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:04,909 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:05,108 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:05,351 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:05,540 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:05,719 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:05,910 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:06,124 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:06,364 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:06,558 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:06,751 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:06,961 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:14:07,195 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:14:08,155 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111407?text=true - 200 - 127.0.0.1
+2025-10-05 11:14:20,174 - [INFO]: doing cron check in 11 13
+2025-10-05 11:14:20,174 - [INFO]: doing cron check in 11 14
+2025-10-05 11:14:22,509 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:14:47,261 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:14:47,314 - [INFO]: Start Unhashing DB.
+2025-10-05 11:14:47,669 - [INFO]: Unhashing complete.
+2025-10-05 11:14:47,921 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:14:48,149 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:14:48,183 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:14:48,783 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:14:49,751 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:14:49,766 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:14:49,768 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:14:49,771 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:14:50,194 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:14:50,334 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:14:50,341 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:14:51,168 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/daily - 200 - 127.0.0.1
+2025-10-05 11:14:53,617 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:14:58,388 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:14:58,545 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:14:58,632 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:14:58,820 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:14:58,910 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:14:59,802 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:15:00,315 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:15:00,556 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:15:00,784 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:00,967 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:01,142 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:01,431 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:01,631 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:01,825 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:02,014 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:02,206 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:02,389 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:02,602 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:02,787 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:02,989 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:03,170 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:03,354 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:03,554 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:03,746 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:03,938 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:04,133 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:04,335 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:04,521 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:04,703 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:04,889 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:05,081 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:05,279 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:05,468 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:05,673 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:05,856 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:06,065 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:06,265 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:15:06,496 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:15:08,573 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111506?text=true - 200 - 127.0.0.1
+2025-10-05 11:15:17,670 - [INFO]: doing cron check in 11 14
+2025-10-05 11:15:17,670 - [INFO]: doing cron check in 11 15
+2025-10-05 11:15:19,998 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:15:48,072 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111206?text=true - 200 - 127.0.0.1
+2025-10-05 11:15:50,204 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111506?text=true - 200 - 127.0.0.1
+2025-10-05 11:15:51,316 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:16:17,668 - [INFO]: doing cron check in 11 16
+2025-10-05 11:16:22,585 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:16:43,262 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:16:43,316 - [INFO]: Start Unhashing DB.
+2025-10-05 11:16:43,666 - [INFO]: Unhashing complete.
+2025-10-05 11:16:43,969 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:16:44,289 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:16:45,053 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:16:45,625 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:16:45,641 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:16:45,645 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:16:45,646 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:16:46,060 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:16:46,144 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:16:46,157 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:16:46,782 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:16:50,928 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:16:51,086 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:16:51,169 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:16:51,324 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:16:51,445 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:16:52,340 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:16:52,852 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:16:53,073 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:16:53,314 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:53,512 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:53,684 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:53,894 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:54,116 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:54,288 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:54,489 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:54,676 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:54,879 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:55,063 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:55,255 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:55,447 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:55,647 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:55,823 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:56,028 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:56,216 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:56,402 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:56,611 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:56,794 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:56,996 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:57,189 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:57,379 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:57,558 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:57,730 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:57,926 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:58,122 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:58,296 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:58,494 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:58,715 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:16:58,945 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:17:00,196 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111658?text=true - 200 - 127.0.0.1
+2025-10-05 11:17:18,246 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:17:18,296 - [INFO]: Start Unhashing DB.
+2025-10-05 11:17:18,656 - [INFO]: Unhashing complete.
+2025-10-05 11:17:18,985 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:17:18,987 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:17:19,154 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:17:19,183 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:17:20,241 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:17:20,820 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:17:20,834 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:17:20,836 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:17:20,837 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:17:21,285 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:17:21,560 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:17:21,572 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:17:22,197 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:17:25,556 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:17:25,821 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:17:25,913 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:17:26,072 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:17:26,161 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:17:27,442 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:17:27,893 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:17:28,135 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:17:28,377 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:28,558 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:28,748 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:28,950 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:29,148 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:29,345 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:29,536 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:29,721 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:29,906 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:30,138 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:30,341 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:30,536 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:30,716 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:30,886 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:31,076 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:31,267 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:31,453 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:31,659 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:31,848 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:32,040 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:32,226 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:32,427 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:32,609 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:32,783 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:32,965 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:33,199 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:33,382 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:33,570 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:33,766 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:17:33,987 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:17:35,145 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111733?text=true - 200 - 127.0.0.1
+2025-10-05 11:17:48,648 - [INFO]: doing cron check in 11 17
+2025-10-05 11:17:51,071 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:18:18,652 - [INFO]: doing cron check in 11 18
+2025-10-05 11:18:22,326 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:18:44,888 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111658?text=true - 200 - 127.0.0.1
+2025-10-05 11:18:46,110 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005111506?text=true - 200 - 127.0.0.1
+2025-10-05 11:18:53,558 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:19:21,122 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:19:21,173 - [INFO]: Start Unhashing DB.
+2025-10-05 11:19:21,524 - [INFO]: Unhashing complete.
+2025-10-05 11:19:21,670 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:19:37,429 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 304 - 127.0.0.1
+2025-10-05 11:19:37,735 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:19:37,768 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:19:38,778 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:19:39,314 - [ERROR]: invalid syntax (tools.py, line 156)
+Traceback (most recent call last):
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1440, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "C:\Users\64536\AppData\Local\Programs\Python\Python39\lib\site-packages\quart\app.py", line 1536, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 100, in inner
+    return await func(*args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 85, in inner
+    return await func(accountmgr = mgr, *args, **kwargs)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\httpserver.py", line 195, in get_info
+    return await accountmgr.generate_info(), 200
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 420, in generate_info
+    async with self.load(account, readonly = True) as acc:
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\http_server\validator.py", line 94, in accountmgr_load
+    result = accountmgr_load_legacy(account=account, readonly=readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 356, in load
+    return Account(self, self.qid, account, readonly)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\accountmgr.py", line 80, in __init__
+    super().__init__(self.data.config)
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulemgr.py", line 85, in __init__
+    from .modulelistmgr import ModuleListManager
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modulelistmgr.py", line 2, in <module>
+    from .modules import cron_modules, daily_modules, clan_modules, danger_modules, tool_modules, ModuleList, Module, CronModule, planning_modules, unit_modules, table_modules
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\__init__.py", line 19, in <module>
+    from .tools import *
+  File "G:\桌面\8040\HoshinoBot-master\hoshino\modules\autopcr\autopcr\module\modules\tools.py", line 156
+    deep_progress_msg = f" 深域进度：" + " ".join(progress_list) + "   " player_identifier
+                                                                              ^
+SyntaxError: invalid syntax
+2025-10-05 11:19:39,317 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 500 - 127.0.0.1
+2025-10-05 11:19:39,318 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:19:39,323 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:19:51,544 - [INFO]: doing cron check in 11 19
+2025-10-05 11:20:16,176 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:20:16,228 - [INFO]: Start Unhashing DB.
+2025-10-05 11:20:16,576 - [INFO]: Unhashing complete.
+2025-10-05 11:20:16,932 - [INFO]: GET http://127.0.0.1:8040/daily/account/ - 304 - 127.0.0.1
+2025-10-05 11:20:17,149 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 401 - 127.0.0.1
+2025-10-05 11:20:17,149 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 401 - 127.0.0.1
+2025-10-05 11:20:17,153 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 401 - 127.0.0.1
+2025-10-05 11:20:18,217 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:20:19,179 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:20:19,193 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:20:19,195 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:20:19,198 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:20:19,660 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:20:19,907 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:20:19,915 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:20:20,610 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:20:26,620 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:20:26,784 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:20:26,872 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:20:27,025 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:20:27,145 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:20:28,087 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:20:28,555 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:20:28,787 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:20:29,020 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:29,208 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:29,386 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:29,583 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:29,805 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:29,991 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:30,245 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:30,430 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:30,631 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:30,825 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:31,018 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:31,240 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:31,422 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:31,605 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:31,812 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:32,005 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:32,190 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:32,422 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:32,617 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:32,806 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:33,000 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:33,199 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:33,395 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:33,569 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:33,754 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:33,958 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:34,143 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:34,343 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:34,542 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:20:34,771 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:20:36,097 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005112034?text=true - 200 - 127.0.0.1
+2025-10-05 11:20:46,572 - [INFO]: doing cron check in 11 20
+2025-10-05 11:20:49,379 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:21:16,578 - [INFO]: doing cron check in 11 21
+2025-10-05 11:21:20,661 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:21:51,987 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:22:16,594 - [INFO]: doing cron check in 11 22
+2025-10-05 11:22:23,212 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:22:36,526 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:22:36,578 - [INFO]: Start Unhashing DB.
+2025-10-05 11:22:36,929 - [INFO]: Unhashing complete.
+2025-10-05 11:22:37,464 - [INFO]: GET http://127.0.0.1:8040/daily/account/1 - 200 - 127.0.0.1
+2025-10-05 11:22:37,821 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 401 - 127.0.0.1
+2025-10-05 11:22:38,718 - [INFO]: POST http://127.0.0.1:8040/daily/api/login/qq - 200 - 127.0.0.1
+2025-10-05 11:22:39,324 - [INFO]: using cache G:\桌面\8040\HoshinoBot-master\hoshino\modules\priconne\arena\buffer\buffer.json
+2025-10-05 11:22:39,338 - [INFO]: GET http://127.0.0.1:8040/daily/api/account - 200 - 127.0.0.1
+2025-10-05 11:22:39,340 - [INFO]: GET http://127.0.0.1:8040/daily/api/role - 200 - 127.0.0.1
+2025-10-05 11:22:39,344 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:22:39,798 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:22:39,988 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1 - 200 - 127.0.0.1
+2025-10-05 11:22:39,995 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/cron - 200 - 127.0.0.1
+2025-10-05 11:22:41,845 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/unit - 200 - 127.0.0.1
+2025-10-05 11:22:45,296 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/tool - 200 - 127.0.0.1
+2025-10-05 11:22:50,518 - [INFO]: None requested SourceIniIndexRequest at /source_ini/index?format=json
+2025-10-05 11:22:50,678 - [INFO]: None requested SourceIniGetMaintenanceStatusRequest at /source_ini/get_maintenance_status?format=json
+2025-10-05 11:22:50,763 - [INFO]: None requested ToolSdkLoginRequest at /tool/sdk_login
+2025-10-05 11:22:50,896 - [INFO]: None requested CheckGameStartRequest at /check/game_start
+2025-10-05 11:22:51,014 - [INFO]: None requested LoadIndexRequest at /load/index
+2025-10-05 11:22:51,896 - [INFO]: 莱宝prime requested HomeIndexRequest at /home/index
+2025-10-05 11:22:52,366 - [INFO]: 莱宝prime requested DailyTaskTopRequest at /daily_task/top
+2025-10-05 11:22:52,604 - [INFO]: 莱宝prime requested ClanInfoRequest at /clan/info
+2025-10-05 11:22:52,852 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:53,033 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:53,201 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:53,451 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:53,633 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:53,817 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:54,009 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:54,205 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:54,391 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:54,572 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:54,753 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:54,940 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:55,112 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:55,315 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:55,504 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:55,698 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:55,915 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:56,110 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:56,300 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:56,487 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:56,693 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:56,918 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:57,106 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:57,284 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:57,494 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:57,670 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:57,855 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:58,056 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:58,266 - [INFO]: 莱宝prime requested ProfileGetRequest at /profile/get_profile
+2025-10-05 11:22:58,484 - [INFO]: POST http://127.0.0.1:8040/daily/api/account/1/do_single - 200 - 127.0.0.1
+2025-10-05 11:22:59,453 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005112258?text=true - 200 - 127.0.0.1
+2025-10-05 11:23:06,938 - [INFO]: doing cron check in 11 22
+2025-10-05 11:23:06,938 - [INFO]: doing cron check in 11 23
+2025-10-05 11:23:10,039 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:23:41,316 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:24:06,940 - [INFO]: doing cron check in 11 24
+2025-10-05 11:24:12,555 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:24:43,809 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:24:57,889 - [INFO]: GET http://127.0.0.1:8040/daily/api/account/1/single_result/query_deep_progress/20251005112034?text=true - 200 - 127.0.0.1
+2025-10-05 11:25:06,961 - [INFO]: doing cron check in 11 25
+2025-10-05 11:25:15,020 - [INFO]: GET http://127.0.0.1:8040/daily/api/query_validate - 200 - 127.0.0.1
+2025-10-05 11:26:06,975 - [INFO]: doing cron check in 11 26
+2025-10-05 11:27:07,004 - [INFO]: doing cron check in 11 27
+2025-10-05 11:28:07,005 - [INFO]: doing cron check in 11 28
+2025-10-05 11:29:07,043 - [INFO]: doing cron check in 11 29
+2025-10-05 11:30:07,069 - [INFO]: doing cron check in 11 30
+2025-10-05 11:31:07,089 - [INFO]: doing cron check in 11 31
+2025-10-05 11:32:07,094 - [INFO]: doing cron check in 11 32
+2025-10-05 11:33:07,098 - [INFO]: doing cron check in 11 33
+2025-10-05 11:34:07,127 - [INFO]: doing cron check in 11 34
+2025-10-05 11:35:07,142 - [INFO]: doing cron check in 11 35
+2025-10-05 11:36:07,150 - [INFO]: doing cron check in 11 36
+2025-10-05 11:37:07,163 - [INFO]: doing cron check in 11 37
+2025-10-05 11:38:07,174 - [INFO]: doing cron check in 11 38
+2025-10-05 11:39:07,191 - [INFO]: doing cron check in 11 39
+2025-10-05 11:40:07,210 - [INFO]: doing cron check in 11 40
+2025-10-05 11:41:07,244 - [INFO]: doing cron check in 11 41
+2025-10-05 11:42:07,277 - [INFO]: doing cron check in 11 42
+2025-10-05 11:43:07,290 - [INFO]: doing cron check in 11 43
+2025-10-05 11:44:07,295 - [INFO]: doing cron check in 11 44
+2025-10-05 11:45:07,304 - [INFO]: doing cron check in 11 45
+2025-10-05 11:46:07,308 - [INFO]: doing cron check in 11 46
+2025-10-05 11:47:07,314 - [INFO]: doing cron check in 11 47
+2025-10-05 11:48:07,327 - [INFO]: doing cron check in 11 48
+2025-10-05 11:49:07,353 - [INFO]: doing cron check in 11 49
+2025-10-05 11:50:07,378 - [INFO]: doing cron check in 11 50
+2025-10-05 11:51:07,402 - [INFO]: doing cron check in 11 51
+2025-10-05 11:51:31,881 - [INFO]: manifest version 202509291846 loaded from cache
+2025-10-05 11:51:31,930 - [INFO]: Start Unhashing DB.
+2025-10-05 11:51:32,279 - [INFO]: Unhashing complete.

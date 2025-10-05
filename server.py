@@ -1440,11 +1440,9 @@ async def unit_promote(botev: BotEvent):
     await botev.send("请稍等")
     msg = await botev.message()
     config = {
-        # 布尔参数默认值
         "unit_promote_level_when_fail_to_equip_or_skill": False,
         "unit_promote_rank_when_fail_to_unique_equip": False,
         "unit_promote_rank_use_raw_ore": False,
-        # 数值参数默认值
         "unit_promote_level": 1,
         "unit_promote_rank": 1,
         "unit_promote_skill_ub": 1,
@@ -1452,7 +1450,6 @@ async def unit_promote(botev: BotEvent):
         "unit_promote_skill_s2": 1,
         "unit_promote_skill_ex": 1,
         "unit_promote_unique_equip1_level": 0,
-        # 装备星级默认值（-1表示不穿装备）
         "unit_promote_equip_0": -1,
         "unit_promote_equip_1": -1,
         "unit_promote_equip_2": -1,
@@ -1461,25 +1458,6 @@ async def unit_promote(botev: BotEvent):
         "unit_promote_equip_5": -1,
         "unit_promote_units": []
     }
-
-    # 解析前3个布尔参数（自动拉等级、自动拉品级、使用原矿）
-    # try:
-        # config["unit_promote_level_when_fail_to_equip_or_skill"] = bool(int(msg[0]))
-        # del msg[0]
-    # except:
-        # pass
-    # try:
-        # config["unit_promote_rank_when_fail_to_unique_equip"] = bool(int(msg[0]))
-        # del msg[0]
-    # except:
-        # pass
-    # try:
-        # config["unit_promote_rank_use_raw_ore"] = bool(int(msg[0]))
-        # del msg[0]
-    # except:
-        # pass
-
-    # 解析数值参数（等级、品级、技能等级）
     try:
         config["unit_promote_level"] = int(msg[0])
         del msg[0]
@@ -1524,14 +1502,14 @@ async def unit_promote(botev: BotEvent):
         except:
             pass
 
-    # 解析专武等级
+    # 专武等级
     try:
         config["unit_promote_unique_equip1_level"] = int(msg[0])
         del msg[0]
     except:
         pass
 
-    # 解析角色列表（参考search_unit的角色昵称处理方式）
+    # 角色列表（参考search_unit的角色昵称处理方式）
     unknown_units = []
     while msg:
         try:

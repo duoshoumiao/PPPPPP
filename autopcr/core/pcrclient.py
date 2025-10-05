@@ -141,6 +141,15 @@ class pcrclient(apiclient):
         req.roll_num = roll_num
         return await self.request(req)
 
+    async def caravan_coin_shop_buy_bulk(self, season_id: int, shop_season_id: int, buy_item_dict: typing.Counter[int], current_currency_num: int):
+        req = CaravanCoinShopBuyBulkRequest()
+        req.season_id = season_id
+        req.shop_season_id = shop_season_id
+        req.buy_item_list = [BuyBulkBuyItemList(slot_id=slot_id, count=count) for slot_id, count in buy_item_dict.items()]
+        req.current_currency_num = current_currency_num
+        req.is_multi_slots = 0
+        return await self.request(req)
+
     async def caravan_coin_shop_buy(self, season_id: int, shop_season_id: int, slot_id_list: List[int], current_currency_num: int):
         req = CaravanCoinShopBuyRequest()
         req.season_id = season_id
@@ -1047,7 +1056,8 @@ class pcrclient(apiclient):
         await self.request(req)
 
     async def get_clan_info(self):
-        if self.data.clan == 0: return None
+        if not self.data.clan:
+            raise AbortError("未加入公会")
         req = ClanInfoRequest()
         req.clan_id = self.data.clan
         req.get_user_equip = 0
@@ -1095,6 +1105,13 @@ class pcrclient(apiclient):
         req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
         req.quest_id = quest
         req.random_count = times
+        return await self.request(req)
+
+    async def talent_quest_skip(self, quest_id: int, use_ticket_num: int):
+        req = TalentQuestSkipRequest()
+        req.quest_id = quest_id
+        req.use_ticket_num = use_ticket_num
+        req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
         return await self.request(req)
 
     async def equip_get_request(self, message_id: int):
@@ -1312,7 +1329,13 @@ class pcrclient(apiclient):
         req.quest_id = quest
         req.current_currency_num = self.data.jewel.free_jewel + self.data.jewel.jewel
         return await self.request(req)
-    
+
+    async def talent_quest_recovery_challenge(self, talent_id: int):
+        req = TalentQuestRecoverChallengeRequest()
+        req.talent_id = talent_id
+        req.current_currency_num = self.data.jewel.free_jewel + self.data.jewel.jewel
+        return await self.request(req)
+
     async def present_index(self) -> PresentIndexResponse:
         req = PresentIndexRequest()
         req.time_filter = -1
@@ -1342,7 +1365,17 @@ class pcrclient(apiclient):
 
             if qinfo.clear_flag != 3:
                 raise AbortError(f"任务{name}未三星")
-
+        elif db.is_talent_quest(quest):
+            talent_id = db.get_talent_id_from_quest_id(quest)
+            max_quest_id = self.data.cleared_talent_quest_ids.get(talent_id, 0)
+            if max_quest_id < quest:
+                raise AbortError(f"任务{name}未通关或不存在")
+            qinfo = self.data.talent_quest_area_info.get(talent_id, TalentQuestAreaInfo(
+                talent_id = talent_id,
+                daily_bonus_use_count = 0,
+                daily_clear_count = 0,
+                daily_recovery_count = 0,
+            ))
         else:
             if not quest in self.data.quest_dict:
                 raise AbortError(f"任务{name}未通关或不存在")
@@ -1351,8 +1384,10 @@ class pcrclient(apiclient):
             if qinfo.clear_flg != 3: # 怎么会少一个a
                 raise AbortError(f"任务{name}未三星")
 
-
         info = db.quest_info[quest]
+        if db.is_talent_quest(quest): # fix
+            setattr(info, 'daily_limit', self.data.settings.talent_quest.daily_clear_limit_count)
+
         stamina_coefficient = self.data.get_quest_stamina_half_campaign_times(quest)
         if not stamina_coefficient: stamina_coefficient = 100
         result: List[InventoryInfo] = []
@@ -1368,6 +1403,8 @@ class pcrclient(apiclient):
             elif db.is_hatsune_quest(quest):
                 event = db.quest_to_event[quest].event_id
                 return await self.hatsune_quest_skip(event, quest, times)
+            elif db.is_talent_quest(quest):
+                return await self.talent_quest_skip(quest, times)
             else:
                 return await self.quest_skip(quest, times)
         if info.daily_limit:
@@ -1380,7 +1417,10 @@ class pcrclient(apiclient):
             remain = info.daily_limit * (qinfo.daily_recovery_count + 1) - qinfo.daily_clear_count
             while times > 0:
                 if remain == 0:
-                    await self.recover_challenge(quest)
+                    if db.is_talent_quest(quest):
+                        await self.talent_quest_recovery_challenge(db.get_talent_id_from_quest_id(quest))
+                    else:
+                        await self.recover_challenge(quest)
                     remain = info.daily_limit
                 t = min(times, remain)
                 resp = await skip(t)
@@ -1530,19 +1570,6 @@ class pcrclient(apiclient):
         req = PsyReadDramaRequest()
         req.drama_id = drama_id
         req.from_system_id = from_system_id
-        return await self.request(req)
-
-    async def talent_quest_skip(self, quest_id: int, use_ticket_num: int):
-        req = TalentQuestSkipRequest()
-        req.quest_id = quest_id
-        req.use_ticket_num = use_ticket_num
-        req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
-        return await self.request(req)
-
-    async def talent_quest_recovery_challenge(self, talent_id: int):
-        req = TalentQuestRecoverChallengeRequest()
-        req.talent_id = talent_id
-        req.current_currency_num = self.data.jewel.free_jewel + self.data.jewel.jewel
         return await self.request(req)
 
     def _get_key(self, key, default=None):

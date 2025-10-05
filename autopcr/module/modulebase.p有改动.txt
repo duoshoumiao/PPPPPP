@@ -1,3 +1,0 @@
-return False, '无缓存，请先登录'  
-改为
-return False, '无缓存，先发送#刷新box'
