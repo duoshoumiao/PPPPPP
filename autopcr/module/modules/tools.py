@@ -153,7 +153,7 @@ class query_deep_progress(Module):
                             progress_list.append(f"{attr}: 0-0")
 
                     # 格式化输出
-                    deep_progress_msg = f"{player_identifier} 深域进度：" + " ".join(progress_list)
+                    deep_progress_msg = f" 深域进度：" + " ".join(progress_list) + " " + player_identifier
                     return deep_progress_msg
 
                 else:
@@ -178,7 +178,7 @@ class query_deep_progress(Module):
                         self._log(f"公会成员列表({len(clan_info.clan.members)}人):")
                         for member in clan_info.clan.members:
                             # 使用格式化输出，确保ID和昵称对齐
-                            self._log(f"ID: {member.viewer_id}, 昵称: {member.name}")
+                            # self._log(f"ID: {member.viewer_id}, 昵称: {member.name}")
                             # 查询该成员的深域进度
                             member_progress = await self._get_deep_progress(client, member.viewer_id, member.name)
                             self._log(member_progress)

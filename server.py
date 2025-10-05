@@ -863,12 +863,18 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc):
             resp = resp[0]
         resp = resp.get_result()
 
-        # 处理结果文本
-        result_text = str(resp.log) if hasattr(resp, 'log') else str(resp)
-        result_text = result_text.replace('\\n', '\n').replace('\n', '\n')
-        
-        # 调用合并转发函数
-        await send_llonebot_forward(botev, alias, result_text)
+        # 仅对查公会深域进度工具生成图片
+        if tool.key == "query_deep_progress":
+            # 生成深域进度图片
+            img = await drawer.draw_task_result(resp)
+            msg = f"{alias}"
+            msg += outp_b64(img)
+            await botev.send(msg)
+        else:
+            # 其他工具保持原有文本处理逻辑
+            result_text = str(resp.log) if hasattr(resp, 'log') else str(resp)
+            result_text = result_text.replace('\\n', '\n').replace('\n', '\n')
+            await send_llonebot_forward(botev, alias, result_text)
 
     except Exception as e:
         error_msg = f"{alias} 任务执行失败（如果是指令+所有必须去网站-批量运行-BATCH_RUNNER 里保存队伍）：{str(e)[:500]}"
