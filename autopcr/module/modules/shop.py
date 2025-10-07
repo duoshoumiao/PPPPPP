@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from collections import Counter
-from typing import List
-
+from typing import Dict, Tuple
+from ...model.enums import eInventoryType 
 from ...model.common import ShopInfo
 from ..modulebase import *
 from ..config import *
@@ -136,13 +136,115 @@ class normal_shop(shop_buyer):
 @name('限定商店购买')
 @default(False)
 class limit_shop(shop_buyer):
-    def _exp_count(self): return 999000 if "经验药水" in self.get_config('limit_shop_buy_kind') else 0
-    def _equip_count(self): return 999000 if "装备" in self.get_config('limit_shop_buy_kind') else -999000
-    def _equip_raw_ore_count(self): return 999000 if "原矿" in self.get_config('limit_shop_buy_kind') else 0
-    def coin_limit(self) -> int: return self.get_config('limit_shop_buy_coin_limit')
-    def system_id(self) -> eSystemId: return eSystemId.LIMITED_SHOP
-    def reset_count(self) -> int: return 0
-    def buy_kind(self) -> List[str]: return self.get_config('limit_shop_buy_kind')
+    def _exp_count(self): 
+        return 999000 if "经验药水" in self.get_config('limit_shop_buy_kind') else 0
+    
+    def _equip_count(self): 
+        return 999000 if "装备" in self.get_config('limit_shop_buy_kind') else -999000
+    
+    def _equip_raw_ore_count(self): 
+        return 999000 if "原矿" in self.get_config('limit_shop_buy_kind') else 0
+    
+    def coin_limit(self) -> int: 
+        return self.get_config('limit_shop_buy_coin_limit')
+    
+    def system_id(self) -> eSystemId: 
+        return eSystemId.LIMITED_SHOP
+    
+    def reset_count(self) -> int: 
+        return 0
+    
+    def buy_kind(self) -> List[str]: 
+        return self.get_config('limit_shop_buy_kind')
+    
+    ItemType = Tuple[eInventoryType, int]
+    def _get_all_equip_info(self) -> Dict[ItemType, str]:
+        """获取所有常规装备信息（不含特殊装备素材）"""
+        equip_info = {}
+        
+      
+        for eid in db.equip_data.keys():
+            if isinstance(eid, int):
+                equip_type = (eInventoryType.Equip, eid)
+                equip_name = db.get_equip_name(eid) or f"常规装备(ID:{eid})"
+                equip_info[equip_type] = equip_name
+        
+        return equip_info  
+
+    async def do_task(self, client: pcrclient):
+        lmt = self.coin_limit()
+        reset_cnt = self.reset_count()
+        shop_content = await self._get_shop(client)
+        prev = client.data.get_shop_gold(shop_content.system_id)
+        old_reset_cnt = shop_content.reset_count
+        result = []
+        
+        all_equip_info = self._get_all_equip_info()
+        self._log(f"已加载 {len(all_equip_info)} 种常规装备数据用于识别")  
+
+        while True:
+            equip_demand_gap = client.data.get_equip_demand_gap(
+                like_unit_only=False  # 关闭角色偏好过滤
+            )
+
+            gold = client.data.get_shop_gold(shop_content.system_id)
+            if gold < lmt:
+                raise SkipError(f"商店货币{gold}不足{lmt}，将不进行购买")
+
+            target = []
+            for item in shop_content.item_list:
+                if item.sold:
+                    continue
+
+                item_type = (item.type, item.item_id)
+                # 1. 仅识别常规装备（移除特殊素材判断，不输出识别日志）
+                if item_type in all_equip_info:
+                    equip_name = all_equip_info[item_type]
+                    if "装备" in self.buy_kind():
+                        # 仅基于常规装备的库存缺口判断
+                        if -equip_demand_gap.get(item_type, 0) < self._equip_count():
+                            target.append((item.slot_id, item.price.currency_num))
+                
+                # 2. 经验药水识别（保持原有逻辑）
+                elif db.is_exp_upper(item_type) and client.data.get_inventory(item_type) < self._exp_count():
+                    target.append((item.slot_id, item.price.currency_num))
+                    self._log(f"识别到可购买经验药水: {db.get_inventory_name_san(item_type)}")
+                
+                # 3. 原矿识别（保持原有逻辑）
+                elif db.is_equip_raw_ore(item_type) and client.data.get_inventory(item_type) < self._equip_raw_ore_count():
+                    target.append((item.slot_id, item.price.currency_num))
+                    self._log(f"识别到可购买原矿: {db.get_inventory_name_san(item_type)}")
+
+            slots_to_buy = [item[0] for item in target]
+            cost_gold = sum([item[1] for item in target])
+
+            if cost_gold > gold:
+                self._log(f"商店货币{gold}不足购买需求的{cost_gold}，停止购买")
+                break
+            
+            if slots_to_buy:
+                res = await client.shop_buy_item(shop_content.system_id, slots_to_buy)
+                gold -= cost_gold
+                result.extend(res.purchase_list)
+
+            if shop_content.reset_count >= reset_cnt:
+                self._log(f"商店已重置{shop_content.reset_count}次，停止购买")
+                break
+            
+            if gold < shop_content.reset_cost:
+                self._log(f"商店货币{gold}不足重置{shop_content.reset_cost}，停止购买")
+                break
+            
+            await client.shop_reset(shop_content.system_id)
+            shop_content = await self._get_shop(client)
+
+        cost_gold = prev - client.data.get_shop_gold(shop_content.system_id)
+        if cost_gold == 0:
+            raise SkipError("无对应商品购买")
+        else:
+            self._log(f"花费了{cost_gold}货币，重置了{shop_content.reset_count - old_reset_cnt}次，购买了:")
+            msg = await client.serialize_reward_summary(result)
+            self._log(msg)
 
 @singlechoice('underground_shop_buy_memory_count_limit', "记忆碎片盈余值", 0, [0, 10, 20, 120, 270, 9900])
 @singlechoice('underground_shop_buy_equip_count_limit', "装备盈余值", 0, [0, 20, 50, 100, 200, 500, 9900])
@@ -165,6 +267,95 @@ class underground_shop(shop_buyer):
     def buy_kind(self) -> List[str]: return self.get_config('underground_shop_buy_kind')
     def require_equip_units_fav(self) -> bool: return self.get_config('underground_shop_buy_equip_consider_unit_fav')
     def require_equip_units_rank(self) -> str: return self.get_config('underground_shop_buy_equip_consider_unit_rank')
+    
+    ItemType = Tuple[eInventoryType, int]
+    def _get_all_equip_info(self) -> Dict[ItemType, str]:
+        """获取所有常规装备信息（不含特殊装备素材）"""
+        equip_info = {}
+        
+        for eid in db.equip_data.keys():
+            if isinstance(eid, int):
+                equip_type = (eInventoryType.Equip, eid)
+                equip_name = db.get_equip_name(eid) or f"常规装备(ID:{eid})"
+                equip_info[equip_type] = equip_name
+        
+        return equip_info  
+
+    async def do_task(self, client: pcrclient):
+        lmt = self.coin_limit()
+        reset_cnt = self.reset_count()
+        shop_content = await self._get_shop(client)
+        prev = client.data.get_shop_gold(shop_content.system_id)
+        old_reset_cnt = shop_content.reset_count
+        result = []
+        
+        all_equip_info = self._get_all_equip_info()
+        self._log(f"已加载 {len(all_equip_info)} 种常规装备数据用于识别")  
+
+        while True:
+            equip_demand_gap = client.data.get_equip_demand_gap(
+                like_unit_only=self.require_equip_units_fav(),
+                start_rank={
+                    '所有': 1,
+                    '最高': db.equip_max_rank,
+                    '次高': db.equip_max_rank - 1,
+                    '次次高': db.equip_max_rank - 2,
+                }[self.require_equip_units_rank()]
+            )
+
+            memory_demand_gap = client.data.get_memory_demand_gap()
+
+            gold = client.data.get_shop_gold(shop_content.system_id)
+            if gold < lmt:
+                raise SkipError(f"商店货币{gold}不足{lmt}，将不进行购买")
+
+            target = []
+            for item in shop_content.item_list:
+                if item.sold:
+                    continue
+
+                item_type = (item.type, item.item_id)
+                # 1. 仅识别常规装备
+                if item_type in all_equip_info:
+                    if "装备" in self.buy_kind():
+                        if -equip_demand_gap.get(item_type, 0) < self._equip_count():
+                            target.append((item.slot_id, item.price.currency_num))
+                
+                # 2. 记忆碎片识别
+                elif db.is_unit_memory(item_type) and -memory_demand_gap.get(item_type, 0) < self._unit_memory_count():
+                    target.append((item.slot_id, item.price.currency_num))
+                    self._log(f"识别到可购买记忆碎片: {db.get_inventory_name_san(item_type)}")
+
+            slots_to_buy = [item[0] for item in target]
+            cost_gold = sum([item[1] for item in target])
+
+            if cost_gold > gold:
+                self._log(f"商店货币{gold}不足购买需求的{cost_gold}，停止购买")
+                break
+            
+            if slots_to_buy:
+                res = await client.shop_buy_item(shop_content.system_id, slots_to_buy)
+                gold -= cost_gold
+                result.extend(res.purchase_list)
+
+            if shop_content.reset_count >= reset_cnt:
+                self._log(f"商店已重置{shop_content.reset_count}次，停止购买")
+                break
+            
+            if gold < shop_content.reset_cost:
+                self._log(f"商店货币{gold}不足重置{shop_content.reset_cost}，停止购买")
+                break
+            
+            await client.shop_reset(shop_content.system_id)
+            shop_content = await self._get_shop(client)
+
+        cost_gold = prev - client.data.get_shop_gold(shop_content.system_id)
+        if cost_gold == 0:
+            raise SkipError("无对应商品购买")
+        else:
+            self._log(f"花费了{cost_gold}货币，重置了{shop_content.reset_count - old_reset_cnt}次，购买了:")
+            msg = await client.serialize_reward_summary(result)
+            self._log(msg)
 
 @singlechoice('jjc_shop_buy_memory_count_limit', "记忆碎片盈余值", 0, [0, 10, 20, 120, 270, 9900])
 @singlechoice('jjc_shop_buy_equip_count_limit', "装备盈余值", 0, [0, 20, 50, 100, 200, 500, 9900])

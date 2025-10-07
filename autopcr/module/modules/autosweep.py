@@ -438,11 +438,25 @@ class smart_sweep(DIY_sweep):
         return quest
 
 @description('''
-开新图时的便捷设置，将循环刷取所选关卡
+开新图时的便捷设置，总需求减去总缺≥指定数量停止刷取，刷武器选600，0则没有限制,目前只支持武器跟饰品
+可指定装备，当该装备库存达到设定数量时停止刷取
 '''.strip())
 @name("刷最新n图")
 @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
 @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
+@singlechoice("last_normal_stop_threshold", "需求停止阈值", 0, [0, 300, 600])  # 增加0作为不限制选项
+# 新增配置：指定装备选择（确保所有装备显示）
+@multichoice("target_equipments", "指定监控装备", [], 
+             lambda: [
+                 # 最大化显示所有可能的装备，仅过滤明显非装备的ID
+                 f"{db.get_equip_name(eid) or '未知装备'} (ID:{eid})" 
+                 for eid in db.equip_data.keys() 
+                 if isinstance(eid, int) and  # 确保是整数ID
+                    str(eid).isdigit() and   # 确保是数字
+                    len(str(eid)) >= 6       # 装备ID通常至少6位数字
+             ])
+# 新增配置：指定装备目标数量
+@inttype("target_equip_count", "指定装备目标数量", 10, list(range(1, 301)))
 @default(False)
 @tag_stamina_consume
 class last_normal_quest_sweep(DIY_sweep):
@@ -452,12 +466,120 @@ class last_normal_quest_sweep(DIY_sweep):
         quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
         return quest
 
+    async def do_task(self, client: pcrclient):
+        stop_threshold = self.get_config('last_normal_stop_threshold')
+        target_equip_display_names = self.get_config('target_equipments')
+        target_count = self.get_config('target_equip_count')
+        
+        target_equip_ids = []
+        
+        for display_name in target_equip_display_names:
+            try:
+                if "(ID:" in display_name:
+                    eid_str = display_name.split("(ID:")[1].split(")")[0].strip()
+                    eid = int(eid_str)
+                    
+                    if eid in db.equip_data:
+                        target_equip_ids.append((eInventoryType.Equip, eid))
+                        self._log(f"已添加监控装备: {display_name}")
+                    else:
+                        self._log(f"数据库中未找到装备ID={eid}，但仍尝试监控")
+                        target_equip_ids.append((eInventoryType.Equip, eid))
+                else:
+                    self._log(f"无法解析装备名称格式: {display_name}")
+            except (IndexError, ValueError) as e:
+                self._log(f"解析装备名称失败: {display_name}, 错误: {str(e)}")
+        
+        # 特别检查并添加可能遗漏的重要装备ID（可根据需要扩展）从db 里equipment_data获取装备名的。
+        important_ids = []
+        for eid in important_ids:
+            if eid in db.equip_data and (eInventoryType.Equip, eid) not in target_equip_ids:
+                target_equip_ids.append((eInventoryType.Equip, eid))
+                self._log(f"已自动添加重要装备: ID={eid}")
+        
+        if target_equip_ids:
+            self._log("\n===== 监控装备列表 =====")
+            for equip_type_id in target_equip_ids:
+                eid = equip_type_id[1]
+                equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
+                current = client.data.get_inventory(equip_type_id)
+                self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/{target_count}")
+            self._log("======================\n")
+        else:
+            self._log("\n未设置有效的监控装备，将使用阈值判断逻辑\n")
+        
+        all_demand = client.data.get_equip_demand()
+        clean_cnt = Counter()
+        result = []
+        
+        try:
+            loop_quests = await self.get_loop_quest(client)
+            if not loop_quests:
+                raise SkipError("无刷取关卡")
+
+            while True:
+                if target_equip_ids:
+                    all_reached = True
+                    self._log("\n----- 装备库存检查 -----")
+                    for equip_type_id in target_equip_ids:
+                        eid = equip_type_id[1]
+                        current = client.data.get_inventory(equip_type_id)
+                        equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
+                        
+                        self._log(f"{equip_name} (ID:{eid}): {current}/{target_count}")
+                        
+                        if current < target_count:
+                            all_reached = False
+                    
+                    if all_reached:
+                        self._log("\n所有指定装备均已达到目标数量，停止刷取")
+                        break
+
+                gap = client.data.get_demand_gap(all_demand, lambda x: db.is_equip(x))
+                total_gap = sum(gap.values())
+                
+                total_demand = sum(all_demand.values())
+                total_held = total_demand - total_gap
+                
+                if stop_threshold != 0 and total_held >= stop_threshold:
+                    self._log(f"\n总持有装备已达到{stop_threshold}，停止刷取")
+                    break
+                elif stop_threshold == 0 and sum(clean_cnt.values()) > 0 and sum(clean_cnt.values()) % 10 == 0:
+                    self._log(f"\n不限制模式，已刷取{sum(clean_cnt.values())}次，继续刷取中...")
+
+                for quest_id, count in loop_quests:
+                    try:
+                        rewards = await client.quest_skip_aware(quest_id, count, True, True)
+                        result.extend(rewards)
+                        clean_cnt[quest_id] += count
+                    except SkipError:
+                        pass
+                    except AbortError as e:
+                        self._log(str(e))
+                        raise 
+
+        except:
+            raise
+        finally:
+            if clean_cnt:
+                msg = '\n'.join(f"{db.get_quest_name(quest)}: 刷取{cnt}次" 
+                              for quest, cnt in clean_cnt.items())
+                self._log("\n" + msg)
+                self._log("---------")
+            else:
+                self._log("需刷取的图均无次数")
+            if result:
+                self._log(await client.serialize_reward_summary(result))
+    
+
+
+
 @description('''
 每天扫荡！重置扫荡！
 '''.strip())
 @name("深域扫荡")
 @TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
-@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
+@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", [])  # 这里改为空列表，默认不勾选任何选项
 @default(True)
 @tag_stamina_consume
 class talent_sweep(DIY_sweep):
