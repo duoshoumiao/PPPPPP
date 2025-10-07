@@ -1651,17 +1651,8 @@ class database():
     def is_unit_pure_memory(self, item: ItemType) -> bool:
         return item[0] == eInventoryType.Item and item[1] >= 32000 and item[1] < 33000
 
-    def is_equip(self, item: ItemType) -> bool:
-        """仅识别普通装备类型"""
-        if not isinstance(item, tuple) or len(item) != 2:
-            return False 
-        inv_type, item_id = item
-        return (inv_type == eInventoryType.Equip 
-                and isinstance(item_id, int) 
-                and item_id in self.equip_data)
-
     def is_equip(self, item: ItemType, uncraftable_only: bool = False) -> bool:
-        return item[0] == eInventoryType.Equip and item[1] >= 101000 and item[1] < 140000 and (not uncraftable_only or not self.is_equip_craftable(item))
+        return item[0] == eInventoryType.Equip and (item[1] >= 101000 and item[1] < 140000 or item[1] > 160000) and (not uncraftable_only or not self.is_equip_craftable(item))
 
     def is_equip_raw_ore(self, item: ItemType) -> bool:
         return item[0] == eInventoryType.Equip and item[1] >= 150001 and item[1] < 160000

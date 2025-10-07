@@ -438,13 +438,11 @@ class smart_sweep(DIY_sweep):
         return quest
 
 @description('''
-开新图时的便捷设置，总需求减去总缺≥指定数量停止刷取，刷武器选600，0则没有限制,目前只支持武器跟饰品
 可指定装备，当该装备库存达到设定数量时停止刷取
 '''.strip())
 @name("刷最新n图")
 @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
 @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
-@singlechoice("last_normal_stop_threshold", "需求停止阈值", 0, [0, 300, 600])  # 增加0作为不限制选项
 # 新增配置：指定装备选择（确保所有装备显示）
 @multichoice("target_equipments", "指定监控装备", [], 
              lambda: [
@@ -467,7 +465,6 @@ class last_normal_quest_sweep(DIY_sweep):
         return quest
 
     async def do_task(self, client: pcrclient):
-        stop_threshold = self.get_config('last_normal_stop_threshold')
         target_equip_display_names = self.get_config('target_equipments')
         target_count = self.get_config('target_equip_count')
         
@@ -506,7 +503,7 @@ class last_normal_quest_sweep(DIY_sweep):
                 self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/{target_count}")
             self._log("======================\n")
         else:
-            self._log("\n未设置有效的监控装备，将使用阈值判断逻辑\n")
+            self._log("\n未设置有效的监控装备，将持续刷取直到手动停止\n")
         
         all_demand = client.data.get_equip_demand()
         clean_cnt = Counter()
@@ -535,17 +532,9 @@ class last_normal_quest_sweep(DIY_sweep):
                         self._log("\n所有指定装备均已达到目标数量，停止刷取")
                         break
 
-                gap = client.data.get_demand_gap(all_demand, lambda x: db.is_equip(x))
-                total_gap = sum(gap.values())
-                
-                total_demand = sum(all_demand.values())
-                total_held = total_demand - total_gap
-                
-                if stop_threshold != 0 and total_held >= stop_threshold:
-                    self._log(f"\n总持有装备已达到{stop_threshold}，停止刷取")
-                    break
-                elif stop_threshold == 0 and sum(clean_cnt.values()) > 0 and sum(clean_cnt.values()) % 10 == 0:
-                    self._log(f"\n不限制模式，已刷取{sum(clean_cnt.values())}次，继续刷取中...")
+                # 每刷取10次显示一次进度
+                if sum(clean_cnt.values()) > 0 and sum(clean_cnt.values()) % 10 == 0:
+                    self._log(f"\n已刷取{sum(clean_cnt.values())}次，继续刷取中...")
 
                 for quest_id, count in loop_quests:
                     try:
@@ -570,10 +559,8 @@ class last_normal_quest_sweep(DIY_sweep):
                 self._log("需刷取的图均无次数")
             if result:
                 self._log(await client.serialize_reward_summary(result))
+
     
-
-
-
 @description('''
 每天扫荡！重置扫荡！
 '''.strip())
