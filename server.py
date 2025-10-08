@@ -191,8 +191,8 @@ sv_help = f"""
 - {prefix}一键编队 第几页 第几队  如 #一键编队 1 1  ，代表第一页第一队
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
 - {prefix}拉角色练度 289 31 289 289 289 289 5 5 5 5 5 5 0 可可罗 佩可 凯露    代表 等级 品级 ub s1 s2 ex 左上 右上 左中 右中 左下 右下 专武 角色名
-- {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] 运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
-  示例：{prefix}大富翁 30 不止搬空商店 | {prefix}大富翁所有 0 搬空商店为止  （需要去批量运行里保存账号）
+- {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
+  示例：{prefix}大富翁 30 不止搬空商店 0 | {prefix}大富翁所有 0 搬空商店为止  0（需要去批量运行里保存账号）
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
   示例：{prefix}商店购买 上期 | {prefix}商店购买所有 当期 （需要去批量运行里保存账号）
 - {prefix}查玩家 uid
@@ -1536,24 +1536,30 @@ async def caravan_play(botev: BotEvent):
     msg = await botev.message()
     # 发送任务正在进行提示
     await botev.send("好的，马上进行大富翁任务")
-    # 默认配置：保留0个骰子，搬空商店为止
+    # 默认配置：保留0个骰子，搬空商店为止，到达终点次数0
     config = {
         "caravan_play_dice_hold_num": 0,
-        "caravan_play_until_shop_empty": True
+        "caravan_play_until_shop_empty": True,
+        "caravan_play_goal_num": 0
     }
     
     try:
-        # 解析保留骰子数量（直接提取数字）
-        for arg in msg[:]:  # 使用切片避免迭代中修改列表
-            if arg.isdigit():
-                config["caravan_play_dice_hold_num"] = int(arg)
-                msg.remove(arg)
+        # 解析参数（按顺序：保留骰子数量 -> 商店设置 -> 到达终点次数）
+        # 解析保留骰子数量
+        if msg and msg[0].isdigit():
+            config["caravan_play_dice_hold_num"] = int(msg[0])
+            msg.pop(0)
         
         # 解析是否搬空商店
-        if is_args_exist(msg, "不止搬空商店"):
-            config["caravan_play_until_shop_empty"] = False
-        elif is_args_exist(msg, "搬空商店为止"):
-            config["caravan_play_until_shop_empty"] = True
+        if msg and msg[0] in ["搬空商店为止", "不止搬空商店"]:
+            config["caravan_play_until_shop_empty"] = (msg[0] == "搬空商店为止")
+            msg.pop(0)
+        
+        # 解析到达终点次数（第三个参数）
+        if msg and msg[0].isdigit():
+            config["caravan_play_goal_num"] = int(msg[0])
+            msg.pop(0)
+    
     except Exception as e:
         logger.warning(f"解析大富翁参数出错: {e}")
     
