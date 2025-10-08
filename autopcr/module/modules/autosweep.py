@@ -11,18 +11,14 @@ from ...model.enums import *
 from collections import Counter
 from ...core.apiclient import apiclient
 
-@conditional_execution1("normal_sweep_run_time", ["n庆典"])
-@singlechoice("normal_sweep_strategy", "刷取策略", "刷最缺", ["刷最缺", "均匀刷"])
-@singlechoice("normal_sweep_quest_scope", "刷取图", "全部", ["全部", "可扫荡", "新开图"])
-@booltype("normal_sweep_full_ok_stop", "刷完所有角色停止", False)
-@booltype("normal_sweep_equip_ok_to_full", "刷满则考虑所有角色", False)
-@singlechoice("normal_sweep_consider_unit", "起始品级", "所有", ["所有", "最高", "次高", "次次高"])
-@booltype("normal_sweep_consider_unit_fav", "收藏角色", True)
-@description('根据【刷图推荐】结果刷n图，均匀刷指每次刷取的图覆盖所缺的需求装备，若无缺装备则刷取推荐的第一张图，仅可扫荡指忽略未三星通关地图')
-@name('智能刷n图')
+@conditional_execution1("lazy_sweep_run_time", ["n庆典"])
+@singlechoice("lazy_sweep_strategy", "刷取策略", "刷最缺", ["刷最缺", "均匀刷"])
+@UnitListConfig('lazy_sweep_consider_units', "考虑角色")
+@description('根据【刷图推荐】结果刷n图，均匀刷指每次刷取的图覆盖所缺的需求装备，若无缺装备则刷取推荐的第一张图')
+@name('懒人刷n图')
 @default(False)
 @tag_stamina_consume
-class smart_normal_sweep(Module):
+class lazy_normal_sweep(Module):
 
     async def get_quests(self, quest_list: List[int], strategy: str, gap: typing.Counter[ItemType]) -> List[int]:
         ret = []
@@ -48,36 +44,18 @@ class smart_normal_sweep(Module):
         return ret
 
     async def do_task(self, client: pcrclient):
-
-        like_unit_only: bool = self.get_config('normal_sweep_consider_unit_fav')
-        rank: str = self.get_config('normal_sweep_consider_unit')
-        strategy: str = self.get_config('normal_sweep_strategy')
-        full2all: bool = self.get_config('normal_sweep_equip_ok_to_full')
-        quest_scope: str = self.get_config('normal_sweep_quest_scope')
-        full2stop: bool = self.get_config('normal_sweep_full_ok_stop')
-        opt: Dict[Union[int, str], int] = {
-            '所有': 1,
-            '最高': db.equip_max_rank,
-            '次高': db.equip_max_rank - 1,
-            '次次高': db.equip_max_rank - 2,
-        }
-        demand = client.data.get_equip_demand(like_unit_only=like_unit_only, start_rank = opt[rank])
-        all_demand = client.data.get_equip_demand()
+        strategy: str = self.get_config('lazy_sweep_strategy')
+        consider_units: List[int] = self.get_config('lazy_sweep_consider_units')
+        
+        grow_parameter_list = client.data.get_synchro_parameter()
+        demand = client.data.get_equip_demand2(consider_units, grow_parameter_list=grow_parameter_list)
 
         clean_cnt = Counter()
         quest_id = []
         tmp = []
         quest_list: List[int] = [id for id, quest in db.normal_quest_data.items() if db.parse_time(quest.start_time) <= apiclient.datetime]
-        if quest_scope == "可扫荡":
-            quest_list = [id for id in quest_list if client.data.is_quest_sweepable(id)]
-        elif quest_scope == "新开图":
-            last_normal = set(db.last_normal_quest())
-            quest_list = [id for id in quest_list if id in last_normal]
-        elif quest_scope != "全部":
-            raise ValueError(f"未知刷取图范围{quest_scope}")
             
         stop: bool = False
-        first: bool = True
 
         try:
             target_quest = []
@@ -87,19 +65,8 @@ class smart_normal_sweep(Module):
 
                     gap = client.data.get_demand_gap(demand, lambda x: db.is_equip(x))
                     if all(gap[item] <= 0 for item in gap):
-                        if first:
-                            first = False
-                            self._log("需求装备均已盈余")
-                            if full2all:
-                                demand = all_demand
-                                gap = client.data.get_demand_gap(demand, lambda x: db.is_equip(x))
-                                self._log("考虑所有角色的需求装备")
-
-                                if all(gap[item] <= 0 for item in gap):
-                                    self._log("所有角色的需求装备均已盈余")
-                                    if full2stop:
-                                        self._log("停止刷图")
-                                        break
+                        self._log("需求装备均已盈余")
+                        break
 
                     quest_weight = client.data.get_quest_weght(gap)
                     quest_id = sorted(quest_list, key = lambda x: quest_weight[x], reverse = True)
@@ -437,23 +404,14 @@ class smart_sweep(DIY_sweep):
                         quest.append((x, tab.skip_count))
         return quest
 
+
 @description('''
 可指定装备，当该装备库存达到设定数量时停止刷取
 '''.strip())
 @name("刷最新n图")
 @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
 @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
-# 新增配置：指定装备选择（确保所有装备显示）
-@multichoice("target_equipments", "指定监控装备", [], 
-             lambda: [
-                 # 最大化显示所有可能的装备，仅过滤明显非装备的ID
-                 f"{db.get_equip_name(eid) or '未知装备'} (ID:{eid})" 
-                 for eid in db.equip_data.keys() 
-                 if isinstance(eid, int) and  # 确保是整数ID
-                    str(eid).isdigit() and   # 确保是数字
-                    len(str(eid)) >= 6       # 装备ID通常至少6位数字
-             ])
-# 新增配置：指定装备目标数量
+@EquipListConfig("lazy_sweep_consider_equip", "考虑装备")
 @inttype("target_equip_count", "指定装备目标数量", 10, list(range(1, 301)))
 @default(False)
 @tag_stamina_consume
@@ -461,42 +419,36 @@ class last_normal_quest_sweep(DIY_sweep):
     async def get_loop_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
         last_sweep_quests: List[int] = self.get_config('last_normal_quests_sweep')
         last_sweep_quests_count: int = 3
-        quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
+        
+        # 按关卡ID从大到小排序
+        last_sweep_quests_sorted = sorted(last_sweep_quests, reverse=True)
+        
+        quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests_sorted]
         return quest
 
     async def do_task(self, client: pcrclient):
-        target_equip_display_names = self.get_config('target_equipments')
+        # 修改配置获取方式，适配EquipListConfig
+        target_equip_ids = self.get_config('lazy_sweep_consider_equip')
         target_count = self.get_config('target_equip_count')
         
-        target_equip_ids = []
-        
-        for display_name in target_equip_display_names:
+        # 格式化装备ID列表，确保类型正确
+        formatted_equip_ids = []
+        for eid in target_equip_ids:
             try:
-                if "(ID:" in display_name:
-                    eid_str = display_name.split("(ID:")[1].split(")")[0].strip()
-                    eid = int(eid_str)
-                    
-                    if eid in db.equip_data:
-                        target_equip_ids.append((eInventoryType.Equip, eid))
-                        self._log(f"已添加监控装备: {display_name}")
-                    else:
-                        self._log(f"数据库中未找到装备ID={eid}，但仍尝试监控")
-                        target_equip_ids.append((eInventoryType.Equip, eid))
-                else:
-                    self._log(f"无法解析装备名称格式: {display_name}")
-            except (IndexError, ValueError) as e:
-                self._log(f"解析装备名称失败: {display_name}, 错误: {str(e)}")
+                # 确保装备ID为整数
+                equip_id = int(eid)
+                formatted_equip_ids.append((eInventoryType.Equip, equip_id))
+                equip_name = db.get_equip_name(equip_id) or f"未知装备(ID:{equip_id})"
+                self._log(f"已添加监控装备: {equip_name}")
+            except (ValueError, TypeError) as e:
+                self._log(f"无效的装备ID: {eid}, 错误: {str(e)}")
         
-        # 特别检查并添加可能遗漏的重要装备ID（可根据需要扩展）从db 里equipment_data获取装备名的。
-        important_ids = []
-        for eid in important_ids:
-            if eid in db.equip_data and (eInventoryType.Equip, eid) not in target_equip_ids:
-                target_equip_ids.append((eInventoryType.Equip, eid))
-                self._log(f"已自动添加重要装备: ID={eid}")
+        # 按装备ID从大到小排序
+        target_equip_ids_sorted = sorted(formatted_equip_ids, key=lambda x: x[1], reverse=True)
         
-        if target_equip_ids:
+        if target_equip_ids_sorted:
             self._log("\n===== 监控装备列表 =====")
-            for equip_type_id in target_equip_ids:
+            for equip_type_id in target_equip_ids_sorted:
                 eid = equip_type_id[1]
                 equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
                 current = client.data.get_inventory(equip_type_id)
@@ -515,10 +467,10 @@ class last_normal_quest_sweep(DIY_sweep):
                 raise SkipError("无刷取关卡")
 
             while True:
-                if target_equip_ids:
+                if target_equip_ids_sorted:
                     all_reached = True
                     self._log("\n----- 装备库存检查 -----")
-                    for equip_type_id in target_equip_ids:
+                    for equip_type_id in target_equip_ids_sorted:
                         eid = equip_type_id[1]
                         current = client.data.get_inventory(equip_type_id)
                         equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
@@ -551,8 +503,10 @@ class last_normal_quest_sweep(DIY_sweep):
             raise
         finally:
             if clean_cnt:
+                # 按关卡ID从大到小排序显示结果
+                sorted_clean_cnt = sorted(clean_cnt.items(), key=lambda x: x[0], reverse=True)
                 msg = '\n'.join(f"{db.get_quest_name(quest)}: 刷取{cnt}次" 
-                              for quest, cnt in clean_cnt.items())
+                              for quest, cnt in sorted_clean_cnt)
                 self._log("\n" + msg)
                 self._log("---------")
             else:
@@ -566,7 +520,7 @@ class last_normal_quest_sweep(DIY_sweep):
 '''.strip())
 @name("深域扫荡")
 @TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
-@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", [])  # 这里改为空列表，默认不勾选任何选项
+@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
 @default(True)
 @tag_stamina_consume
 class talent_sweep(DIY_sweep):
