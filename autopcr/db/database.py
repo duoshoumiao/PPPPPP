@@ -2116,7 +2116,7 @@ class database():
         return talent_id
 
     def equip_candidate(self) -> List[int]:
-        return [p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))]
+        return sorted([p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))], reverse=True)
 
     def talent_candidate(self) -> List[str]:
         return [f"{talent_id}: {self.talents[talent_id].talent_name}" for talent_id in self.talents]

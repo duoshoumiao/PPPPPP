@@ -274,6 +274,38 @@ class EquipListConfig(MultiSearchConfig):
 
     def candidate_display(self, equip_id: int):
         return db.get_equip_name(equip_id)
+    
+    def candidate_tag(self, equip_id: int):
+        # 整合ID、名称和可能的其他标签用于搜索
+        tags = [str(equip_id)]  # 包含ID
+        name = self.candidate_display(equip_id)
+        tags.append(name)  # 包含显示名称
+        # 可以添加其他相关标签（如果有）
+        return tags
+
+    def validate_value(self, value: List):
+        if not value:
+            return []
+        
+        # 处理搜索输入，支持中文匹配
+        candidates = self.candidates
+        valid_values = []
+        for v in value:
+            # 对于字符串输入（搜索关键词）进行匹配
+            if isinstance(v, str):
+                # 遍历所有候选装备查找匹配项
+                for equip_id in candidates:
+                    # 检查ID、显示名称是否包含搜索关键词
+                    if (v in str(equip_id) or 
+                        v in self.candidate_display(equip_id) or
+                        any(v in tag for tag in self.candidate_tag(equip_id))):
+                        valid_values.append(equip_id)
+            # 对于ID直接验证是否在候选列表中
+            elif v in candidates:
+                valid_values.append(v)
+        
+        # 去重并返回
+        return list(set(valid_values)) if valid_values else None
 
 class UnitListConfig(UnitConfigMixin, MultiSearchConfig):
     def __init__(self, key: str, desc: str):
