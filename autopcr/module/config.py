@@ -270,24 +270,33 @@ class MultiSearchConfig(MultiChoiceConfig):
 
 class EquipListConfig(MultiSearchConfig):
     def __init__(self, key: str, desc: str):
+        # 保留原始初始化逻辑，不改变基础行为
         super().__init__(key, desc, [], db.equip_candidate(), short_display=True)
+        # 增加类型标识，用于区分其他数据类型
+        self.data_type = "equipment"
 
     def candidate_display(self, equip_id: int):
-        return db.get_equip_name(equip_id)
+        # 仅处理装备ID，确保输入是整数且在装备候选列表中
+        if isinstance(equip_id, int) and equip_id in self.candidates:
+            return db.get_equip_name(equip_id)
+        return ""  # 非装备ID返回空，避免干扰其他数据
     
     def candidate_tag(self, equip_id: int):
-        # 整合ID、名称和可能的其他标签用于搜索
+        # 仅处理有效的装备ID
+        if not (isinstance(equip_id, int) and equip_id in self.candidates):
+            return []
+            
+        # 整合ID、名称用于搜索
         tags = [str(equip_id)]  # 包含ID
         name = self.candidate_display(equip_id)
-        tags.append(name)  # 包含显示名称
-        # 可以添加其他相关标签（如果有）
+        if name:
+            tags.append(name)  # 包含显示名称
         return tags
 
     def validate_value(self, value: List):
         if not value:
             return []
         
-        # 处理搜索输入，支持中文匹配
         candidates = self.candidates
         valid_values = []
         for v in value:
@@ -297,14 +306,13 @@ class EquipListConfig(MultiSearchConfig):
                 for equip_id in candidates:
                     # 检查ID、显示名称是否包含搜索关键词
                     if (v in str(equip_id) or 
-                        v in self.candidate_display(equip_id) or
-                        any(v in tag for tag in self.candidate_tag(equip_id))):
+                        v in self.candidate_display(equip_id)):
                         valid_values.append(equip_id)
             # 对于ID直接验证是否在候选列表中
-            elif v in candidates:
+            elif isinstance(v, int) and v in candidates:
                 valid_values.append(v)
         
-        # 去重并返回
+        # 去重并返回，确保只返回装备相关ID
         return list(set(valid_values)) if valid_values else None
 
 class UnitListConfig(UnitConfigMixin, MultiSearchConfig):

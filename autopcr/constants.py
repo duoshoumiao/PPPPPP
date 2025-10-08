@@ -1,6 +1,6 @@
 import os
-import uuid
 from distutils.util import strtobool
+import uuid
 import logging
 
 SERVER_PORT = int(os.getenv("AUTOPCR_SERVER_PORT", "13200"))
@@ -18,8 +18,8 @@ CHANNEL_OPTION = [BSDK, QSDK]
 
 DEBUG_LOG = strtobool(os.getenv("AUTOPCR_SERVER_DEBUG_LOG", "false"))
 
-ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'false'))
-SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", "645364231"))
+ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'true'))
+SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", ""))
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), '..')
 CACHE_DIR = os.path.join(ROOT_DIR, './cache/')
