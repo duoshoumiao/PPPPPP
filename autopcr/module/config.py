@@ -104,10 +104,8 @@ class Config:
         value = self.get_value()
         ret = ""
         if isinstance(value, list):
-            return ', '.join([str(self.candidate_display(v)) for v in value])
             ret = ', '.join([str(self.candidate_display(v)) for v in value])
         else:
-            return str(self.candidate_display(value))
             ret = str(self.candidate_display(value))
         if self.short_display and len(ret) > 15:
             ret = ret[:15] + '...'
@@ -279,12 +277,10 @@ class EquipListConfig(MultiSearchConfig):
 
 class UnitListConfig(UnitConfigMixin, MultiSearchConfig):
     def __init__(self, key: str, desc: str):
-        super().__init__(key, desc, [], db.unlock_unit_condition_candidate)
         super().__init__(key, desc, [], db.unlock_unit_condition_candidate, short_display=True)
 
 class LimitUnitListConfig(UnitConfigMixin, MultiSearchConfig):
     def __init__(self, key: str, desc: str):
-        super().__init__(key, desc, [], db.limit_unit_condition_candidate)
         super().__init__(key, desc, [], db.limit_unit_condition_candidate, short_display=True)
 
 class ConditionalExecutionWrapper(Config):
