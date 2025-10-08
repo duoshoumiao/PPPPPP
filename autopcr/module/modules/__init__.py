@@ -120,6 +120,8 @@ daily_modules = ModuleList(
         clanbattle_shop,
         
         clan_equip_request,
+        master_shop_talent,
+        master_shop,
         love_up,
         shiori_mission_check,
         main_story_reading,
@@ -164,7 +166,6 @@ unit_modules = ModuleList(
     'unit',
     [
         search_unit,
-        master_shop,
         missing_unit,
         refresh_box,
         unit_promote,
@@ -203,6 +204,8 @@ tool_modules = ModuleList(
     'tool',
     [
         return_jewel,
+        find_talent_quest,
+        find_clan_talent_quest,
         # cook_pudding,
         ex_equip_rank_up,
         ex_equip_enhance_up,
