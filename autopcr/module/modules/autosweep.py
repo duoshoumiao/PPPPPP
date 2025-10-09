@@ -406,13 +406,14 @@ class smart_sweep(DIY_sweep):
 
 
 @description('''
-可指定装备，当该装备库存达到设定数量时停止刷取
+可指定装备，当该装备库存达到设定数量或缺口(#查装备 可查询缺口)小于设定值时停止刷取
 '''.strip())
 @name("刷最新n图")
 @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
 @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
 @EquipListConfig("lazy_sweep_consider_equip", "考虑装备")
-@inttype("target_equip_count", "指定装备目标数量", 10, list(range(1, 301)))
+@inttype("target_equip_count", "指定库存量", 10, list(range(1, 301)))
+@inttype("gap_limit", "缺口数限制（0表示不限制）", 0, list(range(0, 99999)))  # 缺口数限制配置
 @default(False)
 @tag_stamina_consume
 class last_normal_quest_sweep(DIY_sweep):
@@ -430,6 +431,10 @@ class last_normal_quest_sweep(DIY_sweep):
         # 修改配置获取方式，适配EquipListConfig
         target_equip_ids = self.get_config('lazy_sweep_consider_equip')
         target_count = self.get_config('target_equip_count')
+        gap_limit = self.get_config('gap_limit')  # 获取缺口数限制配置
+        
+        # 初始化变量，避免未定义错误
+        target_equip_ids_sorted = []
         
         # 格式化装备ID列表，确保类型正确
         formatted_equip_ids = []
@@ -452,7 +457,14 @@ class last_normal_quest_sweep(DIY_sweep):
                 eid = equip_type_id[1]
                 equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
                 current = client.data.get_inventory(equip_type_id)
-                self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/{target_count}")
+                demand = client.data.get_equip_demand().get(eid, 0)  # 获取装备需求
+                
+                # 允许缺口为负数（直接计算差值）
+                gap = demand - current
+                
+                # 区分显示缺口/盈余
+                gap_display = f"缺口 {gap}" if gap > 0 else f"盈余 {abs(gap)}"
+                self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}, {gap_display} (缺口限制: {gap_limit})")
             self._log("======================\n")
         else:
             self._log("\n未设置有效的监控装备，将持续刷取直到手动停止\n")
@@ -473,15 +485,24 @@ class last_normal_quest_sweep(DIY_sweep):
                     for equip_type_id in target_equip_ids_sorted:
                         eid = equip_type_id[1]
                         current = client.data.get_inventory(equip_type_id)
+                        demand = client.data.get_equip_demand().get(eid, 0)  # 获取装备需求
                         equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
                         
-                        self._log(f"{equip_name} (ID:{eid}): {current}/{target_count}")
+                        # 计算缺口（允许为负数）
+                        gap = demand - current
                         
-                        if current < target_count:
+                        # 区分显示缺口/盈余
+                        gap_display = f"缺口 {gap}" if gap > 0 else f"盈余 {abs(gap)}"
+                        self._log(f"{equip_name} (ID:{eid}): 库存 {current}, 当前{gap_display}")
+                        
+                        # 检查是否达到停止条件：缺口≤设定限制值
+                        if not (gap <= gap_limit):
                             all_reached = False
                     
                     if all_reached:
-                        self._log("\n所有指定装备均已达到目标数量，停止刷取")
+                        stop_reason = "所有指定装备均已满足需求（含盈余）" if gap_limit == 0 else \
+                                     f"所有指定装备缺口/盈余均满足限制条件({gap_limit})"
+                        self._log(f"\n{stop_reason}，停止刷取")
                         break
 
                 # 每刷取10次显示一次进度
@@ -513,6 +534,8 @@ class last_normal_quest_sweep(DIY_sweep):
                 self._log("需刷取的图均无次数")
             if result:
                 self._log(await client.serialize_reward_summary(result))
+
+
 
     
 @description('''
