@@ -403,7 +403,36 @@ class smart_sweep(DIY_sweep):
                     for x in tab.skip_list:
                         quest.append((x, tab.skip_count))
         return quest
-
+    
+@description('''
+每天扫荡！重置扫荡！
+'''.strip())
+@name("深域扫荡")
+@TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
+@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
+@default(True)
+@tag_stamina_consume
+class talent_sweep(DIY_sweep):
+    async def get_start_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
+        recovery_areas: List[int] = self.get_config('talent_sweep_target_recovery_areas')
+        no_max_no_sweep: List[int] = self.get_config('talent_sweep_no_max_no_sweep')
+        daily_clear_limit_count = client.data.settings.talent_quest.daily_clear_limit_count
+        ret = []
+        for area_id in db.talent_quest_area_data:
+            talent_id = db.talent_quest_area_data[area_id].talent_id
+            talent_name = db.talents[talent_id].talent_name
+            max_quest = max(db.talent_quests_data[area_id])
+            max_sweepable_quest = client.data.cleared_talent_quest_ids.get(talent_id, 0)
+            if max_sweepable_quest == 0:
+                self._warn(f"未通关{talent_name}关卡，无法扫荡")
+                continue
+            elif max_quest != max_sweepable_quest and talent_id in no_max_no_sweep:
+                self._log(f"不扫荡非最高的{db.get_quest_name(max_sweepable_quest)}关卡")
+                self._log(f"如欲扫荡，请移除{talent_name}的非最高不扫荡")
+                continue
+            recover = talent_id in recovery_areas
+            ret.append((max_sweepable_quest, daily_clear_limit_count * (1 + recover * client.data.settings.talent_quest.recovery_max_count)))
+        return ret
 
 @description('''
 可指定装备，当该装备库存达到设定数量或缺口(#查装备 可查询缺口)小于设定值时停止刷取
@@ -472,11 +501,13 @@ class last_normal_quest_sweep(DIY_sweep):
         all_demand = client.data.get_equip_demand()
         clean_cnt = Counter()
         result = []
+        success = True  # 默认为成功状态
         
         try:
             loop_quests = await self.get_loop_quest(client)
             if not loop_quests:
-                raise SkipError("无刷取关卡")
+                self._log("无刷取关卡，任务结束")
+                return  # 无关卡可刷视为成功结束
 
             while True:
                 if target_equip_ids_sorted:
@@ -503,7 +534,7 @@ class last_normal_quest_sweep(DIY_sweep):
                         stop_reason = "所有指定装备均已满足需求（含盈余）" if gap_limit == 0 else \
                                      f"所有指定装备缺口/盈余均满足限制条件({gap_limit})"
                         self._log(f"\n{stop_reason}，停止刷取")
-                        break
+                        break  # 正常完成，保持success=True
 
                 # 每刷取10次显示一次进度
                 if sum(clean_cnt.values()) > 0 and sum(clean_cnt.values()) % 10 == 0:
@@ -514,14 +545,22 @@ class last_normal_quest_sweep(DIY_sweep):
                         rewards = await client.quest_skip_aware(quest_id, count, True, True)
                         result.extend(rewards)
                         clean_cnt[quest_id] += count
-                    except SkipError:
-                        pass
+                    except SkipError as e:
+                        self._log(f"刷取暂停: {str(e)}")
+                        break  # 跳过错误视为正常结束
                     except AbortError as e:
-                        self._log(str(e))
-                        raise 
+                        self._log(f"操作中断: {str(e)}")
+                        # 体力不足视为正常结束，其他错误视为失败
+                        if not str(e).endswith("体力不足"):
+                            success = False
+                        break
+                else:
+                    continue  # 正常完成本轮循环，继续下一轮
+                break  # 出现异常或需要停止，跳出循环
 
-        except:
-            raise
+        except Exception as e:
+            self._log(f"发生错误: {str(e)}")
+            success = False  # 其他异常视为失败
         finally:
             if clean_cnt:
                 # 按关卡ID从大到小排序显示结果
@@ -534,36 +573,3 @@ class last_normal_quest_sweep(DIY_sweep):
                 self._log("需刷取的图均无次数")
             if result:
                 self._log(await client.serialize_reward_summary(result))
-
-
-
-    
-@description('''
-每天扫荡！重置扫荡！
-'''.strip())
-@name("深域扫荡")
-@TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
-@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
-@default(True)
-@tag_stamina_consume
-class talent_sweep(DIY_sweep):
-    async def get_start_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
-        recovery_areas: List[int] = self.get_config('talent_sweep_target_recovery_areas')
-        no_max_no_sweep: List[int] = self.get_config('talent_sweep_no_max_no_sweep')
-        daily_clear_limit_count = client.data.settings.talent_quest.daily_clear_limit_count
-        ret = []
-        for area_id in db.talent_quest_area_data:
-            talent_id = db.talent_quest_area_data[area_id].talent_id
-            talent_name = db.talents[talent_id].talent_name
-            max_quest = max(db.talent_quests_data[area_id])
-            max_sweepable_quest = client.data.cleared_talent_quest_ids.get(talent_id, 0)
-            if max_sweepable_quest == 0:
-                self._warn(f"未通关{talent_name}关卡，无法扫荡")
-                continue
-            elif max_quest != max_sweepable_quest and talent_id in no_max_no_sweep:
-                self._log(f"不扫荡非最高的{db.get_quest_name(max_sweepable_quest)}关卡")
-                self._log(f"如欲扫荡，请移除{talent_name}的非最高不扫荡")
-                continue
-            recover = talent_id in recovery_areas
-            ret.append((max_sweepable_quest, daily_clear_limit_count * (1 + recover * client.data.settings.talent_quest.recovery_max_count)))
-        return ret
