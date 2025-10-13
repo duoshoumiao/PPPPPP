@@ -480,25 +480,29 @@ class last_normal_quest_sweep(DIY_sweep):
         # 按装备ID从大到小排序
         target_equip_ids_sorted = sorted(formatted_equip_ids, key=lambda x: x[1], reverse=True)
         
+        # 获取全角色列表用于计算缺口
+        all_units = list(db.unit_data.keys())
+        # 获取同步参数用于计算装备需求
+        grow_parameter_list = client.data.get_synchro_parameter()
+        # 计算全角色装备需求缺口（核心修改：使用全角色计算缺口）
+        equip_demand_gap = client.data.get_equip_demand2_gap(all_units, grow_parameter_list=grow_parameter_list)
+        
         if target_equip_ids_sorted:
             self._log("\n===== 监控装备列表 =====")
             for equip_type_id in target_equip_ids_sorted:
                 eid = equip_type_id[1]
                 equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
                 current = client.data.get_inventory(equip_type_id)
-                demand = client.data.get_equip_demand().get(eid, 0)  # 获取装备需求
-                
-                # 允许缺口为负数（直接计算差值）
-                gap = demand - current
+                # 从全角色缺口数据中获取需求（修改点）
+                demand_gap = equip_demand_gap.get(equip_type_id, 0)
                 
                 # 区分显示缺口/盈余
-                gap_display = f"缺口 {gap}" if gap > 0 else f"盈余 {abs(gap)}"
+                gap_display = f"缺口 {demand_gap}" if demand_gap > 0 else f"盈余 {abs(demand_gap)}"
                 self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}, {gap_display} (缺口限制: {gap_limit})")
             self._log("======================\n")
         else:
             self._log("\n未设置有效的监控装备，将持续刷取直到手动停止\n")
         
-        all_demand = client.data.get_equip_demand()
         clean_cnt = Counter()
         result = []
         success = True  # 默认为成功状态
@@ -513,14 +517,16 @@ class last_normal_quest_sweep(DIY_sweep):
                 if target_equip_ids_sorted:
                     all_reached = True
                     self._log("\n----- 装备库存检查 -----")
+                    # 重新计算最新缺口（确保数据最新）
+                    equip_demand_gap = client.data.get_equip_demand2_gap(all_units, grow_parameter_list=grow_parameter_list)
+                    
                     for equip_type_id in target_equip_ids_sorted:
                         eid = equip_type_id[1]
                         current = client.data.get_inventory(equip_type_id)
-                        demand = client.data.get_equip_demand().get(eid, 0)  # 获取装备需求
                         equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
                         
-                        # 计算缺口（允许为负数）
-                        gap = demand - current
+                        # 从全角色缺口数据中获取最新需求（修改点）
+                        gap = equip_demand_gap.get(equip_type_id, 0)
                         
                         # 区分显示缺口/盈余
                         gap_display = f"缺口 {gap}" if gap > 0 else f"盈余 {abs(gap)}"
