@@ -128,18 +128,40 @@ class ArenaQuery:
                     data=ArenaQuery._dumps(data).encode('utf8'),
                     timeout=5,
                 )
-                res = await resp.json()
+                
+                # 先获取响应文本（异步操作需要用await）
+                resp_text = await resp.text()
+                
+                # 检查状态码
+                if resp.status_code != 200:
+                    logger.error(f"接口请求失败，状态码: {resp.status_code}，响应内容: {resp_text}")
+                    return []
+                    
+                # 检查响应内容是否为空
+                if not resp_text.strip():
+                    logger.error("接口返回空内容")
+                    return []
+                    
+                # 解析JSON
+                res = json.loads(resp_text)
                 res = ArenaQueryResponse.parse_obj(res)
                 if res.code:
                     raise ValueError(f'服务器报错：返回值{res.code}')
                 return res.data.result if res.data else []
+                
             except aiorequests.requests.ConnectionError as e:
+                logger.error(f"网络连接错误: {str(e)}")
                 return []
             except aiorequests.requests.ReadTimeout as e:
+                logger.error(f"请求超时: {str(e)}")
+                return []
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON解析失败，响应内容: {resp_text if 'resp_text' in locals() else '无响应'}")
                 return []
             except Exception as e:
-                raise e
-
+                logger.error(f"查询发生未知错误: {str(e)}")
+                return []
+                
     def is_approximate_team(self, lunits: List[int], lregion: ArenaRegion, units: List[int], region: ArenaRegion) -> bool:
         if lregion != region and lregion != ArenaRegion.ALL:
             return False
