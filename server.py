@@ -177,7 +177,6 @@ sv_help = f"""
 - {prefix}pjjc换防 将pjjc防守阵容随机错排
 - {prefix}免费十连 <卡池id> 卡池id来自【{prefix}卡池】
 - {prefix}来发十连 <卡池id> [抽到出] [单抽券|单抽] [编号小优先] [开抽] 赛博抽卡，谨慎使用。卡池id来自【{prefix}卡池】，[抽到出]表示抽到出货或达天井，默认十连，[单抽券]表示仅用厕纸，[单抽]表示宝石单抽，[标号小优先]指智能pickup时优先选择编号小的角色，[开抽]表示确认抽卡。已有up也可再次触发。
-- {prefix}智能刷n图 新开图/可扫荡 
 - {prefix}智能刷h图
 - {prefix}智能刷外传
 - {prefix}刷专二
@@ -1364,31 +1363,31 @@ async def free_gacha(botev: BotEvent):
     }
     return config
 
-@register_tool("智能刷n图", "smart_normal_sweep")
-async def smart_normal_swee(botev: BotEvent):
-    await botev.send("请稍等")
-    msg = await botev.message()
-    config = {
-        "normal_sweep_strategy": "刷最缺",
-        "normal_sweep_quest_scope": "全部",
-        "normal_sweep_consider_unit": "所有",
-        "normal_sweep_consider_unit_fav": True,
-        "normal_sweep_equip_ok_to_full": True
-    }
+# @register_tool("智能刷n图", "smart_normal_sweep")
+# async def smart_normal_swee(botev: BotEvent):
+    # await botev.send("请稍等")
+    # msg = await botev.message()
+    # config = {
+        # "normal_sweep_strategy": "刷最缺",
+        # "normal_sweep_quest_scope": "全部",
+        # "normal_sweep_consider_unit": "所有",
+        # "normal_sweep_consider_unit_fav": True,
+        # "normal_sweep_equip_ok_to_full": True
+    # }
     
-    try:
-        if is_args_exist(msg, '新开图'):
-            normal_sweep_quest_scope = '新开图'
-        elif is_args_exist(msg, '可扫荡'):
-            normal_sweep_quest_scope = '可扫荡'
-    except:
-        pass
-    config = {
-        "normal_sweep_quest_scope": normal_sweep_quest_scope,
-        "normal_sweep_consider_unit_fav": True,
-        "normal_sweep_equip_ok_to_full": True,
-    }
-    return config
+    # try:
+        # if is_args_exist(msg, '新开图'):
+            # normal_sweep_quest_scope = '新开图'
+        # elif is_args_exist(msg, '可扫荡'):
+            # normal_sweep_quest_scope = '可扫荡'
+    # except:
+        # pass
+    # config = {
+        # "normal_sweep_quest_scope": normal_sweep_quest_scope,
+        # "normal_sweep_consider_unit_fav": True,
+        # "normal_sweep_equip_ok_to_full": True,
+    # }
+    # return config
     
 @register_tool("智能刷h图", "smart_hard_sweep")
 async def smart_hard_sweep(botev: BotEvent):
