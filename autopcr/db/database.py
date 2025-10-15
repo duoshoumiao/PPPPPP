@@ -1533,14 +1533,24 @@ class database():
             )
 
     @lazy_property
+    def experience_knight_rank(self) -> Dict[int, ExperienceKnightRank]:
+        with self.dbmgr.session() as db:
+            return (
+                ExperienceKnightRank.query(db) 
+                .to_dict(
+                    lambda x: x.knight_rank,
+                    lambda x: x.total_exp
+                )
+            )
+
+    @lazy_property
     def talents(self) -> Dict[int, Talent]:
         with self.dbmgr.session() as db:
             return Talent.query(db).to_dict(lambda x: x.talent_id, lambda x: x)
 
     def get_ex_equip_star_from_pt(self, id: int, pt: int) -> int:
         rarity = self.get_ex_equip_rarity(id)
-        history_star = [star for star, enhancement_data in self.ex_equipment_enhance_data[rarity].items() if enhancement_data.total_point <= pt]
-        star = max([0] + history_star)
+        star = max([star for star, enhancement_data in self.ex_equipment_enhance_data[rarity].items() if enhancement_data.total_point <= pt], default=0)
         return star
 
     def get_ex_equip_enhance_pt(self, id: int, pt: int, star: int) -> int:
@@ -1564,7 +1574,7 @@ class database():
         return self.ex_equipment_data[id].rarity
 
     def get_ex_equip_max_rank(self, id: int) -> int:
-        return max(self.ex_equipment_rankup_data[self.get_ex_equip_rarity(id)].keys(), default=0)
+        return max(self.ex_equipment_rankup_data.get(self.get_ex_equip_rarity(id), {}).keys(), default=0)
 
     def get_ex_equip_rarity_name(self, id: int) -> str:
         return self.ex_rarity_name[self.get_ex_equip_rarity(id)]
@@ -2003,6 +2013,14 @@ class database():
     def get_level_up_total_exp(self, target_level: int) -> int:
         return self.experience_unit[target_level]
 
+    def query_knight_exp_rank(self, target_value: int) -> int:
+        target_rank = max(  
+            (rank for rank, exp in self.experience_knight_rank.items() if target_value >= exp),  
+            default=1  
+        )  
+
+        return target_rank
+
     def get_gacha_temp_ticket(self) -> List[int]:
         now = apiclient.datetime
         return flow(self.gacha_temp_ticket) \
@@ -2124,7 +2142,7 @@ class database():
         return talent_id
 
     def equip_candidate(self) -> List[int]:
-        return sorted([p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))], reverse=True)[:30]
+        return sorted([p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))], reverse=True)[:40]
 
     def talent_candidate(self) -> List[str]:
         return [f"{talent_id}: {self.talents[talent_id].talent_name}" for talent_id in self.talents]
@@ -2166,7 +2184,7 @@ class database():
 
     def last_normal_quest(self) -> List[int]:
         quest_ids = sorted(self.normal_quest_data.keys(), reverse=True)
-        return quest_ids[:30]
+        return quest_ids[:40]
         last_start_time = flow(self.normal_quest_data.values()) \
                 .where(lambda x: db.parse_time(x.start_time) <= apiclient.datetime) \
                 .max(lambda x: x.start_time).start_time
