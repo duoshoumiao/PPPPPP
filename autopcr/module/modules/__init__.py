@@ -93,7 +93,7 @@ daily_modules = ModuleList(
         smart_hard_sweep,
         smart_shiori_sweep,
         last_normal_quest_sweep,
-        lazy_normal_sweep,
+        # lazy_normal_sweep,
 
         all_in_hatsune,
 
@@ -121,7 +121,6 @@ daily_modules = ModuleList(
         
         clan_equip_request,
         master_shop_talent,
-        master_shop,
         love_up,
         shiori_mission_check,
         main_story_reading,
@@ -204,6 +203,7 @@ tool_modules = ModuleList(
     'tool',
     [
         return_jewel,
+        master_shop,
         find_talent_quest,
         find_clan_talent_quest,
         # cook_pudding,
@@ -222,7 +222,6 @@ tool_modules = ModuleList(
         remove_cb_support,
         redeem_unit_swap,
         query_player_profile,
-        query_deep_progress,
         jjc_back,
         pjjc_back,
         jjc_info,

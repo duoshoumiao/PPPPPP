@@ -718,7 +718,7 @@ class DeckUpdateResponse(responses.DeckUpdateResponse):
 class SeasonPassRewardAcceptResponse(responses.SeasonPassRewardAcceptResponse):
     async def update(self, mgr: datamgr, request):
         if self.rewards:
-            for reward in self.rewards:
+            for reward in self.rewards[::-1]:
                 mgr.update_inventory(reward)
 
 @handles

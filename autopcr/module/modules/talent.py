@@ -71,6 +71,6 @@ class find_clan_talent_quest(Module):
                 quest = self._format_quest_stage(clear_count) 
                 msg.append(f"{talent_name}{quest}")
             max_stage = self._format_quest_stage(max_stage)
-            warn = f"(未通关最高关卡：{max_stage}！！！)" if flag else "" 
-            member_progress = f"({member.viewer_id}){member.name}: " + "/".join(msg) + f" rank等级:{kight_rank}{warn}"
+            warn = f"(未通关最高关卡：{max_stage}⚠️⚠️⚠️)" if flag else "" 
+            member_progress = f"({member.viewer_id}): " + "/".join(msg) + f" {member.name}：rank等级:{kight_rank}{warn}"
             self._log(member_progress)
