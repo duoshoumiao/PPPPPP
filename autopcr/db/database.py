@@ -2142,7 +2142,7 @@ class database():
         return talent_id
 
     def equip_candidate(self) -> List[int]:
-        return sorted([p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))], reverse=True)[:40]
+        return sorted([p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))], reverse=True)[:35]
 
     def talent_candidate(self) -> List[str]:
         return [f"{talent_id}: {self.talents[talent_id].talent_name}" for talent_id in self.talents]
@@ -2184,7 +2184,7 @@ class database():
 
     def last_normal_quest(self) -> List[int]:
         quest_ids = sorted(self.normal_quest_data.keys(), reverse=True)
-        return quest_ids[:40]
+        return quest_ids[:35]
         last_start_time = flow(self.normal_quest_data.values()) \
                 .where(lambda x: db.parse_time(x.start_time) <= apiclient.datetime) \
                 .max(lambda x: x.start_time).start_time

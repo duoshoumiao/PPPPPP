@@ -130,7 +130,7 @@ class ArenaQuery:
                 )
                 
                 # 先获取响应文本（异步操作需要用await）
-                resp_text = await resp.text()
+                resp_text = await resp.text
                 
                 # 检查状态码
                 if resp.status_code != 200:

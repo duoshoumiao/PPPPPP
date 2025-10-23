@@ -11,6 +11,8 @@ from .autopcr.db.dbstart import db_start
 from .autopcr.util.draw import instance as drawer
 import asyncio, datetime
 
+from io import BytesIO
+from PIL import Image
 import nonebot
 from nonebot import on_startup
 import hoshino
@@ -180,14 +182,17 @@ sv_help = f"""
 - {prefix}智能刷h图
 - {prefix}智能刷外传
 - {prefix}刷专二
+- {prefix}强化ex装
+- {prefix}合成ex装
 - {prefix}领小屋体力
 - {prefix}公会点赞
 - {prefix}领每日体力
 - {prefix}领取礼物箱
 - {prefix}查公会深域进度
 - {prefix}收菜  探险续航哦
-- {prefix}设置编队 默认 第一页 第一队 即 设置编队 1 1 内容
-- {prefix}一键编队 第几页 第几队  如 #一键编队 1 1  ，代表第一页第一队
+- {prefix}一键编队 1 1 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 END 设置多队编队，队伍不足5人以END结尾
+- {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
+- {prefix}识图   用于提取图中队伍
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
 - {prefix}拉角色练度 289 31 289 289 289 289 5 5 5 5 5 5 0 可可罗 佩可 凯露    代表 等级 品级 ub s1 s2 ex 左上 右上 左中 右中 左下 右下 专武 角色名
 - {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
@@ -244,6 +249,7 @@ class BotEvent:
     async def group_id(self) -> str: ...
     async def send_qq(self) -> str: ...
     async def message(self) -> List[str]: ...
+    async def image(self) -> List[str]: ...
     async def is_admin(self) -> bool: ...
     async def is_super_admin(self) -> bool: ...
     async def get_group_member_list(self) -> List: ...
@@ -257,11 +263,14 @@ class HoshinoEvent(BotEvent):
 
         self.at_sb = []
         self._message = []
+        self._image = []
         for m in ev.message:
             if m.type == 'at' and m.data['qq'] != 'all':
                 self.at_sb.append(str(m.data['qq']))
-            elif m.type == 'text': # ignore other type
+            elif m.type == 'text':
                 self._message += m.data['text'].split()
+            elif m.type == 'image':
+                self._image.append(m.data['url'])
 
     async def get_group_member_list(self) -> List[Tuple[str, str]]: # (qq, nick_name)
         members = await self.bot.get_group_member_list(group_id=self.ev.group_id)
@@ -280,6 +289,9 @@ class HoshinoEvent(BotEvent):
 
     async def message(self):
         return self._message
+
+    async def image(self):
+        return self._image
 
     async def send(self, msg: str):
         msg = f"[CQ:reply,id={self.ev.message_id}]{msg}"
@@ -447,7 +459,7 @@ def wrap_tool(func):
                     del msg[0]
                 break
         else:
-            await botev.finish(f"未找到工具【{tool}】")
+            await botev.finish(f"未找到工具【{tool}，请发送#帮助】")
 
         tool = tool_info[tool]
 
@@ -863,7 +875,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc):
         resp = resp.get_result()
 
         # 仅对查公会深域进度工具生成图片
-        if tool.key == "query_deep_progress":
+        if tool.key == "find_clan_talent_quest":
             # 生成深域进度图片
             img = await drawer.draw_task_result(resp)
             msg = f"{alias}"
@@ -926,50 +938,6 @@ async def jjc_back(botev: BotEvent):
     }
     return config
     
-@register_tool("设置编队", "set_my_party")
-async def set_my_party(botev: BotEvent):
-    msg = await botev.message()
-    await botev.send("请稍等")
-    party_start_num = 1
-    tab_start_num = 1
-    set_my_party_text = "自定义编队\n"
-    try:
-        tab_start_num = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    try:
-        party_start_num = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    units = []
-    unknown_units = []
-    for _ in range(5):
-        try:
-            unit_name = msg[0]
-            unit = get_id_from_name(unit_name)
-            if unit:
-                units.append(unit)
-            else:
-                unknown_units.append(unit_name)
-            del msg[0]
-        except:
-            pass
-    if unknown_units:
-        await botev.finish(f"未知昵称{', '.join(unknown_units)}")
-    if not units:
-        await botev.finish("未指定任何角色")
-    if len(units) < 5:
-        await botev.finish("需要5个角色")
-    set_my_party_text += "\n".join(f"{unit * 100 + 1}\t{db.get_unit_name(unit*100+1)}\t1\t{6 if unit*100+1 in db.unit_to_pure_memory else 5}" for unit in units)
-    config = {
-        "tab_start_num": tab_start_num,
-        "party_start_num": party_start_num,
-        "set_my_party_text": set_my_party_text,
-    }
-    return config
- 
 @register_tool("一键编队", "set_my_party")
 async def set_my_party(botev: BotEvent):
     msg = await botev.message()
@@ -986,6 +954,75 @@ async def set_my_party(botev: BotEvent):
         del msg[0]
     except:
         pass
+    unknown_units = []
+    token = []
+    while True:
+        if not msg:
+            break
+        if get_id_from_name(msg[0]) or msg[0].isdigit() and get_id_from_name(msg[0][1:]):
+            title = "自定义编队"
+        else:
+            title = msg[0]
+            del msg[0]
+        units = []
+        stars = []
+        for _ in range(5):
+            try:
+                unit_name = msg[0]
+                if msg[0] == "END":
+                    del msg[0]
+                    break
+
+                unit = get_id_from_name(unit_name)
+                if unit:
+                    units.append(unit)
+                    stars.append(6 if unit*100+1 in db.unit_to_pure_memory else 5)
+                else:
+                    if unit_name[0].isdigit():
+                        star = int(unit_name[0])
+                        unit = get_id_from_name(unit_name[1:])
+                        if unit:
+                            units.append(unit)
+                            stars.append(star)
+                        else:
+                            unknown_units.append(unit_name)
+                    else:
+                        unknown_units.append(unit_name)
+                del msg[0]
+            except:
+                pass
+        token.append( (title, units, stars) )
+
+    if unknown_units:
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")
+    if not token:
+        await botev.finish("无法识别任何编队")
+    set_my_party_text = "\n".join(
+        f"{title}\n" + "\n".join(f"{unit * 100 + 1}\t{db.get_unit_name(unit*100+1)}\t1\t{star}" for unit, star in zip(units, stars))
+        for title, units, stars in token)
+    config = {
+        "tab_start_num": tab_start_num,
+        "party_start_num": party_start_num,
+        "set_my_party_text": set_my_party_text,
+    }
+    return config
+ 
+@register_tool("导入编队", "set_my_party")
+async def set_my_party(botev: BotEvent):
+    msg = await botev.message()
+    await botev.send("请稍等")
+    party_start_num = 1
+    tab_start_num = 1
+    try:
+        tab_start_num = int(msg[0])
+        del msg[0]
+    except:
+        pass
+    try:
+        party_start_num = int(msg[0])
+        del msg[0]
+    except:
+        pass
     units = []
     unknown_units = []
     for _ in range(5):
@@ -1006,6 +1043,46 @@ async def set_my_party(botev: BotEvent):
         "party_start_num": party_start_num,
     }
     return config
+
+
+@sv.on_prefix(f"{prefix}识图")
+@wrap_hoshino_event
+async def ocr_team(botev: BotEvent):
+    try:
+        from hoshino.modules.priconne.arena import getBox, get_pic
+    except ImportError:
+        try:
+            from hoshino.modules.priconne.arena.old_main import getBox, get_pic
+        except ImportError:
+            await botev.finish("未安装怎么拆截图版，无法使用识图")
+            return
+
+    img_urls = await botev.image()
+    if not img_urls:
+        await botev.finish("未识别到图片!")
+
+    result = []
+    for id, img_url in enumerate(img_urls):
+        try:
+            image = Image.open(BytesIO(await get_pic(img_url)))
+        except Exception as e:
+            await botev.send(f"图片{id+1}下载失败: {e}")
+            continue
+        box, s = await getBox(image)
+        await botev.send(f"图片{id+1}识别结果: {s}")
+        if not box:
+            await botev.send(f"图片{id+1}未识别到任何队伍！")
+            continue
+        result += box
+
+    if not result:
+        await botev.finish("未识别到任何队伍！")
+
+    msg = f"{prefix}一键编队 4 1\n" + "\n".join(
+            f"队伍{id+1} {' '.join(db.get_unit_name(uid * 100 + 1) for uid in team)}{' END' if len(team) < 5 else ''}"
+            for id, team in enumerate(result)
+    )
+    await botev.finish(msg)
 
 @register_tool("pjjc回刺", "pjjc_back")
 async def pjjc_back(botev: BotEvent):
@@ -1245,6 +1322,16 @@ async def find_missing_emblem(botev: BotEvent):
     await botev.send("请稍等")
     return {}
 
+@register_tool("合成ex装", "ex_equip_rank_up")
+async def ex_equip_rank_up(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}
+
+@register_tool("强化ex装", "ex_equip_enhance_up")
+async def ex_equip_enhance_up(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}
+
 @register_tool("查角色", "search_unit")
 async def search_box(botev: BotEvent):
     await botev.send("请稍等")
@@ -1304,8 +1391,8 @@ async def redeem_unit_swap(botev: BotEvent):
     }
     return config
 
-@register_tool("查公会深域进度", "query_deep_progress")
-async def query_deep_progress(botev: BotEvent):
+@register_tool("查公会深域进度", "find_clan_talent_quest")
+async def find_clan_talent_quest(botev: BotEvent):
     await botev.send("请稍等")
     return {}
 

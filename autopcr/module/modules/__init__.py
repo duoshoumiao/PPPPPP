@@ -93,7 +93,7 @@ daily_modules = ModuleList(
         smart_hard_sweep,
         smart_shiori_sweep,
         last_normal_quest_sweep,
-        # lazy_normal_sweep,
+        lazy_normal_sweep,
 
         all_in_hatsune,
 
@@ -203,6 +203,7 @@ tool_modules = ModuleList(
     'tool',
     [
         return_jewel,
+        query_player_profile,
         master_shop,
         find_talent_quest,
         find_clan_talent_quest,
@@ -221,7 +222,6 @@ tool_modules = ModuleList(
         remove_cb_ex_equip,
         remove_cb_support,
         redeem_unit_swap,
-        query_player_profile,
         jjc_back,
         pjjc_back,
         jjc_info,
