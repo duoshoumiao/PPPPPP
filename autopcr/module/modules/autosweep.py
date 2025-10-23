@@ -434,15 +434,30 @@ class talent_sweep(DIY_sweep):
             ret.append((max_sweepable_quest, daily_clear_limit_count * (1 + recover * client.data.settings.talent_quest.recovery_max_count)))
         return ret
 
+
+# @description('''
+# 开新图时的便捷设置，将循环刷取所选关卡
+# '''.strip())
+# @name("刷最新n图")
+# @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
+# @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
+# @default(False)
+# @tag_stamina_consume
+# class last_normal_quest_sweep(DIY_sweep):
+    # async def get_loop_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
+        # last_sweep_quests: List[int] = self.get_config('last_normal_quests_sweep')
+        # last_sweep_quests_count: int = 3
+        # quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
+        # return quest
+
 @description('''
-可指定装备，当该装备库存达到设定数量或缺口(#查装备 可查询缺口)小于设定值时停止刷取
+可指定装备，当该装备库存达到设定数量时停止刷取
 '''.strip())
 @name("刷最新n图")
 @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
 @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
 @EquipListConfig("lazy_sweep_consider_equip", "考虑装备")
 @inttype("target_equip_count", "指定库存量", 10, list(range(1, 301)))
-@inttype("gap_limit", "缺口数限制（0表示不限制）", 0, list(range(0, 99999)))  # 缺口数限制配置
 @default(False)
 @tag_stamina_consume
 class last_normal_quest_sweep(DIY_sweep):
@@ -450,16 +465,13 @@ class last_normal_quest_sweep(DIY_sweep):
         last_sweep_quests: List[int] = self.get_config('last_normal_quests_sweep')
         last_sweep_quests_count: int = 3
         
-        # 移除按关卡ID排序，直接使用原始顺序
         quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
         return quest
 
     async def do_task(self, client: pcrclient):
         target_equip_ids = self.get_config('lazy_sweep_consider_equip')
         target_count = self.get_config('target_equip_count')
-        gap_limit = self.get_config('gap_limit')
         
-        # 优化点2: 预编译装备ID，减少重复转换
         formatted_equip_ids = []
         try:
             for eid in target_equip_ids:
@@ -467,29 +479,19 @@ class last_normal_quest_sweep(DIY_sweep):
                 equip_type_id = (eInventoryType.Equip, equip_id)
                 formatted_equip_ids.append(equip_type_id)
                 equip_name = db.get_equip_name(equip_id) or f"未知装备(ID:{equip_id})"
-                self._log(f"已添加监控装备: {equip_name}")
+                self._log(f"已添加监控装备: {equip_name} (目标库存: {target_count})")
         except (ValueError, TypeError) as e:
             self._log(f"无效的装备ID: {eid}, 错误: {str(e)}")
         
-        # 优化点3: 预计算全角色列表（只计算一次）
-        all_units = list(db.unit_data.keys())
-        grow_parameter_list = client.data.get_synchro_parameter()
-        
-        # 优化点4: 首次计算缺口后缓存装备ID列表，避免重复排序
         target_equip_ids_sorted = sorted(formatted_equip_ids, key=lambda x: x[1], reverse=True)
         
         if target_equip_ids_sorted:
             self._log("\n===== 监控装备列表 =====")
-            # 优化点5: 只计算一次缺口用于初始显示
-            equip_demand_gap = client.data.get_equip_demand2_gap(all_units, grow_parameter_list=grow_parameter_list)
-            
             for equip_type_id in target_equip_ids_sorted:
                 eid = equip_type_id[1]
                 equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
                 current = client.data.get_inventory(equip_type_id)
-                demand_gap = equip_demand_gap.get(equip_type_id, 0)
-                gap_display = f"缺口 {demand_gap}" if demand_gap > 0 else f"盈余 {abs(demand_gap)}"
-                self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}, {gap_display} (缺口限制: {gap_limit})")
+                self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/目标库存 {target_count}")
             self._log("======================\n")
         else:
             self._log("\n未设置有效的监控装备，将持续刷取直到手动停止\n")
@@ -497,7 +499,6 @@ class last_normal_quest_sweep(DIY_sweep):
         clean_cnt = Counter()
         result = []
         success = True
-        # 优化点6: 增加进度显示间隔，减少日志输出开销
         progress_interval = 50  # 每刷50次显示一次进度
         
         try:
@@ -510,32 +511,25 @@ class last_normal_quest_sweep(DIY_sweep):
                 if target_equip_ids_sorted:
                     all_reached = True
                     self._log("\n----- 装备库存检查 -----")
-                    # 核心优化: 减少缺口计算频率，每轮检查只计算一次
-                    equip_demand_gap = client.data.get_equip_demand2_gap(all_units, grow_parameter_list=grow_parameter_list)
                     
                     for equip_type_id in target_equip_ids_sorted:
                         eid = equip_type_id[1]
                         current = client.data.get_inventory(equip_type_id)
                         equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
-                        gap = equip_demand_gap.get(equip_type_id, 0)
-                        gap_display = f"缺口 {gap}" if gap > 0 else f"盈余 {abs(gap)}"
-                        self._log(f"{equip_name} (ID:{eid}): 库存 {current}, 当前{gap_display}")
+                        self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/目标库存 {target_count}")
                         
-                        if not (gap <= gap_limit):
+                        # 检查是否达到目标库存
+                        if current < target_count:
                             all_reached = False
                     
                     if all_reached:
-                        stop_reason = "所有指定装备均已满足需求（含盈余）" if gap_limit == 0 else \
-                                     f"所有指定装备缺口/盈余均满足限制条件({gap_limit})"
-                        self._log(f"\n{stop_reason}，停止刷取")
+                        self._log(f"\n所有指定装备均已达到目标库存({target_count})，停止刷取")
                         break
 
-                # 优化点6: 使用更大的进度间隔
                 total_count = sum(clean_cnt.values())
                 if total_count > 0 and total_count % progress_interval == 0:
                     self._log(f"\n已刷取{total_count}次，继续刷取中...")
 
-                # 优化点7: 减少循环内的异常捕获层级
                 for quest_id, count in loop_quests:
                     try:
                         rewards = await client.quest_skip_aware(quest_id, count, True, True)
