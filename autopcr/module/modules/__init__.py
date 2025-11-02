@@ -20,7 +20,7 @@ from .tools import *
 from .travel import *
 from .unit import *
 from .talent import *
-
+from .nbb import *  
 @dataclass
 class ModuleList:
     name: str = ""
@@ -203,6 +203,9 @@ tool_modules = ModuleList(
     'tool',
     [
         return_jewel,
+        nbb_game,
+        remove_normal_ex_equip,
+        calc_best_3star_ex_equip,
         query_player_profile,
         master_shop,
         find_talent_quest,
