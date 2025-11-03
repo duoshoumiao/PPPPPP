@@ -19,7 +19,6 @@ from ...util.linq import flow
 class find_talent_quest(Module):
     async def do_task(self, client: pcrclient):
         result = []
-
         for area in db.talent_quest_area_data.values():
             talent_id = area.talent_id
             max_quest_id = client.data.cleared_talent_quest_ids.get(talent_id, 0)
@@ -27,43 +26,90 @@ class find_talent_quest(Module):
         result.sort(key = lambda x: x[0])
 
         msg = []
+        clear_info = []
         for talent_id, quest_id in result:
             talent_name = db.talents[talent_id].talent_name 
-            quest = "0-0" if quest_id == 0 else f"{db.quest_name[quest_id][4:]}"
-            msg.append(f"{talent_name}{quest}")
-        self._log("深域通关:" + "/".join(msg))
+            quest = "未通关" if quest_id == 0 else f"{db.quest_name[quest_id][4:]}"
+            clear_info.append(f"{talent_name}{quest}")
+        msg.append("通关情况：\n" + "/".join(clear_info)) 
 
+        # 添加属性等级和技能信息
         princess_knight_info = client.data.princess_knight_info
         if princess_knight_info:
-            msg = []
+            # 属性等级信息
+            talent_names = {1:"火",2:"水",3:"风",4:"光",5:"暗"}
+            talent_levels = {}
+            level_info = []
             for talent_info in princess_knight_info.talent_level_info_list:
-                msg.append(f"{db.talents[talent_info.talent_id].talent_name}{db.get_talent_level(talent_info.total_point)}")
-            self._log("属性等级:" + "/".join(msg))
+                talent_levels[talent_info.talent_id] = db.get_talent_level(talent_info.total_point)
 
-            page = 0 if not princess_knight_info.talent_skill_last_enhanced_page_node_list else db.talent_skill_node[princess_knight_info.talent_skill_last_enhanced_page_node_list[0].node_id].page_num
-            joined_nodes = flow(princess_knight_info.talent_skill_last_enhanced_page_node_list) \
-                            .where(lambda x: db.talent_skill_node[x.node_id].is_joined_node()) \
-                            .to_list()
-            max_joined_node = max(joined_nodes, key=lambda x: x.node_id, default=TalentSkillNodeInfo(node_id=1))
-            joined_node_after = flow(princess_knight_info.talent_skill_last_enhanced_page_node_list) \
-                                .where(lambda x: x.node_id > max_joined_node.node_id) \
-                                .group_by(lambda x: db.talent_skill_node[x.node_id].pos_x) \
-                                .to_dict(lambda g: g.key, lambda g: g.to_list())
-            joined_node_after_max = {pos: max(nodes, key=lambda x: x.node_id) for pos, nodes in joined_node_after.items()}
+            for tid, name in talent_names.items():
+                level_info.append(f"{name}{talent_levels.get(tid, 0)}")
+            msg.append("属性等级：\n" + "/".join(level_info))
 
-            prefix = f"第{page}页 第{len(joined_nodes)}合流"
-            msg = []
-            if not joined_node_after and joined_nodes:
-                prefix += f"[{max_joined_node.enhance_level}级]"
-            elif joined_node_after:
-                for pos, nodes in joined_node_after.items():
-                    msg.append(f"{db.talent_skill_node[nodes[0].node_id].pos()}{len(nodes)}[{joined_node_after_max[pos].enhance_level}级]")
-            self._log("属性技能:" + prefix + " " + "/".join(msg))
+            # 属性技能信息
+            skill_tree_text = "无"
+            if princess_knight_info.talent_skill_last_enhanced_page_node_list:
+                talent_skill_list = [
+                    {"node_id": node.node_id, "enhance_level": node.enhance_level} 
+                    for node in princess_knight_info.talent_skill_last_enhanced_page_node_list
+                ]
 
-            self._log(f"大师技能: MP{princess_knight_info.team_skill_latest_node.node_id}")
+                if talent_skill_list:
+                    import bisect
+                    talent_skill_list.sort(key=lambda x: x["node_id"])
 
-            for item in [db.fire_ball, db.water_ball, db.wind_ball, db.sun_ball, db.dark_ball, db.xinyou, db.master_fragment, db.master_ffragment]: # temp display, future replace with effect
-                self._log(f"{db.get_inventory_name_san(item)}: {client.data.get_inventory(item)}")
+                    INTERSECTIONS = [1,26,54,82,110,138,166,194,222,235,248,261,274,287,300,313,326,
+                                    339,352,365,378,391,404,417,430,443,456,469,482,495,508,521,534,
+                                    547,560,573,586,599,612,625,638]
+                    PAGE_BOUNDARIES = [4, 8, 16, 24, 32, 40]
+
+                    max_node_id = talent_skill_list[-1]["node_id"]
+                    current_index = bisect.bisect_right(INTERSECTIONS, max_node_id) - 1
+                    current_index = max(current_index, 0)
+
+                    current_level_value = INTERSECTIONS[current_index]
+                    current_level_enhance = talent_skill_list[current_level_value-1]["enhance_level"] if current_level_value-1 < len(talent_skill_list) else 0
+                    current_page = bisect.bisect_left(PAGE_BOUNDARIES, current_index) + 1
+
+                    node_ids = [n['node_id'] for n in talent_skill_list]
+                    start_idx = bisect.bisect_right(node_ids, current_level_value)
+
+                    columns = {
+                        "left": {"count": 0, "last_level": 0},
+                        "middle": {"count": 0, "last_level": 0},
+                        "right": {"count": 0, "last_level": 0}
+                    }
+
+                    for node in talent_skill_list[start_idx:]:
+                        offset = (node["node_id"] - current_level_value) % 3
+                        if offset == 1:
+                            columns["left"]["count"] += 1
+                            columns["left"]["last_level"] = node["enhance_level"]
+                        elif offset == 2:
+                            columns["middle"]["count"] += 1
+                            columns["middle"]["last_level"] = node["enhance_level"]
+                        else:
+                            columns["right"]["count"] += 1
+                            columns["right"]["last_level"] = node["enhance_level"]
+
+                    skill_tree_text = (
+                        f"第{current_page}页 合{current_index}[{current_level_enhance}] "
+                        f"左{columns['left']['count']}[{columns['left']['last_level']}] "
+                        f"中{columns['middle']['count']}[{columns['middle']['last_level']}] "
+                        f"右{columns['right']['count']}[{columns['right']['last_level']}]"
+                    )
+            msg.append("属性技能：\n" + skill_tree_text + f"\n星幽碎片：{client.data.get_inventory(db.xinyou)}")
+
+            # 添加大师技能和碎片信息
+            team_skill_id = princess_knight_info.team_skill_latest_node.node_id if princess_knight_info.team_skill_latest_node else 0
+            master_info = [
+                f"大师技能{team_skill_id}",
+                f"大师碎片{client.data.get_inventory(db.master_fragment)}"
+            ]
+            msg.append("/".join(master_info))
+
+        self._log("\n".join(msg))
 
 @description('看看公会深域的通关情况，会登录！')
 @name('查公会深域')

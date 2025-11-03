@@ -170,6 +170,7 @@ sv_help = f"""
 - {prefix}卡池 查看当前卡池
 - {prefix}半月刊
 - {prefix}返钻
+- {prefix}查属性练度
 - {prefix}刷新box
 - {prefix}查缺称号 查看缺少的称号
 - {prefix}jjc透视 查前51名
@@ -1513,6 +1514,11 @@ async def mission_receive_first(botev: BotEvent):
 
 @register_tool("收菜", "travel_quest_sweep")
 async def travel_quest_sweep(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}
+    
+@register_tool("查属性练度", "get_talent_info")
+async def get_talent_info(botev: BotEvent):
     await botev.send("请稍等")
     return {}
 
