@@ -867,8 +867,8 @@ class pjjc_def_shuffle_team(PJJCShuffleTeam):
         if limit_info.daily_times == limit_info.daily_max_limited_times:
             raise AbortError(f"已达到换防次数上限{limit_info.daily_max_limited_times}，请于明日再试")
         msg = f"{db.format_time(db.parse_time(limit_info.round_end_time))}刷新" if limit_info.round_times else ""
-        self._log(f'''本轮换防次数{limit_info.round_times}/{limit_info.round_max_limited_times}，{msg}
-今日换防次数{limit_info.daily_times}/{limit_info.daily_max_limited_times}''')
+        self._log(f'''本轮换防次数{limit_info.round_times + 1}/{limit_info.round_max_limited_times}，{msg}
+今日换防次数{limit_info.daily_times + 1}/{limit_info.daily_max_limited_times}''')
 
 @description('获得可导入到兰德索尔图书馆的账号数据')
 @name('兰德索尔图书馆导入数据')
