@@ -401,35 +401,41 @@ async def get_folder_id(botev: BotEvent, folder_name: str) -> Union[str, None]:
         await botev.send(f"获取或创建「{folder_name}」文件夹失败: {e}")
         return None
 
-async def upload_excel(botev: BotEvent, data: BytesIO, filename: str, folder_name: str):
-    excel_R = R.get('autopcr', 'excel', filename)
-    path = Path(excel_R.path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(excel_R.path, 'wb') as f:
-        f.write(data.getbuffer())
-
-    try:
-        gid = await botev.group_id()
-        folder_id = await get_folder_id(botev, folder_name)
-
-        upload_kwargs = {
-            'action': 'upload_group_file',
-            'group_id': gid,
-            'file': excel_R.url,
-            'name': filename
-        }
-        if folder_id:
-            upload_kwargs['folder'] = folder_id
-        else:
-            await botev.send(f"未能获取文件夹ID，上传到根目录")
-
-        await botev.call_action(**upload_kwargs)
-
-    finally:
-        try:
-            path.unlink()
-        except Exception as e:
-            sv.logger.warning(f"⚠️ 删除临时文件失败: {e}")
+async def upload_excel(botev: BotEvent, data: BytesIO, filename: str, folder_name: str):  
+    excel_R = R.get('autopcr', 'excel', filename)  
+    path = Path(excel_R.path)  
+    path.parent.mkdir(parents=True, exist_ok=True)  
+      
+    try:  
+        with open(excel_R.path, 'wb') as f:  
+            f.write(data.getbuffer())  
+  
+        gid = await botev.group_id()  
+        folder_id = await get_folder_id(botev, folder_name)  
+  
+        upload_kwargs = {  
+            'action': 'upload_group_file',  
+            'group_id': gid,  
+            'file': excel_R.path,  
+            'name': filename  
+        }  
+        if folder_id:  
+            upload_kwargs['folder'] = folder_id  
+        else:  
+            await botev.send(f"未能获取文件夹ID,上传到根目录")  
+  
+        await botev.call_action(**upload_kwargs)  
+        sv.logger.info(f"✅ 上传成功: {filename}")  
+          
+        await asyncio.sleep(0.5)  
+          
+    finally:  
+        if path.exists():  
+            try:  
+                path.unlink()  
+                sv.logger.info(f"✅ 已删除临时文件: {path}")  
+            except Exception as e:  
+                sv.logger.error(f"❌ 删除临时文件失败: {path}, 错误: {e}")
 
 
 from dataclasses import dataclass
