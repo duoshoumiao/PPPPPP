@@ -374,7 +374,7 @@ def check_final_args_be_empty(func):
     wrapper.__name__ = func.__name__
     return wrapper
 
-async def get_folder_id(botev: BotEvent, folder_name: str) -> str | None:
+async def get_folder_id(botev: BotEvent, folder_name: str) -> Union[str, None]:
     try:
         gid = await botev.group_id()
         resp = await botev.call_action('get_group_root_files', group_id=gid)
@@ -937,14 +937,14 @@ async def send_llonebot_forward(botev, alias: str, content: str):
 
 @sv.on_prefix(f"{prefix}")
 @wrap_hoshino_event
-@wrap_export
+@wrap_export  # 确保该装饰器会注入export参数
 @wrap_group
 @wrap_tool
 @wrap_accountmgr
 @wrap_account
 @wrap_config
 @check_final_args_be_empty
-async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc):
+async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc, export: bool = False):  # 增加export参数
     """
     任务执行主函数
     参数:
@@ -952,6 +952,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc):
         tool: 工具对象
         config: 配置字典
         acc: 账号对象
+        export: 是否导出为Excel（由装饰器注入）
     """
     alias = getattr(acc, 'alias', '未知账号')
     try:
@@ -964,19 +965,26 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc):
         if isinstance(resp, List):
             resp = resp[0]
         resp = resp.get_result()
-
-        # 仅对查公会深域进度工具生成图片
-        if tool.key == "find_clan_talent_quest":
-            # 生成深域进度图片
-            img = await drawer.draw_task_result(resp)
-            msg = f"{alias}"
-            msg += outp_b64(img)
-            await botev.send(msg)
+        
+        # 处理导出逻辑
+        if export:
+            # 导出为Excel
+            data = await export_excel(resp.table)
+            timestamp = db.format_time_safe(datetime.datetime.now())
+            await upload_excel(botev, data, f"{tool.name}_{alias}_{timestamp}.xlsx", 'autopcr')
         else:
-            # 其他工具保持原有文本处理逻辑
-            result_text = str(resp.log) if hasattr(resp, 'log') else str(resp)
-            result_text = result_text.replace('\\n', '\n').replace('\n', '\n')
-            await send_llonebot_forward(botev, alias, result_text)
+            # 仅对查公会深域进度工具生成图片
+            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit"]:
+                # 生成深域进度图片
+                img = await drawer.draw_task_result(resp)
+                msg = f"{alias}"
+                msg += outp_b64(img)
+                await botev.send(msg)
+            else:
+                # 其他工具保持原有文本处理逻辑
+                result_text = str(resp.log) if hasattr(resp, 'log') else str(resp)
+                result_text = result_text.replace('\\n', '\n').replace('\n', '\n')
+                await send_llonebot_forward(botev, alias, result_text)
 
     except Exception as e:
         error_msg = f"{alias} 任务执行失败（如果是指令+所有必须去网站-批量运行-BATCH_RUNNER 里保存队伍）：{str(e)[:500]}"
@@ -1424,7 +1432,7 @@ async def ex_equip_enhance_up(botev: BotEvent):
     return {}
 
 @register_tool("查角色", "search_unit")
-async def search_box(botev: BotEvent):
+async def search_unit(botev: BotEvent):
     await botev.send("请稍等")
     msg = await botev.message()
     unit = None
