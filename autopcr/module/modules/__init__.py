@@ -88,6 +88,7 @@ daily_modules = ModuleList(
         hatsune_h_sweep,
         hatsune_dear_reading,
         present_receive,
+        talent_sweep2,
         smart_sweep,
         mirai_very_hard_sweep,
         smart_hard_sweep,
@@ -154,7 +155,6 @@ table_modules = ModuleList(
     'table',
     [
         get_need_pure_memory_box,
-        get_talent_info,
     ],
     hidden=False,
     visible_in_batch=False,

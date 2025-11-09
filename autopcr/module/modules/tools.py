@@ -2,7 +2,7 @@ from typing import List, Set
 
 from ...util.ilp_solver import memory_use_average
 import time
-from ...model.common import ChangeRarityUnit, DeckListData, GachaPointInfo, GrandArenaHistoryDetailInfo, GrandArenaHistoryInfo, GrandArenaSearchOpponent, ProfileUserInfo, RankingSearchOpponent, RedeemUnitInfo, RedeemUnitSlotInfo, VersusResult, VersusResultDetail
+from ...model.common import ChangeRarityUnit, DeckListData, GachaPointInfo, GrandArenaHistoryDetailInfo, GrandArenaHistoryInfo, GrandArenaSearchOpponent, ProfileUserInfo, RankingSearchOpponent, RedeemUnitInfo, RedeemUnitSlotInfo, UnitData, UnitDataLight, VersusResult, VersusResultDetail
 from ...model.responses import GachaIndexResponse, PsyTopResponse
 from ...db.models import GachaExchangeLineup
 from ...model.custom import ArenaQueryResult, GachaReward, ItemType
@@ -454,21 +454,74 @@ class gacha_exchange_chara(Module):
         self._log(f"兑换了{db.get_unit_name(gacha_exchange_unit_id)}，获得了:\n{msg}")
 
 
-@description('查看会战支援角色的详细数据，拒绝内鬼！')
 @name('会战支援数据')
 @default(True)
 class get_clan_support_unit(Module):
+    async def serialize_unit_info(self, unit_data: Union[UnitData, UnitDataLight]) -> Tuple[bool, str]:
+        info = []
+        ok = True
+        def add_info(prefix, cur, expect = None):
+            if expect:
+                nonlocal ok
+                info.append(f'{prefix}:{cur}/{expect}')
+                ok &= (cur == expect)
+            else:
+                info.append(f'{prefix}:{cur}')
+        unit_id = unit_data.id
+        add_info("等级", unit_data.unit_level, max(unit_data.unit_level, db.team_max_level))
+        if unit_data.battle_rarity:
+            add_info("星级", f"{unit_data.battle_rarity}-{unit_data.unit_rarity}")
+        else:
+            add_info("星级", f"{unit_data.unit_rarity}")
+        add_info("品级", unit_data.promotion_level, db.equip_max_rank)
+        for id, union_burst in enumerate(unit_data.union_burst):
+            if union_burst.skill_level:
+                add_info(f"ub{id}", union_burst.skill_level, unit_data.unit_level)
+        for id, skill in enumerate(unit_data.main_skill):
+            if skill.skill_level:
+                add_info(f"skill{id}", skill.skill_level, unit_data.unit_level)
+        for id, skill in enumerate(unit_data.ex_skill):
+            if skill.skill_level:
+                add_info(f"ex{id}", skill.skill_level, unit_data.unit_level)
+        equip_info = []
+        for id, equip in enumerate(unit_data.equip_slot):
+            equip_id = getattr(db.unit_promotion[unit_id][unit_data.promotion_level], f'equip_slot_{id + 1}')
+            if not equip.is_slot:
+                if equip_id != 999999:
+                    equip_info.append('-')
+                    ok = False
+                else:
+                    equip_info.append('*')
+            else:
+                star = db.get_equip_star_from_pt(equip_id, equip.enhancement_pt)
+                ok &= (star == 5)
+                equip_info.append(str(star))
+        equip_info = '/'.join(equip_info)
+        add_info("装备", equip_info)
+
+        for id, equip in enumerate(unit_data.unique_equip_slot):
+            equip_slot = id + 1
+            have_unique = (equip_slot in db.unit_unique_equip and unit_id in db.unit_unique_equip[equip_slot])
+            max_level = 0 if not have_unique else db.unique_equipment_max_level[equip_slot]
+            if have_unique:
+                if not equip.is_slot:
+                    add_info(f"专武{id}", '-', max_level)
+                else:
+                    add_info(f"专武{id}", db.get_unique_equip_level_from_pt(equip_slot, equip.enhancement_pt), max_level)
+
+        return ok, ' '.join(info)
+        
     async def do_task(self, client: pcrclient):
         await client.get_clan_battle_top(1, client.data.get_shop_gold(eSystemId.CLAN_BATTLE_SHOP))
         unit_list = await client.get_clan_battle_support_unit_list()
         msg = []
         for unit in unit_list.support_unit_list:
-            strongest, info = await client.serialize_unit_info(unit.unit_data)
+            strongest, info = await self.serialize_unit_info(unit.unit_data)
             msg.append((unit.unit_data.id, strongest, unit.owner_name, info))
 
         for unit in client.data.dispatch_units:
             if unit.position == eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_1 or unit.position == eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_2:
-                strongest, info = await client.serialize_unit_info(client.data.unit[unit.unit_id])
+                strongest, info = await self.serialize_unit_info(client.data.unit[unit.unit_id])
                 msg.append((unit.unit_id, strongest, client.user_name, info))
 
         msg = sorted(msg, key=lambda x:(x[0], -x[1]))

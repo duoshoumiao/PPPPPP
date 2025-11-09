@@ -407,17 +407,27 @@ class smart_sweep(DIY_sweep):
         return quest
     
 @description('''
-每天扫荡！重置扫荡！
+开新图时的便捷设置，将循环刷取所选关卡
 '''.strip())
-@name("深域扫荡")
-@TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
-@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
-@default(True)
+@name("刷最新n图")
+@conditional_execution1("last_normal_quest_run_time", ['n庆典'])
+@LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
+@default(False)
 @tag_stamina_consume
-class talent_sweep(DIY_sweep):
+class last_normal_quest_sweep(DIY_sweep):
+    async def get_loop_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
+        last_sweep_quests: List[int] = self.get_config('last_normal_quests_sweep')
+        last_sweep_quests_count: int = 3
+        quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
+        return quest
+
+class TalentSweep(DIY_sweep):
+    def get_recovery_areas(self) -> List[int]: ...
+    def get_no_max_no_sweep_areas(self) -> List[int]: ...
+
     async def get_start_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
-        recovery_areas: List[int] = self.get_config('talent_sweep_target_recovery_areas')
-        no_max_no_sweep: List[int] = self.get_config('talent_sweep_no_max_no_sweep')
+        recovery_areas: List[int] = self.get_recovery_areas()
+        no_max_no_sweep: List[int] = self.get_no_max_no_sweep_areas()
         daily_clear_limit_count = client.data.settings.talent_quest.daily_clear_limit_count
         ret = []
         for area_id in db.talent_quest_area_data:
@@ -436,129 +446,30 @@ class talent_sweep(DIY_sweep):
             ret.append((max_sweepable_quest, daily_clear_limit_count * (1 + recover * client.data.settings.talent_quest.recovery_max_count)))
         return ret
 
-
-# @description('''
-# 开新图时的便捷设置，将循环刷取所选关卡
-# '''.strip())
-# @name("刷最新n图")
-# @conditional_execution1("last_normal_quest_run_time", ['n庆典'])
-# @LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
-# @default(False)
-# @tag_stamina_consume
-# class last_normal_quest_sweep(DIY_sweep):
-    # async def get_loop_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
-        # last_sweep_quests: List[int] = self.get_config('last_normal_quests_sweep')
-        # last_sweep_quests_count: int = 3
-        # quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
-        # return quest
+@description('''
+每天扫荡！重置扫荡！
+'''.strip())
+@name("深域扫荡")
+@TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
+@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
+@default(True)
+@tag_stamina_consume
+class talent_sweep(TalentSweep):
+    def get_recovery_areas(self) -> List[int]:
+        return self.get_config('talent_sweep_target_recovery_areas')
+    def get_no_max_no_sweep_areas(self) -> List[int]: 
+        return self.get_config('talent_sweep_no_max_no_sweep')
 
 @description('''
-可指定装备，当该装备库存达到设定数量时停止刷取
+领取邮件体力后再次扫荡！
 '''.strip())
-@name("刷最新n图")
-@conditional_execution1("last_normal_quest_run_time", ['n庆典'])
-@LastNormalQuestConfig("last_normal_quests_sweep", "刷取关卡", [])
-@EquipListConfig("lazy_sweep_consider_equip", "考虑装备")
-@inttype("target_equip_count", "指定库存量", 10, list(range(1, 301)))
+@name("深域扫荡2")
+@TalentConfig("talent_sweep2_target_recovery_areas", "重置扫荡", [])
+@TalentConfig("talent_sweep2_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
 @default(False)
 @tag_stamina_consume
-class last_normal_quest_sweep(DIY_sweep):
-    async def get_loop_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
-        last_sweep_quests: List[int] = self.get_config('last_normal_quests_sweep')
-        last_sweep_quests_count: int = 3
-        
-        quest: List[Tuple[int, int]] = [(id, last_sweep_quests_count) for id in last_sweep_quests]
-        return quest
-
-    async def do_task(self, client: pcrclient):
-        target_equip_ids = self.get_config('lazy_sweep_consider_equip')
-        target_count = self.get_config('target_equip_count')
-        
-        formatted_equip_ids = []
-        try:
-            for eid in target_equip_ids:
-                equip_id = int(eid)
-                equip_type_id = (eInventoryType.Equip, equip_id)
-                formatted_equip_ids.append(equip_type_id)
-                equip_name = db.get_equip_name(equip_id) or f"未知装备(ID:{equip_id})"
-                self._log(f"已添加监控装备: {equip_name} (目标库存: {target_count})")
-        except (ValueError, TypeError) as e:
-            self._log(f"无效的装备ID: {eid}, 错误: {str(e)}")
-        
-        target_equip_ids_sorted = sorted(formatted_equip_ids, key=lambda x: x[1], reverse=True)
-        
-        if target_equip_ids_sorted:
-            self._log("\n===== 监控装备列表 =====")
-            for equip_type_id in target_equip_ids_sorted:
-                eid = equip_type_id[1]
-                equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
-                current = client.data.get_inventory(equip_type_id)
-                self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/目标库存 {target_count}")
-            self._log("======================\n")
-        else:
-            self._log("\n未设置有效的监控装备，将持续刷取直到手动停止\n")
-        
-        clean_cnt = Counter()
-        result = []
-        success = True
-        progress_interval = 50  # 每刷50次显示一次进度
-        
-        try:
-            loop_quests = await self.get_loop_quest(client)
-            if not loop_quests:
-                self._log("无刷取关卡，任务结束")
-                return
-
-            while True:
-                if target_equip_ids_sorted:
-                    all_reached = True
-                    self._log("\n----- 装备库存检查 -----")
-                    
-                    for equip_type_id in target_equip_ids_sorted:
-                        eid = equip_type_id[1]
-                        current = client.data.get_inventory(equip_type_id)
-                        equip_name = db.get_equip_name(eid) or f"未知装备(ID:{eid})"
-                        self._log(f"{equip_name} (ID:{eid}): 当前库存 {current}/目标库存 {target_count}")
-                        
-                        # 检查是否达到目标库存
-                        if current < target_count:
-                            all_reached = False
-                    
-                    if all_reached:
-                        self._log(f"\n所有指定装备均已达到目标库存({target_count})，停止刷取")
-                        break
-
-                total_count = sum(clean_cnt.values())
-                if total_count > 0 and total_count % progress_interval == 0:
-                    self._log(f"\n已刷取{total_count}次，继续刷取中...")
-
-                for quest_id, count in loop_quests:
-                    try:
-                        rewards = await client.quest_skip_aware(quest_id, count, True, True)
-                        result.extend(rewards)
-                        clean_cnt[quest_id] += count
-                    except SkipError as e:
-                        self._log(f"刷取暂停: {str(e)}")
-                        break
-                    except AbortError as e:
-                        self._log(f"操作中断: {str(e)}")
-                        if not str(e).endswith("体力不足"):
-                            success = False
-                        break
-                else:
-                    continue
-                break
-
-        except Exception as e:
-            self._log(f"发生错误: {str(e)}")
-            success = False
-        finally:
-            if clean_cnt:
-                msg = '\n'.join(f"{db.get_quest_name(quest)}: 刷取{cnt}次" 
-                              for quest, cnt in clean_cnt.items())
-                self._log("\n" + msg)
-                self._log("---------")
-            else:
-                self._log("需刷取的图均无次数")
-            if result:
-                self._log(await client.serialize_reward_summary(result))
+class talent_sweep2(TalentSweep):
+    def get_recovery_areas(self) -> List[int]:
+        return self.get_config('talent_sweep2_target_recovery_areas')
+    def get_no_max_no_sweep_areas(self) -> List[int]: 
+        return self.get_config('talent_sweep2_no_max_no_sweep')
