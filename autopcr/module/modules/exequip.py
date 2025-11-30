@@ -7,7 +7,7 @@ from ...model.error import *
 from ...db.database import db
 from ...model.enums import *
 from collections import Counter
-
+from .unit import UnitController
 @name('强化EX装')
 @default(True)
 @booltype('ex_equip_enhance_view', '看消耗', True)
@@ -209,6 +209,7 @@ class remove_cb_ex_equip(Module):
             raise SkipError("所有会战EX装备均已撤下")
 
 
+
 ## add: 撤下普通ex装
 @name('撤下普通EX装')
 @default(True)
@@ -235,6 +236,7 @@ class remove_normal_ex_equip(Module):
             self._log(f"撤下了{unit_cnt}个角色的{ex_cnt}个普通EX装备")
         else:
             raise SkipError("所有普通EX装备均已撤下")
+
 
 # add: 计算已有角色最佳3星ex装备
 # 每个角色有三个槽，通过unit_ex_equipment_slot、ex_equipment_data可以找到每个槽能够使用的多个装备，通过calc_unit_power计算装上ex装备增加的战力倒序，获取最佳3星ex，以及次佳与最佳的差值。目前的calc_unit_attribute只能获取到未添加ex装备的战力，如果装上ex装备，需要在白板unit_attribute上加上"ex_equipment_data"的对应max_xxx值（如果是100的倍数需要加上百分之几，如200就加2%，如果不是就直接加上原数字）。装备显示成名称。
