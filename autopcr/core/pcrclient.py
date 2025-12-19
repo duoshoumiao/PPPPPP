@@ -732,6 +732,18 @@ class pcrclient(apiclient):
         await self.story_check(story_id)
         return await self.story_view(story_id)
 
+    async def tpr_register_success(self, panel_id: int, correct_type: int, parts_id_list: List[int]):
+        req = SubStoryTprRegisterSuccessRequest()
+        req.panel_id = panel_id
+        req.correct_type = correct_type
+        req.parts_id_list = parts_id_list
+        return await self.request(req)
+
+    async def read_tpr_story(self, sub_story_id: int):
+        req = SubStoryTprReadStoryRequest()
+        req.sub_story_id = sub_story_id
+        return await self.request(req)
+
     async def apg_story_top(self):
         req = SubStoryApgTopRequest()
         return await self.request(req)
@@ -1329,9 +1341,9 @@ class pcrclient(apiclient):
             for other in kizuna_unit:
                 if other not in db.unlock_unit_condition: continue
                 unit_name = db.get_unit_name(other)
-                unit_id = other // 100
-                love_level = self.data.unit_love_data[unit_id].love_level if unit_id in self.data.unit_love_data else 0
-                unit_story = [story.story_id for story in db.unit_story if story.story_group_id == unit_id]
+                other_id = other // 100
+                love_level = self.data.unit_love_data[other_id].love_level if other_id in self.data.unit_love_data else 0
+                unit_story = [story.story_id for story in db.unit_story if story.story_group_id == other_id]
                 total_storys = len(unit_story)
                 read_storys = len([story for story in unit_story if story in read_story])
                 love.append(f"{unit_name}好感{love_level}({read_storys}/{total_storys})")

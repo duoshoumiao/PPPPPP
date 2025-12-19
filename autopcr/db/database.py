@@ -1,7 +1,7 @@
 from typing import List, Dict, Set, Tuple, Union
 import typing
 from ..model.enums import eCampaignCategory
-from ..model.common import UnitData, eInventoryType, RoomUserItem, InventoryInfo
+from ..model.common import ExtraEquipInfo, UnitData, eInventoryType, RoomUserItem, InventoryInfo
 from ..model.custom import ItemType
 import datetime
 from collections import Counter, defaultdict
@@ -14,6 +14,7 @@ from .constdata import extra_drops
 from ..core.apiclient import apiclient
 from typing import TypeVar, Generic
 from ..util.pcr_data import CHARA_NICKNAME
+from ..util.logger import instance as logger
 
 T = TypeVar("T")
 
@@ -772,7 +773,7 @@ class database():
                 EventStoryDetail.query(db)
                 .to_list()
             )
-    
+
     @lazy_property
     def story_detail(self) -> Dict[int, StoryDetail]:
         with self.dbmgr.session() as db:
@@ -1071,6 +1072,22 @@ class database():
             )
 
     @lazy_property
+    def dome_schedule_data(self) -> Dict[int, DomeScheduleDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                DomeScheduleDatum.query(db)
+                .to_dict(lambda x: x.schedule_id, lambda x: x)
+            )
+
+    @lazy_property
+    def abyss_schedule(self) -> Dict[int, AbyssSchedule]:
+        with self.dbmgr.session() as db:
+            return (
+                AbyssSchedule.query(db)
+                .to_dict(lambda x: x.abyss_id, lambda x: x)
+            )
+
+    @lazy_property
     def tower_schedule(self) -> Dict[int, TowerSchedule]:
         with self.dbmgr.session() as db:
             return (
@@ -1226,6 +1243,22 @@ class database():
             return (
                 HatsuneItem.query(db)
                 .to_dict(lambda x: x.event_id, lambda x: x)
+            )
+
+    @lazy_property
+    def tpr_story_data(self) -> Dict[int, TprStoryDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                TprStoryDatum.query(db)
+                .to_dict(lambda x: x.sub_story_id, lambda x: x)
+            )
+
+    @lazy_property
+    def tpr_panel_data(self) -> Dict[int, TprPanelDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                TprPanelDatum.query(db)
+                .to_dict(lambda x: x.panel_id, lambda x: x)
             )
 
     @lazy_property
@@ -1579,7 +1612,7 @@ class database():
     @lazy_property
     def talents(self) -> Dict[int, Talent]:
         with self.dbmgr.session() as db:
-             return (
+            return (
                 Talent.query(db)
                 .to_dict(lambda x: x.talent_id, lambda x: x)
             )
@@ -1623,7 +1656,6 @@ class database():
                 ExperienceTalentLevel.query(db)
                 .to_dict(lambda x: x.talent_level, lambda x: x)
             )
-
 
     def get_ex_equip_star_from_pt(self, id: int, pt: int) -> int:
         rarity = self.get_ex_equip_rarity(id)
@@ -1676,9 +1708,9 @@ class database():
         except:
             return f"未知物品({item[0]}, {item[1]})"
 
-    def get_ex_equip_name(self, item: int, rank: int = 0) -> str:
+    def get_ex_equip_name(self, item: int, rank: int = -1) -> str:
         try:
-            return f"{self.ex_rarity_name[self.ex_equipment_data[item].rarity]}{rank}-" + self.inventory_name[(eInventoryType.ExtraEquip, item)] 
+            return f"{self.ex_rarity_name[self.ex_equipment_data[item].rarity]}{rank if rank != -1 else ''}-" + self.inventory_name[(eInventoryType.ExtraEquip, item)] 
         except:
             return f"未知ex装备({item})"
 
@@ -2268,7 +2300,7 @@ class database():
         return list(range(st, self.unique_equipment_max_level[equip_slot] + 1))
 
     def last_normal_quest(self) -> List[int]:
-        quest_ids = sorted(self.normal_quest_data.keys(), reverse=True)
+        quest_ids = sorted([k for k, v in self.normal_quest_data.items() if self.parse_time(v.start_time) <= apiclient.datetime] , reverse=True)
         return quest_ids[:35]
         last_start_time = flow(self.normal_quest_data.values()) \
                 .where(lambda x: db.parse_time(x.start_time) <= apiclient.datetime) \
@@ -2302,7 +2334,7 @@ class database():
     def is_unit_rank_bonus(self, unit_id: int, promotion_level: int) -> bool:
         return unit_id in self.promote_bonus and promotion_level in self.promote_bonus[unit_id]
 
-    def calc_unit_attribute(self, unit_data: UnitData, read_story: Set[int]) -> UnitAttribute:
+    def calc_unit_attribute(self, unit_data: UnitData, read_story: Set[int], ex_equips: Dict[int, ExtraEquipInfo]) -> UnitAttribute:
         unit_id = unit_data.id
         promotion_level = unit_data.promotion_level.value
         rarity = unit_data.battle_rarity if unit_data.battle_rarity else unit_data.unit_rarity
@@ -2343,10 +2375,22 @@ class database():
                 kizuna_attribute += story.get_unit_attribute()
 
         unit_attribute = base_attribute.round() + rb_attribute.round() + equip_attribute.round() + unique_equip_attribute.ceil() + kizuna_attribute.round()
+
+        # EX装备
+        ex_attribute = UnitAttribute()
+        for ex_equip in unit_data.ex_equip_slot:
+            if ex_equip.serial_id:
+                ex_equip_data = ex_equips[ex_equip.serial_id]
+                star = self.get_ex_equip_star_from_pt(ex_equip_data.ex_equipment_id, ex_equip_data.enhancement_pt)
+                attr = self.ex_equipment_data[ex_equip_data.ex_equipment_id].get_unit_attribute(star)
+                bonus = unit_attribute.ex_equipment_mul(attr).ceil()
+                ex_attribute += bonus
+        unit_attribute += ex_attribute
+
         return unit_attribute
 
-    def calc_unit_attribute_power(self, unit_data: UnitData, read_story: Set[int], coefficient: UnitStatusCoefficient) -> float:
-        unit_attribute = self.calc_unit_attribute(unit_data, read_story)
+    def calc_unit_attribute_power(self, unit_data: UnitData, read_story: Set[int], ex_equips: Dict[int, ExtraEquipInfo], coefficient: UnitStatusCoefficient) -> float:
+        unit_attribute = self.calc_unit_attribute(unit_data, read_story, ex_equips)
         return unit_attribute.get_power(coefficient)
 
     def calc_skill_power(self, unit_data: UnitData, coefficient: UnitStatusCoefficient) -> float:
@@ -2375,9 +2419,9 @@ class database():
 
         return skill_power * coefficient.skill_lv_coefficient
 
-    def calc_unit_power(self, unit_data: UnitData, read_story: Set[int]) -> float:
+    def calc_unit_power(self, unit_data: UnitData, read_story: Set[int], ex_equips: Dict[int, ExtraEquipInfo]) -> float:
         coefficient = self.unit_status_coefficient[1]
-        attribute_power = self.calc_unit_attribute_power(unit_data, read_story, coefficient)
+        attribute_power = self.calc_unit_attribute_power(unit_data, read_story, ex_equips, coefficient)
         skill_power = self.calc_skill_power(unit_data, coefficient)
         return attribute_power + skill_power
 
