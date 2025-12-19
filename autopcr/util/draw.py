@@ -26,33 +26,6 @@ class Drawer():
             '致命': '#8B0000',
         }
 
-
-    async def draw_task_result(self, result):
-            """绘制任务结果图片"""
-            # 根据 result 数据结构生成图片
-            # 示例：简单绘制文本到图片
-            from PIL import Image, ImageDraw, ImageFont
-            
-            # 创建图片
-            img = Image.new('RGB', (800, 600), color=(255, 255, 255))
-            draw = ImageDraw.Draw(img)
-            
-            # 加载字体（需替换为实际字体路径）
-            try:
-                font = ImageFont.truetype("simhei.ttf", 24)
-            except:
-                font = ImageFont.load_default()
-            
-            # 绘制内容（根据实际 result 结构调整）
-            text = f"公会深域进度结果:\n{str(result)}"
-            draw.text((50, 50), text, font=font, fill=(0, 0, 0))
-            
-            # 转为 base64 所需的字节流
-            from io import BytesIO
-            buf = BytesIO()
-            img.save(buf, format='PNG')
-            return buf.getvalue()
-            
     def light_color(self):
         return {
             'bg': 'white',
@@ -86,7 +59,7 @@ class Drawer():
     async def draw_json(self, titles: List[str], records: List[Dict]) -> Image.Image:
         img = json2img(records, titles, colors=self.color(), font=self.font, stock=True)
         return img
-        
+
     async def draw_tasks_result(self, data: "TaskResult") -> Image.Image:
         content = []
         header = ["序号", "名字","配置","状态","结果"]

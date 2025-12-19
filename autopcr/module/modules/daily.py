@@ -358,4 +358,3 @@ class pjjc_daily(Module):
         await client.logout()
         await asyncio.sleep(2)
         self._log(f"当前排名{info.grand_arena_info.rank}，进攻第{opponent.rank}名的【{opponent.user_name}】")
-

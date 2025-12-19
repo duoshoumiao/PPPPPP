@@ -1,4 +1,5 @@
 from ...util.linq import flow
+from ...util.ilp_solver import ex_equip_power_max_cost_flow
 from ...model.common import ExtraEquipChangeSlot, ExtraEquipChangeUnit, InventoryInfoPost
 from ..modulebase import *
 from ..config import *
@@ -7,7 +8,7 @@ from ...model.error import *
 from ...db.database import db
 from ...model.enums import *
 from collections import Counter
-from .unit import UnitController
+
 @name('强化EX装')
 @default(True)
 @booltype('ex_equip_enhance_view', '看消耗', True)
@@ -209,363 +210,109 @@ class remove_cb_ex_equip(Module):
             raise SkipError("所有会战EX装备均已撤下")
 
 
-
-## add: 撤下普通ex装
-@name('撤下普通EX装')
+@name('EX装战力最高搭配')
 @default(True)
-@description('')
-class remove_normal_ex_equip(Module):
+@description('理论最优，执行装备将撤下所有EX装备，然后再进行最优搭配')
+@booltype('ex_equip_power_maximun_do', '执行装备', False)
+class ex_equip_power_maximun(Module):
     async def do_task(self, client: pcrclient):
-        ex_cnt = 0
-        unit_cnt = 0
+        st = "st"
+        ed = "ed"
+        edges = []
+        read_story = set(client.data.read_story_ids)
+        coefficient = db.unit_status_coefficient[1]
         for unit_id in client.data.unit:
-            unit = client.data.unit[unit_id]
-            exchange_list = []
-            for ex_equip in unit.ex_equip_slot:
-                if ex_equip.serial_id != 0:
-                    exchange_list.append(ExtraEquipChangeSlot(slot=ex_equip.slot, serial_id=0))
-                    ex_cnt += 1
+            unit_node = f"u{unit_id}"
+            edges.append((st, unit_node, 3, 0))
 
-            if exchange_list:
-                unit_cnt += 1
-                await client.unit_equip_ex([ExtraEquipChangeUnit(
-                        unit_id=unit_id, 
-                        ex_equip_slot=exchange_list,
-                        cb_ex_equip_slot=None)])
-        if ex_cnt:
-            self._log(f"撤下了{unit_cnt}个角色的{ex_cnt}个普通EX装备")
-        else:
-            raise SkipError("所有普通EX装备均已撤下")
+            unit_attr = db.calc_unit_attribute(client.data.unit[unit_id], read_story, client.data.ex_equips)
 
+            slot_data = db.unit_ex_equipment_slot[unit_id]
+            for slot_id, ex_category in enumerate([slot_data.slot_category_1, slot_data.slot_category_2, slot_data.slot_category_3], start=1):
+                unit_slot_node = f"{unit_node}k{slot_id}"
+                edges.append((unit_node, unit_slot_node, 1, 0))
+                ex_equip_group_by_star = flow(client.data.ex_equips.values()) \
+                        .where(lambda ex: ex_category == db.ex_equipment_data[ex.ex_equipment_id].category) \
+                        .group_by(lambda ex: db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt)) \
+                        .to_dict(lambda ex: ex.key, lambda ex: ex.to_list())
+                for star in ex_equip_group_by_star:
+                    consider_ex = set()
+                    for ex in ex_equip_group_by_star[star]:
+                        if ex.ex_equipment_id in consider_ex:
+                            continue
+                        consider_ex.add(ex.ex_equipment_id)
+                        ex_node = f"e{ex.ex_equipment_id}s{star}"
+                        attr = db.ex_equipment_data[ex.ex_equipment_id].get_unit_attribute(star)
+                        bonus = unit_attr.ex_equipment_mul(attr).ceil()
+                        power = int(bonus.get_power(coefficient) + 0.5)
+                        edges.append((unit_slot_node, ex_node, 1, -power))
 
-# add: 计算已有角色最佳3星ex装备
-# 每个角色有三个槽，通过unit_ex_equipment_slot、ex_equipment_data可以找到每个槽能够使用的多个装备，通过calc_unit_power计算装上ex装备增加的战力倒序，获取最佳3星ex，以及次佳与最佳的差值。目前的calc_unit_attribute只能获取到未添加ex装备的战力，如果装上ex装备，需要在白板unit_attribute上加上"ex_equipment_data"的对应max_xxx值（如果是100的倍数需要加上百分之几，如200就加2%，如果不是就直接加上原数字）。装备显示成名称。
+        ex_equips_group_by_id_star = flow(client.data.ex_equips.values()) \
+                .group_by(lambda ex: (ex.ex_equipment_id, db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt))) \
+                .to_dict(lambda ex: ex.key, lambda ex: ex.count())
+        for (ex_id, star) in ex_equips_group_by_id_star:
+            ex_node = f"e{ex_id}s{star}"
+            edges.append((ex_node, ed, ex_equips_group_by_id_star[(ex_id, star)], 0))
+        min_cost, strategy = ex_equip_power_max_cost_flow(edges, st, ed)
+        self._log(f"最大战力提升：{-min_cost}")
 
-@name('计算最佳3星EX装备')
-@default(False)
-@description('计算已有角色每个槽位的最佳3星EX装备推荐')
-@booltype('auto_equip', '自动装备', False)
-class calc_best_3star_ex_equip(Module):
-    async def do_task(self, client: pcrclient):
-        auto_equip: bool = self.get_config('auto_equip')
-        results = []
-        total_best_power_increase = 0  # 统计所有最佳装备的战力提升总和
-        all_slot_data = {}  # 存储每个角色每个槽位的所有装备选择: {(unit_id, slot): [(ex_id, power), ...]}
-        
-        for unit_id in client.data.unit:
-            unit = client.data.unit[unit_id]
-            unit_name = db.get_unit_name(unit_id)
-            
-            # 获取角色当前战力（基础战力，参考successful example）
-            base_power = client.data.get_unit_power(unit_id)
-            
-            # 获取角色基础属性（用于计算增强后的战力）
-            base_attr = db.calc_unit_attribute(unit, client.data.read_story_ids)
-            
-            # 计算每个槽位的最佳EX装备（只处理普通EX槽位1-3）
-            for slot in range(3):  # 只处理槽位1-3，槽位4-6是会战EX
-                slot_recommendations = []
-                
-                # 获取该槽位可用的EX装备
-                available_ex_equips = []
-                if unit_id in db.unit_ex_equipment_slot:
-                    slot_data = db.unit_ex_equipment_slot[unit_id]
-                    # 获取槽位的种类号
-                    category = None
-                    if slot == 0:  # 槽位1
-                        category = slot_data.slot_category_1
-                    elif slot == 1:  # 槽位2
-                        category = slot_data.slot_category_2
-                    elif slot == 2:  # 槽位3
-                        category = slot_data.slot_category_3
-                    
-                    # 在ex_equipment_data中查找匹配该种类的所有装备ID
-                    if category is not None:
-                        available_ex_equips = [ex_id for ex_id, ex_data in db.ex_equipment_data.items() 
-                                             if ex_data.category == category]
-                
-                if not available_ex_equips:
-                    continue
-                    
-                for ex_equip_id in available_ex_equips:
-                    # 只考虑3星品质的EX装备
-                    if db.get_ex_equip_rarity(ex_equip_id) != 3:
+        slot_strategy = []
+        for u, v, flow_num in strategy:
+            if u == st or v == ed or flow_num == 0 or u.startswith("u") and v.startswith("u"):
+                continue
+            unit_id = int(u[1:u.index('k')])
+            slot_id = int(u[u.index('k') + 1:])
+            ex_equipment_id = int(v[1:v.index('s')])
+            star = int(v[v.index('s') + 1:])
+
+            slot_strategy.append((unit_id, slot_id, ex_equipment_id, star))
+
+        slot_strategy = flow(slot_strategy) \
+                .group_by(lambda x: x[0]) \
+                .to_dict(lambda x: x.key, lambda x: x.to_list())
+        do_equip = self.get_config('ex_equip_power_maximun_do')
+        if do_equip:
+            cnt = 0
+            for unit_id in client.data.unit:
+                unit = client.data.unit[unit_id]
+                exchange_list = []
+                for ex_slot in unit.ex_equip_slot:
+                    if ex_slot.serial_id != 0:
+                        exchange_list.append(ExtraEquipChangeSlot(slot=ex_slot.slot, serial_id=0))
+                if exchange_list:
+                    cnt += 1
+                    await client.unit_equip_ex([ExtraEquipChangeUnit(
+                            unit_id=unit_id, 
+                            ex_equip_slot=exchange_list[:len(unit.ex_equip_slot)],
+                            cb_ex_equip_slot=None)])
+            if cnt:
+                self._log(f"撤下了{cnt}个角色的EX装备")
+
+            use_series_set = set()
+            for unit_id in slot_strategy:
+                unit = client.data.unit[unit_id]
+                exchange_list = []
+                for (_, slot, ex_equipment_id, star) in slot_strategy[unit_id]:
+                    ex_candidates = flow(client.data.ex_equips.values()) \
+                            .where(lambda ex: ex.ex_equipment_id == ex_equipment_id and db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt) == star) \
+                            .where(lambda ex: ex.serial_id not in use_series_set) \
+                            .to_list()
+                    if not ex_candidates:
+                        self._warn(f"无{db.get_ex_equip_name(ex_equipment_id)}★{star}，无法装备")
                         continue
-                        
-                    # 获取EX装备数据
-                    ex_data = db.ex_equipment_data[ex_equip_id]
-                    
-                    # 计算装备该EX装备后的属性
-                    enhanced_attr = {
-                        'hp': base_attr.hp,
-                        'atk': base_attr.atk,
-                        'def_': base_attr.def_,
-                        'magic_str': base_attr.magic_str,
-                        'magic_def': base_attr.magic_def,
-                        'physical_critical': base_attr.physical_critical,
-                        'magic_critical': base_attr.magic_critical,
-                        'dodge': base_attr.dodge,
-                        'accuracy': base_attr.accuracy,
-                        'energy_recovery_rate': base_attr.energy_recovery_rate,
-                        'hp_recovery_rate': base_attr.hp_recovery_rate,
-                        'energy_reduce_rate': base_attr.energy_reduce_rate
-                    }
-                    
-                    # 根据注释说明，添加EX装备属性
-                    for attr_name in ['max_hp', 'max_atk', 'max_def', 'max_magic_str', 
-                                     'max_magic_def', 'max_physical_critical', 'max_magic_critical',
-                                     'max_dodge', 'max_accuracy', 'max_energy_recovery_rate',
-                                     'max_hp_recovery_rate', 'max_energy_reduce_rate']:
-                        ex_value = getattr(ex_data, attr_name, 0)
-                        if ex_value > 0:
-                            # 转换属性名：max_hp -> hp, max_def -> def_
-                            base_attr_name = attr_name.replace('max_', '')
-                            if base_attr_name == 'def':
-                                base_attr_name = 'def_'
-                            
-                            base_value = enhanced_attr.get(base_attr_name, 0)
-                            if ex_value % 100 == 0 and ex_value >= 100:
-                                # 百分比属性
-                                enhanced_attr[base_attr_name] = float(base_value) * (1 + ex_value / 10000)
-                            else:
-                                # 固定数值属性
-                                enhanced_attr[base_attr_name] = float(base_value) + ex_value
-                    
-                    # 计算装备后的战力 (属性值与系数相乘求和)
-                    coefficient = db.unit_status_coefficient[1]
-                    
-                    # 使用_coefficient形式的属性名，并转换为float避免Decimal类型冲突
-                    coeff_hp = float(coefficient.hp_coefficient)
-                    coeff_atk = float(coefficient.atk_coefficient)
-                    coeff_def = float(coefficient.def_coefficient)
-                    coeff_magic_str = float(coefficient.magic_str_coefficient)
-                    coeff_magic_def = float(coefficient.magic_def_coefficient)
-                    coeff_physical_critical = float(coefficient.physical_critical_coefficient)
-                    coeff_magic_critical = float(coefficient.magic_critical_coefficient)
-                    coeff_dodge = float(coefficient.dodge_coefficient)
-                    coeff_accuracy = float(coefficient.accuracy_coefficient)
-                    coeff_energy_recovery_rate = float(coefficient.energy_recovery_rate_coefficient)
-                    coeff_hp_recovery_rate = float(coefficient.hp_recovery_rate_coefficient)
-                    coeff_energy_reduce_rate = float(coefficient.energy_reduce_rate_coefficient)
-                    aaa = float(base_attr.hp) * coeff_hp
-                    # 计算基础战力
-                    base_attr_power = (
-                        float(base_attr.hp) * coeff_hp +
-                        float(base_attr.atk) * coeff_atk +
-                        float(base_attr.def_) * coeff_def +
-                        float(base_attr.magic_str) * coeff_magic_str +
-                        float(base_attr.magic_def) * coeff_magic_def +
-                        float(base_attr.physical_critical) * coeff_physical_critical +
-                        float(base_attr.magic_critical) * coeff_magic_critical +
-                        float(base_attr.dodge) * coeff_dodge +
-                        float(base_attr.accuracy) * coeff_accuracy +
-                        float(base_attr.energy_recovery_rate) * coeff_energy_recovery_rate +
-                        float(base_attr.hp_recovery_rate) * coeff_hp_recovery_rate +
-                        float(base_attr.energy_reduce_rate) * coeff_energy_reduce_rate
-                    )
-                    
-                    # 计算增强后战力
-                    power_with_ex = (
-                        float(enhanced_attr['hp']) * coeff_hp +
-                        float(enhanced_attr['atk']) * coeff_atk +
-                        float(enhanced_attr['def_']) * coeff_def +
-                        float(enhanced_attr['magic_str']) * coeff_magic_str +
-                        float(enhanced_attr['magic_def']) * coeff_magic_def +
-                        float(enhanced_attr['physical_critical']) * coeff_physical_critical +
-                        float(enhanced_attr['magic_critical']) * coeff_magic_critical +
-                        float(enhanced_attr['dodge']) * coeff_dodge +
-                        float(enhanced_attr['accuracy']) * coeff_accuracy +
-                        float(enhanced_attr['energy_recovery_rate']) * coeff_energy_recovery_rate +
-                        float(enhanced_attr['hp_recovery_rate']) * coeff_hp_recovery_rate +
-                        float(enhanced_attr['energy_reduce_rate']) * coeff_energy_reduce_rate
-                    )
-                    
-                    power_increase = power_with_ex - base_attr_power
-                    
-                    ex_name = ex_data.name
-                    slot_recommendations.append((ex_equip_id, ex_name, int(power_increase)))
-                
-                # 按战力增加值排序
-                slot_recommendations.sort(key=lambda x: x[2], reverse=True)
-                
-                # 存储该槽位的所有装备选择
-                if slot_recommendations:
-                    all_slot_data[(unit_id, slot + 1)] = [(ex_id, power) for ex_id, ex_name, power in slot_recommendations]
-                
-                if len(slot_recommendations) >= 3:
-                    top3 = slot_recommendations[:3]
-                    best_power = top3[0][2]  # 最佳装备的战力
-                    
-                    result_text = f"{unit_name} 槽位{slot+1}: "
-                    for i, (ex_id, ex_name, power) in enumerate(top3):
-                        rank_name = ["最佳", "次佳", "第三"][i]
-                        power_diff = power - best_power  # 相对于最佳的差值
-                        if power_diff == 0:
-                            result_text += f"{rank_name}={ex_name}(0)"
-                        else:
-                            result_text += f"{rank_name}={ex_name}({power_diff})"
-                        if i < len(top3) - 1:
-                            result_text += ", "
-                    results.append(result_text)
-                    # 累加最佳装备的战力提升
-                    total_best_power_increase += best_power
-                elif len(slot_recommendations) == 2:
-                    best, second = slot_recommendations[:2]
-                    power_diff = second[2] - best[2]
-                    results.append(f"{unit_name} 槽位{slot+1}: 最佳={best[1]}(0), 次佳={second[1]}({power_diff})")
-                    # 累加最佳装备的战力提升
-                    total_best_power_increase += best[2]
-                elif len(slot_recommendations) == 1:
-                    best = slot_recommendations[0]
-                    results.append(f"{unit_name} 槽位{slot+1}: 最佳={best[1]}(0)")
-                    # 累加最佳装备的战力提升
-                    total_best_power_increase += best[2]
-        
-        if results:
-            if auto_equip:
-                # 执行自动装备操作
-                await self._auto_equip_best_ex(client, all_slot_data)
-            else:
-                # 只显示推荐结果
-                self._log("3星EX装备推荐结果:")
-                for result in results:
-                    self._log(result)
-                self._log(f"所有最佳装备战力提升总计: +{total_best_power_increase}")
-        else:
-            raise SkipError("没有找到可推荐的3星EX装备")
-    
-    async def _auto_equip_best_ex(self, client: pcrclient, all_slot_data):
-        """自动装备最佳3星EX装备"""
-        equipped_units = 0
-        equipped_count = 0
-        
-        # 统计四种装备类型的数量
-        max_enhanced_best = 0      # 满强化最优
-        max_enhanced_secondary = 0 # 满强化次优
-        rank2_unlocked_best = 0    # 未强化但解锁rank2的最优
-        rank_locked_best = 0       # 未解锁rank的最优
-        
-        # 获取当前未使用的EX装备
-        use_ex_equip = set(ex_slot.serial_id
-                          for unit in client.data.unit.values() 
-                          for ex_slot in unit.ex_equip_slot if ex_slot.serial_id != 0)
-        
-        # 按EX装备ID分组可用装备
-        ex_equip_by_ex_id = {}
-        for ex in client.data.ex_equips.values():
-            if ex.serial_id not in use_ex_equip:
-                if ex.ex_equipment_id not in ex_equip_by_ex_id:
-                    ex_equip_by_ex_id[ex.ex_equipment_id] = []
-                ex_equip_by_ex_id[ex.ex_equipment_id].append(ex)
-        
-        # 为每个EX装备ID按优先级排序：首先enhancement_pt越高越优先，其次rank越高越优先
-        for ex_id in ex_equip_by_ex_id:
-            ex_equip_by_ex_id[ex_id].sort(key=lambda x: (-x.enhancement_pt, -x.rank))
-        
-        # 按战力从高到低排序处理槽位
-        sorted_combinations = []
-        for (unit_id, slot), options in all_slot_data.items():
-            # 只处理普通EX装备槽位1-3
-            if slot > 3:
-                continue
-            max_power = max(option[1] for option in options)
-            sorted_combinations.append((unit_id, slot, options, max_power))
-        
-        sorted_combinations.sort(key=lambda x: x[3], reverse=True)
-        
-        # 处理每个角色槽位组合
-        equipped_units_set = set()
-        for unit_id, slot, options, max_power in sorted_combinations:
-            unit_name = db.get_unit_name(unit_id)
-            
-            # 智能选择：从该槽位的所有选项中选择最佳装备
-            # 获取最高战力的装备ID作为默认选择
-            best_option = max(options, key=lambda x: x[1])
-            final_ex_id = best_option[0]
-            
-            if len(options) > 1:
-                # 检查当前最优装备的强化情况
-                current_best_enhancement = 0
-                if final_ex_id in ex_equip_by_ex_id and ex_equip_by_ex_id[final_ex_id]:
-                    current_best_enhancement = max(ex.enhancement_pt for ex in ex_equip_by_ex_id[final_ex_id] 
-                                                  if db.ex_equipment_data[ex.ex_equipment_id].rarity == 3)
-                
-                # 如果最优装备未强化，检查其他选项
-                if current_best_enhancement == 0:
-                    for alt_ex_id, alt_power in options:
-                        if alt_ex_id != final_ex_id and (max_power - alt_power) <= 100:
-                            # 检查替代装备的强化情况
-                            if alt_ex_id in ex_equip_by_ex_id and ex_equip_by_ex_id[alt_ex_id]:
-                                alt_enhancement = max(ex.enhancement_pt for ex in ex_equip_by_ex_id[alt_ex_id] 
-                                                    if db.ex_equipment_data[ex.ex_equipment_id].rarity == 3)
-                                if alt_enhancement == 6000:  # 满强化
-                                    final_ex_id = alt_ex_id
-                                    break
-            
-            # 检查是否有可用的装备
-            if final_ex_id not in ex_equip_by_ex_id or not ex_equip_by_ex_id[final_ex_id]:
-                continue
-                
-            # 获取当前槽位的装备
-            unit = client.data.unit[unit_id]
-            current_ex_slot = unit.ex_equip_slot[slot - 1]
-            
-            # 如果已经装备了相同的装备ID，跳过
-            if current_ex_slot.serial_id != 0:
-                current_ex = client.data.ex_equips[current_ex_slot.serial_id]
-                if current_ex.ex_equipment_id == final_ex_id:
-                    continue
-            
-            # 选择最佳可用装备（优先强化满的，其次未强化的）
-            target_ex = None
-            for ex in ex_equip_by_ex_id[final_ex_id]:
-                # 检查是否为3星装备
-                if db.ex_equipment_data[ex.ex_equipment_id].rarity == 3:
-                    target_ex = ex
-                    break
-            
-            if not target_ex:
-                continue
-            
-            # 执行装备操作
-            try:
-                exchange_list = [ExtraEquipChangeSlot(slot=slot, serial_id=target_ex.serial_id)]
-                await client.unit_equip_ex([ExtraEquipChangeUnit(
-                    unit_id=unit_id, 
-                    ex_equip_slot=exchange_list,
-                    cb_ex_equip_slot=None
-                )])
-                
-                # 从可用列表中移除已使用的装备
-                ex_equip_by_ex_id[final_ex_id].remove(target_ex)
-                if not ex_equip_by_ex_id[final_ex_id]:
-                    del ex_equip_by_ex_id[final_ex_id]
-                
-                equipped_count += 1
-                equipped_units_set.add(unit_id)
-                
-                # 统计装备类型
-                original_best_ex_id = best_option[0]  # 原始最优装备ID
-                is_best = (final_ex_id == original_best_ex_id)  # 是否为原始最优装备
-                enhancement = target_ex.enhancement_pt
-                rank = target_ex.rank
-                
-                if enhancement == 6000:  # 满强化
-                    if is_best:
-                        max_enhanced_best += 1
-                    else:
-                        max_enhanced_secondary += 1
-                elif enhancement == 0:  # 未强化
-                    if rank >= 2:  # 解锁rank2
-                        rank2_unlocked_best += 1
-                    else:  # 未解锁rank
-                        rank_locked_best += 1
-                
-            except Exception as e:
-                ex_name = db.ex_equipment_data[final_ex_id].name
-                self._warn(f"为{unit_name}装备{ex_name}失败: {e}")
-        
-        equipped_units = len(equipped_units_set)
-        self._log(f"自动装备完成：为{equipped_units}个角色装备了{equipped_count}个最佳3星EX装备")
-        self._log(f"装备详情：满强化最优{max_enhanced_best}个，满强化次优{max_enhanced_secondary}个，"
-                 f"未强化但解锁rank2的最优{rank2_unlocked_best}个，未解锁rank的最优{rank_locked_best}个")
+                    ex_to_equip = ex_candidates[0]
+                    use_series_set.add(ex_to_equip.serial_id)
+                    exchange_list.append(ExtraEquipChangeSlot(slot=slot, serial_id=ex_to_equip.serial_id))
+                if exchange_list:
+                    await client.unit_equip_ex([ExtraEquipChangeUnit(
+                            unit_id=unit_id, 
+                            ex_equip_slot=exchange_list,
+                            cb_ex_equip_slot=None)])
+
+        for unit_id in slot_strategy:
+            msg = []
+            for (_, slot, ex_equipment_id, star) in slot_strategy[unit_id]:
+                msg.append(f"{db.get_ex_equip_name(ex_equipment_id)}★{star}")
+            msg = ','.join(msg)
+            self._log(f"{db.get_unit_name(unit_id)} 装备 {msg}")
+

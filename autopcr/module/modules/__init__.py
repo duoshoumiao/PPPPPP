@@ -2,6 +2,7 @@ from dataclasses import field
 from typing import Any
 from .autosweep import *
 from .box import *
+from .abyss import *
 from .nologin import *
 from .caravan import *
 from .clan import *
@@ -70,6 +71,8 @@ daily_modules = ModuleList(
         explore_exp,
         explore_mana,
         underground_skip,
+        abyss_quest_sweep,
+        abyss_boss_sweep,
         special_underground_skip,
         tower_cloister_sweep,
         smart_very_hard_sweep,
@@ -203,6 +206,7 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        ex_equip_power_maximun,
         return_jewel,
         nbb_game,
         remove_normal_ex_equip,
