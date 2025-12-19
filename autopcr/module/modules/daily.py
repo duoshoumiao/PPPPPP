@@ -230,6 +230,8 @@ class present_receive(Module):
                             self._warn("体力满了，无法领取礼物箱的体力")
                         if any(db.is_ex_equip((present.reward_type, present.reward_id)) for present in present_index.present_info_list):
                             self._warn("EX装备满了，无法领取礼物箱的EX装备")
+                        if any((present.reward_type, present.reward_id) == db.dice for present in present_index.present_info_list):
+                            self._warn("骰子满了，无法领取礼物箱的骰子")
                         stop = True
                     else:
                         result += res.rewards
@@ -276,6 +278,30 @@ class jjc_reward(Module):
         if info.reward_info.count:
             await client.receive_grand_arena_reward()
         self._log(f"pjjc币x{info.reward_info.count}")
+
+@description('展示基本信息')
+@name('基本信息')
+@default(True)
+class user_info(Module):
+    async def do_task(self, client: pcrclient):
+        now = db.format_time(apiclient.datetime)
+        name = client.data.user_name
+        level = client.data.team_level
+        stamina = client.data.stamina
+        max_stamina = db.team_info[client.data.team_level].max_stamina
+        jewel = client.data.jewel.free_jewel
+        mana = client.data.gold.gold_id_free
+        sweep_ticket = client.data.get_inventory((eInventoryType.Item, 23001))
+        pig = client.data.get_inventory((eInventoryType.Item, 90005))
+        tot_power = sum([client.data.get_unit_power(unit) for unit in client.data.unit])
+
+        if stamina >= max_stamina:
+            self._warn(f"体力爆了！")
+        self._log(f"{name} 体力{stamina}({max_stamina}) 等级{level} 钻石{jewel}")
+        self._log(f"玛那{mana} 扫荡券{sweep_ticket} 母猪石{pig}")
+        self._log(f"全角色战力：{tot_power}")
+        self._log(f"已氪体数：{client.data.recover_stamina_exec_count}")
+        self._log(f"清日常时间：{now}")
 
 @description('仅进攻，不结算，会消耗次数')
 @name('完成每日jjc任务')
@@ -332,28 +358,4 @@ class pjjc_daily(Module):
         await client.logout()
         await asyncio.sleep(2)
         self._log(f"当前排名{info.grand_arena_info.rank}，进攻第{opponent.rank}名的【{opponent.user_name}】")
-
-@description('展示基本信息')
-@name('基本信息')
-@default(True)
-class user_info(Module):
-    async def do_task(self, client: pcrclient):
-        now = db.format_time(apiclient.datetime)
-        name = client.data.user_name
-        level = client.data.team_level
-        stamina = client.data.stamina
-        max_stamina = db.team_info[client.data.team_level].max_stamina
-        jewel = client.data.jewel.free_jewel
-        mana = client.data.gold.gold_id_free
-        sweep_ticket = client.data.get_inventory((eInventoryType.Item, 23001))
-        pig = client.data.get_inventory((eInventoryType.Item, 90005))
-        tot_power = sum([client.data.get_unit_power(unit) for unit in client.data.unit])
-
-        if stamina >= max_stamina:
-            self._warn(f"体力爆了！")
-        self._log(f"{name} 体力{stamina}({max_stamina}) 等级{level} 钻石{jewel}")
-        self._log(f"玛那{mana} 扫荡券{sweep_ticket} 母猪石{pig}")
-        self._log(f"全角色战力：{tot_power}")
-        self._log(f"已氪体数：{client.data.recover_stamina_exec_count}")
-        self._log(f"清日常时间：{now}")
 

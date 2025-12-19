@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from ..core import pcrclient
 from ..db.database import db
+from ..model.custom import eDifficulty
 from ..util.pcr_data import CHARA_NAME, CHARA_NICKNAME
 from copy import copy
 
@@ -270,50 +271,10 @@ class MultiSearchConfig(MultiChoiceConfig):
 
 class EquipListConfig(MultiSearchConfig):
     def __init__(self, key: str, desc: str):
-        # 保留原始初始化逻辑，不改变基础行为
         super().__init__(key, desc, [], db.equip_candidate(), short_display=True)
-        # 增加类型标识，用于区分其他数据类型
-        self.data_type = "equipment"
 
     def candidate_display(self, equip_id: int):
-        # 仅处理装备ID，确保输入是整数且在装备候选列表中
-        if isinstance(equip_id, int) and equip_id in self.candidates:
-            return db.get_equip_name(equip_id)
-        return ""  # 非装备ID返回空，避免干扰其他数据
-    
-    def candidate_tag(self, equip_id: int):
-        # 仅处理有效的装备ID
-        if not (isinstance(equip_id, int) and equip_id in self.candidates):
-            return []
-            
-        # 整合ID、名称用于搜索
-        tags = [str(equip_id)]  # 包含ID
-        name = self.candidate_display(equip_id)
-        if name:
-            tags.append(name)  # 包含显示名称
-        return tags
-
-    def validate_value(self, value: List):
-        if not value:
-            return []
-        
-        candidates = self.candidates
-        valid_values = []
-        for v in value:
-            # 对于字符串输入（搜索关键词）进行匹配
-            if isinstance(v, str):
-                # 遍历所有候选装备查找匹配项
-                for equip_id in candidates:
-                    # 检查ID、显示名称是否包含搜索关键词
-                    if (v in str(equip_id) or 
-                        v in self.candidate_display(equip_id)):
-                        valid_values.append(equip_id)
-            # 对于ID直接验证是否在候选列表中
-            elif isinstance(v, int) and v in candidates:
-                valid_values.append(v)
-        
-        # 去重并返回，确保只返回装备相关ID
-        return list(set(valid_values)) if valid_values else None
+        return db.get_equip_name(equip_id)
 
 class UnitListConfig(UnitConfigMixin, MultiSearchConfig):
     def __init__(self, key: str, desc: str):
@@ -464,6 +425,16 @@ class TalentConfig(MultiChoiceConfig):
 
     def candidate_display(self, talent_id: int):
         return db.talents[talent_id].talent_name
+
+
+class AbyssBossConfig(SingleChoiceConfig):
+    """Configuration for abyss boss difficulty."""
+
+    def __init__(self, key: str, desc: str, default: int):
+        super().__init__(key, desc, default, [eDifficulty.NONE, eDifficulty.NORMAL, eDifficulty.HARD, eDifficulty.VERY_HARD, eDifficulty.EXTREME])
+
+    def candidate_display(self, difficulty: int):
+        return (eDifficulty)(difficulty).name
 
 # Compatible with the old version
 def booltype(key: str, desc: str, default: bool):

@@ -46,7 +46,7 @@ class lazy_normal_sweep(Module):
     async def do_task(self, client: pcrclient):
         strategy: str = self.get_config('lazy_sweep_strategy')
         consider_units: List[int] = self.get_config('lazy_sweep_consider_units')
-        
+
         grow_parameter_list = client.data.get_synchro_parameter()
         demand = client.data.get_equip_demand2(consider_units, grow_parameter_list=grow_parameter_list)
 
@@ -75,18 +75,19 @@ class lazy_normal_sweep(Module):
 
                 for target_id in target_quest:
                     try:
-                        resp = await client.quest_skip_aware(target_id, 3)
+                        resp, clear_count, no_stamina = await client.quest_skip_aware(target_id, 3)
                         tmp.extend([item for item in resp if db.is_equip((item.type, item.id))]) 
-                        clean_cnt[target_id] += 3
+                        if clear_count:
+                            clean_cnt[target_id] += clear_count
+                        if no_stamina:
+                            stop = True
+                            if not clean_cnt: self._log(f"刷取{db.get_quest_name(target_id)}体力不足")
+                            break
                     except SkipError:
                         pass
                     except AbortError as e:
                         stop = True
-                        if str(e).endswith("体力不足"):
-                            if not tmp and not self.log: self._log(str(e))
-                        else:
-                            raise e
-                        break
+                        raise e
                 if stop:
                     break
         except:
@@ -97,8 +98,132 @@ class lazy_normal_sweep(Module):
                 f": 刷取{cnt}次" for quest, cnt in clean_cnt.items())
                 self._log(msg)
                 self._log("---------")
-            if tmp:
-                self._log(await client.serialize_reward_summary(tmp))
+                if tmp:
+                    self._log(await client.serialize_reward_summary(tmp))
+            elif not self.is_warn:
+                raise SkipError()
+
+# @conditional_execution1("normal_sweep_run_time", ["n庆典"])
+# @singlechoice("normal_sweep_strategy", "刷取策略", "刷最缺", ["刷最缺", "均匀刷"])
+# @singlechoice("normal_sweep_quest_scope", "刷取图", "全部", ["全部", "可扫荡", "新开图"])
+# @booltype("normal_sweep_full_ok_stop", "刷完所有角色停止", False)
+# @booltype("normal_sweep_equip_ok_to_full", "刷满则考虑所有角色", False)
+# @singlechoice("normal_sweep_consider_unit", "起始品级", "所有", ["所有", "最高", "次高", "次次高"])
+# @booltype("normal_sweep_consider_unit_fav", "收藏角色", True)
+# @description('根据【刷图推荐】结果刷n图，均匀刷指每次刷取的图覆盖所缺的需求装备，若无缺装备则刷取推荐的第一张图，仅可扫荡指忽略未三星通关地图')
+# @name('智能刷n图(弃用)')
+# @default(False)
+# @tag_stamina_consume
+# class smart_normal_sweep(Module):
+#
+#     async def get_quests(self, quest_list: List[int], strategy: str, gap: typing.Counter[ItemType]) -> List[int]:
+#         ret = []
+#         lack = set(item for item, need in gap.items() if need > 0)
+#         if (not lack or strategy == "刷最缺") and quest_list:
+#             ret.append(quest_list[0])
+#         elif strategy == "均匀刷":
+#             uncover = lack
+#             ret = []
+#             for quest in quest_list:
+#                 if any(item in uncover for item in db.normal_quest_rewards[quest]):
+#                     ret.append(quest)
+#                     uncover -= set(db.normal_quest_rewards[quest])
+#                     if not uncover:
+#                         break
+#         else:
+#             raise ValueError(f"未知策略{strategy}")
+#
+#         if not ret and quest_list:
+#             ret.append(quest_list[0])
+#         if not ret:
+#             self._log("无需刷取的图！")
+#         return ret
+#
+#     async def do_task(self, client: pcrclient):
+#
+#         like_unit_only: bool = self.get_config('normal_sweep_consider_unit_fav')
+#         rank: str = self.get_config('normal_sweep_consider_unit')
+#         strategy: str = self.get_config('normal_sweep_strategy')
+#         full2all: bool = self.get_config('normal_sweep_equip_ok_to_full')
+#         quest_scope: str = self.get_config('normal_sweep_quest_scope')
+#         full2stop: bool = self.get_config('normal_sweep_full_ok_stop')
+#         opt: Dict[Union[int, str], int] = {
+#             '所有': 1,
+#             '最高': db.equip_max_rank,
+#             '次高': db.equip_max_rank - 1,
+#             '次次高': db.equip_max_rank - 2,
+#         }
+#         demand = client.data.get_equip_demand(like_unit_only=like_unit_only, start_rank = opt[rank])
+#         all_demand = client.data.get_equip_demand()
+#
+#         clean_cnt = Counter()
+#         quest_id = []
+#         tmp = []
+#         quest_list: List[int] = [id for id, quest in db.normal_quest_data.items() if db.parse_time(quest.start_time) <= apiclient.datetime]
+#         if quest_scope == "可扫荡":
+#             quest_list = [id for id in quest_list if client.data.is_quest_sweepable(id)]
+#         elif quest_scope == "新开图":
+#             last_normal = set(db.last_normal_quest())
+#             quest_list = [id for id in quest_list if id in last_normal]
+#         elif quest_scope != "全部":
+#             raise ValueError(f"未知刷取图范围{quest_scope}")
+#             
+#         stop: bool = False
+#         first: bool = True
+#
+#         try:
+#             target_quest = []
+#             for i in range(10000):
+#
+#                 if i % 3 == 0:
+#
+#                     gap = client.data.get_demand_gap(demand, lambda x: db.is_equip(x))
+#                     if all(gap[item] <= 0 for item in gap):
+#                         if first:
+#                             first = False
+#                             self._log("需求装备均已盈余")
+#                             if full2all:
+#                                 demand = all_demand
+#                                 gap = client.data.get_demand_gap(demand, lambda x: db.is_equip(x))
+#                                 self._log("考虑所有角色的需求装备")
+#
+#                                 if all(gap[item] <= 0 for item in gap):
+#                                     self._log("所有角色的需求装备均已盈余")
+#                                     if full2stop:
+#                                         self._log("停止刷图")
+#                                         break
+#
+#                     quest_weight = client.data.get_quest_weght(gap)
+#                     quest_id = sorted(quest_list, key = lambda x: quest_weight[x], reverse = True)
+#                     target_quest = await self.get_quests(quest_id, strategy, gap)
+#                     if not target_quest: break
+#
+#                 for target_id in target_quest:
+#                     try:
+#                         resp = await client.quest_skip_aware(target_id, 3)
+#                         tmp.extend([item for item in resp if db.is_equip((item.type, item.id))]) 
+#                         clean_cnt[target_id] += 3
+#                     except SkipError:
+#                         pass
+#                     except AbortError as e:
+#                         stop = True
+#                         if str(e).endswith("体力不足"):
+#                             if not tmp and not self.log: self._log(str(e))
+#                         else:
+#                             raise e
+#                         break
+#                 if stop:
+#                     break
+#         except:
+#             raise 
+#         finally:
+#             if clean_cnt:
+#                 msg = '\n'.join(db.get_quest_name(quest) +
+#                 f": 刷取{cnt}次" for quest, cnt in clean_cnt.items())
+#                 self._log(msg)
+#                 self._log("---------")
+#             if tmp:
+#                 self._log(await client.serialize_reward_summary(tmp))
 
 
 class simple_demand_sweep_base(Module):
@@ -119,16 +244,18 @@ class simple_demand_sweep_base(Module):
                 for quest in self.get_need_quest(token):
                     max_times = self.get_max_times(client, quest.quest_id)
                     try:
-                        resp = await client.quest_skip_aware(quest.quest_id, max_times, True, True)
-                        clean_cnt[quest.quest_id] += max_times
+                        resp, clear_count, no_stamina = await client.quest_skip_aware(quest.quest_id, max_times, True, True)
+                        if clear_count:
+                            clean_cnt[quest.quest_id] += clear_count
                         tmp.extend(resp) 
+                        if no_stamina:
+                            stop = True
+                            if not clean_cnt: self._log(f"刷取{db.get_quest_name(quest.quest_id)}体力不足")
+                            break
                     except SkipError as e:
                         pass
                     except AbortError as e:
-                        if str(e).endswith("体力不足"):
-                            stop = True
-                            if not tmp and not self.log: self._log(str(e))
-                        elif str(e).endswith("未通关或不存在") or str(e).endswith("未三星"):
+                        if str(e).endswith("未通关或不存在") or str(e).endswith("未三星"):
                             self._warn(f"{db.get_inventory_name_san(token)}: {str(e)}")
                         else:
                             self._log(str(e))
@@ -144,11 +271,12 @@ class simple_demand_sweep_base(Module):
                 f": 刷取{cnt}次" for quest, cnt in clean_cnt.items())
                 self._log(msg)
                 self._log("---------")
-            if tmp:
-                self._log(await client.serialize_reward_summary(tmp))
-            if not self.log:
-                self._log("需刷取的图均无次数")
-                raise SkipError()
+                if tmp:
+                    self._log(await client.serialize_reward_summary(tmp))
+            else:
+                if not self.is_warn:
+                    self._log("需刷取的图均无次数")
+                    raise SkipError()
 
 
 @singlechoice('hard_sweep_gap_limit', "盈余阈值", 10, [0, 5, 10])
@@ -265,6 +393,8 @@ unique_equip_2_pure_memory_id = [
         113901, # 鬼裁
         113801, # 天姐
         113701, # 天妹
+        114401, # 圣哈
+        114501, # 圣电
 ]
 @conditional_execution1("very_hard_sweep_run_time", ["vh庆典"])
 @description('储备专二需求的150碎片，包括' + ','.join(db.get_unit_name(unit_id) for unit_id in unique_equip_2_pure_memory_id))
@@ -326,6 +456,7 @@ class smart_very_hard_sweep(simple_demand_sweep_base):
         return self.times
 
 class DIY_sweep(Module):
+    warn = False
 
     async def get_start_quest(self, client: pcrclient) -> List[Tuple[int, int]]:
         return []
@@ -353,23 +484,34 @@ class DIY_sweep(Module):
         clean_cnt = Counter()
         for quest_id, count in _sweep(): 
             try:
-                result += await client.quest_skip_aware(quest_id, count, True, True)
-                clean_cnt[quest_id] += count
+                reward, clear_count, no_stamina = await client.quest_skip_aware(quest_id, count, True, True)
+                result += reward
+                if clear_count:
+                    clean_cnt[quest_id] += clear_count
+                if no_stamina:
+                    if not clean_cnt: self._log(f"刷取{db.get_quest_name(quest_id)}体力不足")
+                    break
             except SkipError as e:
                 pass
             except AbortError as e:
-                self._log(str(e))
+                if self.warn:
+                    self._warn(str(e))
+                else:
+                    self._log(str(e))
                 break
-        
+
         if clean_cnt:
-                msg = '\n'.join(db.get_quest_name(quest) +
-                f": 刷取{cnt}次" for quest, cnt in clean_cnt.items())
-                self._log(msg)
-                self._log("---------")
+            msg = '\n'.join(db.get_quest_name(quest) +
+            f": 刷取{cnt}次" for quest, cnt in clean_cnt.items())
+            self._log(msg)
+            self._log("---------")
+            if result:
+                self._log(await client.serialize_reward_summary(result))
         else:
-            self._log("需刷取的图均无次数")
-        if result:
-            self._log(await client.serialize_reward_summary(result))
+            if not self.log:
+                self._log("需刷取的图均无次数")
+            if not self.warn:
+                raise SkipError()
 
 @description('''
 首先按次数逐一刷取名字为start和start2的图
@@ -405,7 +547,7 @@ class smart_sweep(DIY_sweep):
                     for x in tab.skip_list:
                         quest.append((x, tab.skip_count))
         return quest
-    
+
 @description('''
 开新图时的便捷设置，将循环刷取所选关卡
 '''.strip())
@@ -464,10 +606,11 @@ class talent_sweep(TalentSweep):
 领取邮件体力后再次扫荡！复用「深域扫荡」配置
 '''.strip())
 @name("深域扫荡2")
-@default(False)
+@default(True)
 @tag_stamina_consume
 class talent_sweep2(TalentSweep):
     def get_recovery_areas(self) -> List[int]:
         return self._parent.get_config('talent_sweep_target_recovery_areas', [])
     def get_no_max_no_sweep_areas(self) -> List[int]: 
-        return self._parent.get_config('talent_sweep2_no_max_no_sweep', list(db.talents.keys()))
+        return self._parent.get_config('talent_sweep_no_max_no_sweep', list(db.talents.keys()))
+
