@@ -2,7 +2,7 @@ from typing import List, Dict, Set, Tuple, Union
 import typing
 from ..model.enums import eCampaignCategory
 from ..model.common import ExtraEquipInfo, UnitData, eInventoryType, RoomUserItem, InventoryInfo
-from ..model.custom import ItemType
+from ..model.custom import ItemType, eDifficulty
 import datetime
 from collections import Counter, defaultdict
 from .dbmgr import dbmgr
@@ -1562,11 +1562,13 @@ class database():
                 .concat(ShioriQuest.query(db))
                 .concat(TrainingQuestDatum.query(db))
                 .concat(TalentQuestDatum.query(db))
-                .concat(AbyssQuestDatum.query(db))
                 .to_dict(lambda x: x.quest_id, lambda x: x.quest_name)
             )
         ret.update(
             {x.travel_quest_id :x.travel_quest_name for x in self.travel_quest_data.values()}
+        )
+        ret.update(
+            {x.quest_id: f"{x.quest_name}-{eDifficulty(x.difficulty).name}" for xs in self.abyss_quest_info.values() for x in xs}
         )
         return ret
 
@@ -2292,7 +2294,7 @@ class database():
         return talent_id
 
     def equip_candidate(self) -> List[int]:
-        return sorted([p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))], reverse=True)[:35]
+        return [p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))]
 
     def talent_candidate(self) -> List[str]:
         return [f"{talent_id}: {self.talents[talent_id].talent_name}" for talent_id in self.talents]
@@ -2334,7 +2336,7 @@ class database():
 
     def last_normal_quest(self) -> List[int]:
         quest_ids = sorted([k for k, v in self.normal_quest_data.items() if self.parse_time(v.start_time) <= apiclient.datetime] , reverse=True)
-        return quest_ids[:35]
+        return quest_ids[:5]
         last_start_time = flow(self.normal_quest_data.values()) \
                 .where(lambda x: db.parse_time(x.start_time) <= apiclient.datetime) \
                 .max(lambda x: x.start_time).start_time
