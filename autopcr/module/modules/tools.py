@@ -121,7 +121,7 @@ class remove_cb_support(Module):
 
 @name('计算兑换角色碎片')
 @default(True)
-@booltype('redeem_unit_swap_do', '开换', False)
+@booltype('redeem_unit_swap_do', '开换', True)
 @description('计算兑换对应角色所需的3000碎片的最优使用方案，使得剩余碎片的盈余值的最大值最小')
 class redeem_unit_swap(Module):
     async def do_task(self, client: pcrclient):
