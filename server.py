@@ -981,7 +981,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc, export: b
             await upload_excel(botev, data, f"{tool.name}_{alias}_{timestamp}.xlsx", 'autopcr')
         else:
             # 仅对查公会深域进度工具生成图片
-            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit"]:
+            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest"]:
                 # 生成深域进度图片
                 img = await drawer.draw_task_result(resp)
                 msg = f"{alias}"
