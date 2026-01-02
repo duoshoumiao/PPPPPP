@@ -1428,16 +1428,45 @@ async def find_missing_emblem(botev: BotEvent):
     await botev.send("请稍等")
     return {}
 
-@register_tool("合成ex装", "ex_equip_rank_up")
-async def ex_equip_rank_up(botev: BotEvent):
-    await botev.send("请稍等")
-    return {}
+@register_tool("合成ex装", "ex_equip_rank_up")  
+async def ex_equip_rank_up(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+      
+    # 解析装备种类参数  
+    kinds = []  
+    available_kinds = ['粉', '会战金', '普通金', '会战银']  
+      
+    for kind in available_kinds:  
+        if kind in msg:  
+            kinds.append(kind)  
+            msg.remove(kind)  
+      
+    # 如果没有指定种类，默认全部  
+    if not kinds:  
+        kinds = available_kinds  
+      
+    return {"ex_equip_rank_up_kind": kinds}
 
-@register_tool("强化ex装", "ex_equip_enhance_up")
-async def ex_equip_enhance_up(botev: BotEvent):
-    await botev.send("请稍等")
-    return {}
-
+@register_tool("强化ex装", "ex_equip_enhance_up")  
+async def ex_equip_enhance_up(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+      
+    # 解析装备种类参数  
+    kinds = []  
+    available_kinds = ['粉', '会战金', '普通金', '会战银']  
+      
+    for kind in available_kinds:  
+        if kind in msg:  
+            kinds.append(kind)  
+            msg.remove(kind)  
+      
+    # 如果没有指定种类，默认全部  
+    if not kinds:  
+        kinds = available_kinds  
+      
+    return {"ex_equip_enhance_up_kind": kinds}
 @register_tool("查角色", "search_unit")
 async def search_unit(botev: BotEvent):
     await botev.send("请稍等")
