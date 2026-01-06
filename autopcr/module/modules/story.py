@@ -199,7 +199,7 @@ class hatsune_sub_story_reading(Module):
 
             if any(sub_story.status == eEventSubStoryStatus.ADDED for sub_story in sub_storys.sub_story_info_list):
                 await reader.confirm()
-            for sub_story in sub_storys.sub_story_info_list:
+            for sub_story in await reader.sort_by_time(sub_storys.sub_story_info_list):
                 if sub_story.status == eEventSubStoryStatus.UNREAD and reader.is_readable(sub_story.sub_story_id):
                     await reader.read(sub_story.sub_story_id)
                     self._log(f"阅读了{reader.title(sub_story.sub_story_id)}")
@@ -269,4 +269,3 @@ class hatsune_dear_reading(Module):
         if not self.log:
             raise SkipError("不存在未阅读的活动信赖度剧情")
         self._log(f"共{len(self.log)}篇")
-
