@@ -86,6 +86,7 @@ daily_modules = ModuleList(
         xinsui3_sweep,
         xinsui2_sweep,
         xinsui1_sweep,
+        starcup3_sweep,
         starcup2_sweep,
         starcup1_sweep, 
         hatsune_dear_reading,
