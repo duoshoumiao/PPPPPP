@@ -1801,7 +1801,7 @@ async def caravan_play(botev: BotEvent):
     # 默认配置：保留0个骰子，搬空商店为止，到达终点次数0
     config = {
         "caravan_play_dice_hold_num": 0,
-        "caravan_play_until_shop_empty": True,
+        "caravan_play_until_shop_empty": False,
         "caravan_play_goal_num": 0
     }
     
