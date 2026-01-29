@@ -22,6 +22,8 @@ from .travel import *
 from .unit import *
 from .talent import *
 from .nbb import *  
+from .mirage import *
+
 @dataclass
 class ModuleList:
     name: str = ""
@@ -74,6 +76,8 @@ daily_modules = ModuleList(
         abyss_quest_sweep,
         abyss_boss_sweep,
         special_underground_skip,
+        mirage_floor_receive,
+        mirage_nemesis_sweep,
         tower_cloister_sweep,
         smart_very_hard_sweep,
         jjc_reward,
@@ -128,6 +132,7 @@ daily_modules = ModuleList(
         master_shop_talent,
         love_up,
         shiori_mission_check,
+        alces_story_reading,
         main_story_reading,
         tower_story_reading,
         hatsune_story_reading,
@@ -207,6 +212,7 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        ex_equip_rainbow_enchance,
         ex_equip_power_maximun,
         return_jewel,
         nbb_game,
