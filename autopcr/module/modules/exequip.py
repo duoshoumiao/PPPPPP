@@ -12,6 +12,8 @@ from collections import Counter
 
 @name('彩装究极炼成')
 @default(True)
+@inttype('ex_equip_rainbow_enhance_pt_hold', '保留pt数(w)', 1, list(range(0, 1001)))
+@ExEquipSubStatusRankConfig('ex_equip_rainbow_enhance_rank', '属性优先级')
 @inttype('ex_equip_rainbow_enhance_no_max_num', '不需要满属性的词条个数', 1, [0, 1, 2, 3, 4])
 @inttype('ex_equip_rainbow_enchance_target_sum', '属性总值', 0, range(0, 21))
 @ExEquipSubStatusConfig('ex_equip_rainbow_enchance_sub_status_4', '炼成属性4')
@@ -73,13 +75,26 @@ class ex_equip_rainbow_enchance(Module):
             alces_exec_cnt = 0
             last_lock_cnt = 0
             stop = False
+            
+            base = 1
+            self.weight = Counter()
+            rank_order = self.get_config('ex_equip_rainbow_enhance_rank')
+            for key in rank_order[::-1]:
+                if key not in target_sub_status:
+                    self.weight[key] += base
+                    base *= 30
+            for key in target_sub_status:
+                self.weight[key] += base
+
+            # self._log(f"各属性加权值: " + ', '.join(f"{UnitAttribute.index2ch[eParamType(k)]}: {v}" for k, v in self.weight.items()))
 
             self._log(f"当前彩装属性 " +
                       f"{serial_id}: {db.get_ex_equip_name(client.data.ex_equips[serial_id].ex_equipment_id)} "
                       f"{db.get_ex_equip_sub_status_str(client.data.ex_equips[serial_id].ex_equipment_id, client.data.ex_equips[serial_id].sub_status or [])}")
+
+            pt_hold = self.get_config('ex_equip_rainbow_enhance_pt_hold')
                 
             while not stop:
-                # 检查当前目标属性总值是否达到阈值
                 if target_sum > 0:
                     current_total = await self.get_current_target_value(client, serial_id, target_sub_status)
                     self._log(f"当前目标属性值: {current_total}")
@@ -97,6 +112,10 @@ class ex_equip_rainbow_enchance(Module):
                 if last_lock_cnt != lock_cnt:
                     self._log(f"L 锁定属性个数{last_lock_cnt} -> {lock_cnt}")
                     last_lock_cnt = lock_cnt
+
+                if client.data.get_inventory(db.ex_rainbow_enhance_pt) <= pt_hold * 10000:
+                    self._warn(f"彩装究极炼成PT{client.data.get_inventory(db.ex_rainbow_enhance_pt)}<={pt_hold * 10000}，停止炼成")
+                    break
 
                 to_consume = Counter()
                 for consume, item in db.alces_cost.items():
@@ -124,7 +143,6 @@ class ex_equip_rainbow_enchance(Module):
                 for consume in consume_cnt:
                     self._log(f"  {db.get_inventory_name_san(consume)} x {consume_cnt[consume]}")
             
-            # 显示最终的目标属性值
             if target_sum > 0:
                 final_total = await self.get_current_target_value(client, serial_id, target_sub_status)
                 self._log(f"最终目标属性值: {final_total}")
@@ -159,8 +177,9 @@ class ex_equip_rainbow_enchance(Module):
                 accept = True
         
         if not accept:
-            current_score = sum(status.step for status in client.data.ex_equips[alces_data.serial_id].sub_status or [] if status.status in target_key)
-            nxt_score = sum(status.step for status in alces_data.sub_status if status.status in target_key)
+            current_score = sum(status.step * self.weight[status.status] for status in client.data.ex_equips[alces_data.serial_id].sub_status or [])
+            nxt_score = sum(status.step * self.weight[status.status] for status in alces_data.sub_status)
+            # self._log(f"当前目标属性加权值{current_score}，新属性加权值{nxt_score}")
 
             if nxt_score > current_score:
                 accept = True
@@ -183,32 +202,26 @@ class ex_equip_rainbow_enchance(Module):
         return achived_max_cnt, achived_cnt
     
     async def get_current_target_value(self, client: pcrclient, serial_id: int, target_sub_status: Counter) -> int:
-        """从属性字符串中解析目标属性值"""
         ex_equip = client.data.ex_equips[serial_id]
         attr_str = db.get_ex_equip_sub_status_str(ex_equip.ex_equipment_id, ex_equip.sub_status or [])
         
-        # 获取目标属性的显示值
         target_value = 0
         target_keys = target_sub_status.keys()
         
         for target_key in target_keys:
             attr_name = UnitAttribute.index2ch[eParamType(target_key)] if hasattr(UnitAttribute, 'index2ch') else str(target_key)
             
-            # 在属性字符串中查找目标属性
             if attr_name in attr_str:
                 import re
-                # 查找如"物贯×2"中的数字
                 pattern = rf'{attr_name}[×x](\d+(?:\.\d+)?)'
                 match = re.search(pattern, attr_str)
                 if match:
                     try:
                         value = float(match.group(1))
-                        # 累加所有找到的目标属性值
                         target_value += value
                     except:
                         pass
         
-        # 返回整数
         return int(target_value) if target_value == int(target_value) else target_value
 
 @name('强化EX装')
