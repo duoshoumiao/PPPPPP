@@ -205,6 +205,7 @@ sv_help = f"""
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
   示例：{prefix}商店购买 上期 | {prefix}商店购买所有 当期 （需要去批量运行里保存账号）
 - {prefix}查玩家 uid
+- {prefix}炼金 + (看属性/看概率/炼成)  炼成之前去网站设置参数
 """.strip()
 
 if address is None:
@@ -1855,6 +1856,21 @@ async def caravan_shop_buy(botev: BotEvent):
     if msg:
         await botev.finish(f"未知的参数：【{' '.join(msg)}】")
     
+    return config
+
+@register_tool("炼金", "ex_equip_rainbow_enchance")  
+async def ex_equip_rainbow_enchance_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()
+    operation = "炼成"  
+    if is_args_exist(msg, '看属性'):  
+        operation = "看属性"  
+    elif is_args_exist(msg, '看概率'):  
+        operation = "看概率"  
+      
+    config = {  
+        "ex_equip_rainbow_enchance_action": operation  
+    }  
     return config
     
 # @register_tool("获取导入", "get_library_import_data")
