@@ -1862,9 +1862,9 @@ async def caravan_shop_buy(botev: BotEvent):
 async def ex_equip_rainbow_enchance_tool(botev: BotEvent):  
     await botev.send("请稍等")  
     msg = await botev.message()
-    operation = "炼成"  
-    if is_args_exist(msg, '看属性'):  
-        operation = "看属性"  
+    operation = "看属性"  
+    if is_args_exist(msg, '炼成'):  
+        operation = "炼成"  
     elif is_args_exist(msg, '看概率'):  
         operation = "看概率"  
       
