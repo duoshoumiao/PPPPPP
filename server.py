@@ -206,6 +206,8 @@ sv_help = f"""
   示例：{prefix}商店购买 上期 | {prefix}商店购买所有 当期 （需要去批量运行里保存账号）
 - {prefix}查玩家 uid
 - {prefix}炼金 + (看属性/看概率/炼成)  炼成之前去网站设置参数
+- {prefix}撤下会战ex装
+- {prefix}撤下普通ex装
 """.strip()
 
 if address is None:
