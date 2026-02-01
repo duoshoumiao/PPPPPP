@@ -88,6 +88,9 @@ class ex_equip_rainbow_enchance(Module):
             no_max_num = self.get_config('ex_equip_rainbow_enhance_no_max_num')
             target_cnt = sum(target_sub_status.values())
 
+            if no_max_num > target_cnt:
+                raise AbortError(f"非满属性个数{no_max_num}不能大于非任意的目标属性个数{target_cnt}")
+
             consume_cnt = Counter()
             alces_exec_cnt = 0
             last_lock_cnt = 0
@@ -123,7 +126,7 @@ class ex_equip_rainbow_enchance(Module):
                         break
                 
                 achived_max_cnt, achived_cnt = await self.get_achived_sub_status_cnt(client, serial_id, target_sub_status)
-                if achived_max_cnt == target_cnt - no_max_num and achived_cnt == target_cnt:
+                if achived_max_cnt >= target_cnt - no_max_num and achived_cnt >= target_cnt:
                     self._log("彩装炼成属性已达成目标")
                     break
 
