@@ -216,7 +216,7 @@ tool_modules = ModuleList(
         ex_equip_power_maximun,
         return_jewel,
         nbb_game,
-        # remove_normal_ex_equip,
+        remove_normal_ex_equip,
         # calc_best_3star_ex_equip,
         query_player_profile,
         master_shop,

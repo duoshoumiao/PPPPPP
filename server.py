@@ -1872,6 +1872,16 @@ async def ex_equip_rainbow_enchance_tool(botev: BotEvent):
         "ex_equip_rainbow_enchance_action": operation  
     }  
     return config
+  
+@register_tool("撤下会战ex装", "remove_cb_ex_equip")
+async def remove_cb_ex_equip(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}
+  
+@register_tool("撤下普通ex装", "remove_normal_ex_equip")
+async def remove_normal_ex_equip(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}  
     
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
