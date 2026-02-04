@@ -40,9 +40,11 @@ class ex_equip_rainbow_enchance(Module):
             self._log(f"{cnt}件彩装:\n{msg}")
         elif ex_equip_rainbow_enchance_action == '看概率':
             for equip, data in self.iter_cache():
-                total = data.get('total', 1)
+                total = sum(data.values())
+                if total == 0:
+                    continue
                 equip = int(equip)
-                self._log(f"{db.get_ex_equip_name(equip)}(炼成{total}次)")
+                self._log(f"{db.get_ex_equip_name(equip)}({total}次词条刷新)")
                 info = flow(data.items()) \
                     .where(lambda kv: kv[0] != 'total') \
                     .select(lambda kv: (list(map(int, kv[0].split('-'))), kv[1])) \
@@ -113,7 +115,7 @@ class ex_equip_rainbow_enchance(Module):
                       f"{db.get_ex_equip_sub_status_str(client.data.ex_equips[serial_id].ex_equipment_id, client.data.ex_equips[serial_id].sub_status or [])}")
 
             pt_hold = self.get_config('ex_equip_rainbow_enhance_pt_hold')
-            self.cache_info = self.find_cache(client.data.ex_equips[serial_id].ex_equipment_id)
+            self.cache_info = self.find_cache(str(client.data.ex_equips[serial_id].ex_equipment_id))
             if not self.cache_info:
                 self.cache_info = Counter()
                 
@@ -170,7 +172,7 @@ class ex_equip_rainbow_enchance(Module):
                 final_total = await self.get_current_target_value(client, serial_id, target_sub_status)
                 self._log(f"最终目标属性值: {final_total}")
             
-            self.save_cache(client.data.ex_equips[serial_id].ex_equipment_id, self.cache_info)
+            self.save_cache(str(client.data.ex_equips[serial_id].ex_equipment_id), self.cache_info)
             self._log(f"最终彩装属性 " +
                       f"{serial_id}: {db.get_ex_equip_name(client.data.ex_equips[serial_id].ex_equipment_id)} "
                       f"{db.get_ex_equip_sub_status_str(client.data.ex_equips[serial_id].ex_equipment_id, client.data.ex_equips[serial_id].sub_status or [])}")
@@ -194,7 +196,6 @@ class ex_equip_rainbow_enchance(Module):
         accept = False
         current_max_sub_status = Counter()
 
-        self.cache_info['total'] += 1
         for status in alces_data.sub_status:
             if status.is_lock:
                 current_max_sub_status[status.status] += 1
