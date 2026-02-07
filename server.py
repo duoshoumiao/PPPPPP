@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import Any, Callable, Coroutine, Dict, List, Tuple, Union
 from pathlib import Path
-
+from .autopcr.model.custom import UnitAttribute
 from .autopcr.module.accountmgr import BATCHINFO, AccountBatch, TaskResultInfo
 from .autopcr.module.modulebase import eResultStatus
 from .autopcr.util.draw_table import outp_b64
@@ -1860,19 +1860,60 @@ async def caravan_shop_buy(botev: BotEvent):
     
     return config
 
-@register_tool("炼金", "ex_equip_rainbow_enchance")  
-async def ex_equip_rainbow_enchance_tool(botev: BotEvent):  
-    await botev.send("请稍等")  
-    msg = await botev.message()
-    operation = "看属性"  
-    if is_args_exist(msg, '炼成'):  
-        operation = "炼成"  
-    elif is_args_exist(msg, '看概率'):  
+@register_tool("炼金", "ex_equip_rainbow_enchance")      
+async def ex_equip_rainbow_enchance_tool(botev: BotEvent):      
+    await botev.send("请稍等")      
+    msg = await botev.message()  
+      
+    # 先解析操作类型关键词(会从msg中移除)  
+    operation = "看属性"      
+    if is_args_exist(msg, '炼成'):      
+        operation = "炼成"      
+    elif is_args_exist(msg, '看概率'):      
         operation = "看概率"  
       
-    config = {  
-        "ex_equip_rainbow_enchance_action": operation  
-    }  
+    # Create reverse mapping    
+    ch2index = {v: k for k, v in UnitAttribute.index2ch.items()}    
+    ch2index["任意"] = 0    
+        
+    # Parse 4 attribute parameters    
+    attributes = []    
+    for i in range(4):    
+        try:    
+            attr_name = msg[0]    
+            del msg[0]    
+            if attr_name in ch2index:    
+                attributes.append(ch2index[attr_name])    
+            else:    
+                await botev.finish(f"未知属性名: {attr_name}")    
+        except:    
+            await botev.finish(f"请输入第{i+1}个属性参数")    
+        
+    # Parse target sum integer    
+    target_sum = 0    
+    try:    
+        target_sum = int(msg[0])    
+        del msg[0]    
+    except:    
+        pass  # Optional parameter    
+      
+    # Parse 彩装ID (保持为字符串!)  
+    equip_id = ""  
+    try:    
+        equip_id = msg[0]  # 不要用 int(),保持字符串  
+        del msg[0]    
+    except:    
+        pass  
+          
+    config = {    
+        "ex_equip_rainbow_enchance_sub_status_1": attributes[0],    
+        "ex_equip_rainbow_enchance_sub_status_2": attributes[1],    
+        "ex_equip_rainbow_enchance_sub_status_3": attributes[2],    
+        "ex_equip_rainbow_enchance_sub_status_4": attributes[3],    
+        "ex_equip_rainbow_enchance_target_sum": target_sum,    
+        "ex_equip_rainbow_enchance_id": equip_id,  # 字符串形式  
+        "ex_equip_rainbow_enchance_action": operation      
+    }      
     return config
   
 @register_tool("撤下会战ex装", "remove_cb_ex_equip")
