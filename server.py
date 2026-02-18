@@ -194,7 +194,7 @@ sv_help = f"""
 - {prefix}领取礼物箱
 - {prefix}查公会深域进度
 - {prefix}收菜  探险续航哦
-- {prefix}一键编队 1 1 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 END 设置多队编队，队伍不足5人以END结尾
+- {prefix}一键编队 1 1 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 设置多队编队，队伍不足5人结尾
 - {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑换角色
@@ -1162,7 +1162,7 @@ async def ocr_team(botev: BotEvent):
         await botev.finish("未识别到任何队伍！")
 
     msg = f"{prefix}一键编队 4 1\n" + "\n".join(
-            f"队伍{id+1} {' '.join(db.get_unit_name(uid * 100 + 1) for uid in team)}{' END' if len(team) < 5 else ''}"
+            f"队伍{id} {' '.join(db.get_unit_name(uid * 100 + 1) for uid in team)}"
             for id, team in enumerate(result)
     )
     await botev.finish(msg)
