@@ -1787,3 +1787,35 @@ class pcrclient(apiclient):
 
     def set_cron_run(self):
         self._keys['cron_run'] = True
+
+    async def bsm_top(self) -> BsmTopResponse:
+        req = BsmTopRequest()
+        req.from_system_id = 6001
+        return await self.request(req)
+
+    async def bsm_rival_battle_prepare(self) -> BsmRivalBattlePrepareResponse:
+        req = BsmRivalBattlePrepareRequest()
+        req.from_system_id = 6001
+        return await self.request(req)
+
+    async def bsm_battle_start(self, type: int, enemy_viewer_id: int, machine_id: int, token: str) -> BsmBattleStartResponse:
+        req = BsmBattleStartRequest()
+        req.type = type
+        req.enemy_viewer_id = enemy_viewer_id
+        req.machine_id = machine_id
+        req.token = token
+        req.from_system_id = 6001
+        return await self.request(req)
+
+    async def bsm_battle_finish(self, battle_result: int, token: str) -> BsmBattleFinishResponse:
+        req = BsmBattleFinishRequest()
+        req.battle_result = battle_result
+        req.token = token
+        req.from_system_id = 6001
+        return await self.request(req)
+
+    async def bsm_mission_accept(self, mission_id: int) -> BsmMissionAcceptResponse:
+        req = BsmMissionAcceptRequest()
+        req.mission_id = mission_id
+        req.from_system_id = 6001
+        return await self.request(req)
