@@ -257,6 +257,7 @@ class BotEvent:
     async def group_id(self) -> str: ...
     async def send_qq(self) -> str: ...
     async def message(self) -> List[str]: ...
+    async def message_raw(self) -> str: ...
     async def image(self) -> List[str]: ...
     async def is_admin(self) -> bool: ...
     async def is_super_admin(self) -> bool: ...
@@ -272,12 +273,15 @@ class HoshinoEvent(BotEvent):
 
         self.at_sb = []
         self._message = []
+        self._raw_message = ""
         self._image = []
         for m in ev.message:
             if m.type == 'at' and m.data['qq'] != 'all':
                 self.at_sb.append(str(m.data['qq']))
             elif m.type == 'text':
-                self._message += m.data['text'].split()
+                text = m.data['text']
+                self._raw_message += text
+                self._message += text.split()
             elif m.type == 'image':
                 self._image.append(m.data['url'])
 
@@ -298,6 +302,9 @@ class HoshinoEvent(BotEvent):
 
     async def message(self):
         return self._message
+
+    async def message_raw(self):
+        return self._raw_message
 
     async def image(self):
         return self._image
@@ -1016,6 +1023,15 @@ def is_args_exist(msg: List[str], key: str):
         return True
     return False
 
+def recover_text_by_tokens(raw_text: str, tokens: List[str]) -> str:
+    if not tokens:
+        return ""
+    pattern = r"\s+".join(re.escape(token) for token in tokens)
+    match = re.search(pattern, raw_text, flags=re.S)
+    if match:
+        return raw_text[match.start():match.end()]
+    return " ".join(tokens)
+
 @register_tool("公会支援", 'get_clan_support_unit')
 async def clan_support(botev: BotEvent):
     await botev.send("请稍等")
@@ -1047,10 +1063,10 @@ async def jjc_back(botev: BotEvent):
     }
     return config
     
-@register_tool("一键编队", "set_my_party")
-async def set_my_party(botev: BotEvent):
+@register_tool("一键编队", "set_my_party2")
+async def set_my_party_multi(botev: BotEvent):
+    raw_msg = await botev.message_raw()
     msg = await botev.message()
-    await botev.send("请稍等")
     party_start_num = 1
     tab_start_num = 1
     try:
@@ -1063,58 +1079,16 @@ async def set_my_party(botev: BotEvent):
         del msg[0]
     except:
         pass
-    unknown_units = []
-    token = []
-    while True:
-        if not msg:
-            break
-        if get_id_from_name(msg[0]) or msg[0].isdigit() and get_id_from_name(msg[0][1:]):
-            title = "自定义编队"
-        else:
-            title = msg[0]
-            del msg[0]
-        units = []
-        stars = []
-        for _ in range(5):
-            try:
-                unit_name = msg[0]
-                if msg[0] == "END":
-                    del msg[0]
-                    break
 
-                unit = get_id_from_name(unit_name)
-                if unit:
-                    units.append(unit)
-                    stars.append(6 if unit*100+1 in db.unit_to_pure_memory else 5)
-                else:
-                    if unit_name[0].isdigit():
-                        star = int(unit_name[0])
-                        unit = get_id_from_name(unit_name[1:])
-                        if unit:
-                            units.append(unit)
-                            stars.append(star)
-                        else:
-                            unknown_units.append(unit_name)
-                    else:
-                        unknown_units.append(unit_name)
-                del msg[0]
-            except:
-                pass
-        token.append( (title, units, stars) )
-
-    if unknown_units:
-        await botev.finish(f"未知昵称{', '.join(unknown_units)}")
-    if not token:
-        await botev.finish("无法识别任何编队")
-    set_my_party_text = "\n".join(
-        f"{title}\n" + "\n".join(f"{unit * 100 + 1}\t{db.get_unit_name(unit*100+1)}\t1\t{star}" for unit, star in zip(units, stars))
-        for title, units, stars in token)
+    teams_text = recover_text_by_tokens(raw_msg, msg)
     config = {
-        "tab_start_num": tab_start_num,
-        "party_start_num": party_start_num,
-        "set_my_party_text": set_my_party_text,
+        "tab_start_num2": tab_start_num,
+        "party_start_num2": party_start_num,
+        "set_my_party_text2": teams_text,
     }
+    del msg[:]
     return config
+
  
 @register_tool("导入编队", "set_my_party")
 async def set_my_party(botev: BotEvent):

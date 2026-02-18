@@ -214,6 +214,7 @@ tool_modules = ModuleList(
     [
         ex_equip_rainbow_enchance,
         ex_equip_power_maximun,
+        set_my_party2,
         return_jewel,
         nbb_game,
         remove_normal_ex_equip,
