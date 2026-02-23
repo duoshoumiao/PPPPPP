@@ -199,7 +199,7 @@ sv_help = f"""
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑换角色
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
-- {prefix}拉角色练度 289 31 289 289 289 289 5 5 5 5 5 5 0 可可罗 佩可 凯露    代表 等级 品级 ub s1 s2 ex 左上 右上 左中 右中 左下 右下 专武 角色名
+- {prefix}拉角色练度 335 31 335 335 335 335 -1 -1 -1 -1 -1 -1 0 可可罗 佩可 凯露    代表 等级 品级 ub s1 s2 ex 左上 右上 左中 右中 左下 右下 专武 角色名（不输入则全选）
 - {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
   示例：{prefix}大富翁 30 不止搬空商店 0 | {prefix}大富翁所有 0 搬空商店为止  0（需要去批量运行里保存账号）
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
@@ -1065,6 +1065,7 @@ async def jjc_back(botev: BotEvent):
     
 @register_tool("一键编队", "set_my_party2")
 async def set_my_party_multi(botev: BotEvent):
+    await botev.send("请稍等")
     raw_msg = await botev.message_raw()
     msg = await botev.message()
     party_start_num = 1
@@ -1766,7 +1767,7 @@ async def unit_promote(botev: BotEvent):
     if unknown_units:
         await botev.finish(f"未知昵称{', '.join(unknown_units)}")
     if not config["unit_promote_units"]:
-        await botev.finish("未指定任何角色")
+        config["unit_promote_units"] = list(range(100101, 199901, 100))
 
     return config
 
