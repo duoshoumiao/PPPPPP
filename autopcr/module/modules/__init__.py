@@ -102,6 +102,7 @@ daily_modules = ModuleList(
         mirai_very_hard_sweep,
         smart_hard_sweep,
         smart_shiori_sweep,
+        smart_combined_sweep,
         last_normal_quest_sweep,
         lazy_normal_sweep,
 

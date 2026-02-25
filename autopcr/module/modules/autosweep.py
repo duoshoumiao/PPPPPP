@@ -614,3 +614,49 @@ class talent_sweep2(TalentSweep):
     def get_no_max_no_sweep_areas(self) -> List[int]: 
         return self._parent.get_config('talent_sweep_no_max_no_sweep', list(db.talents.keys()))
 
+@singlechoice('combined_sweep_gap_limit', "盈余阈值", 100, [100, 150, 300])  
+@conditional_not_execution("combined_sweep_not_run_time", [])  
+@conditional_execution1("combined_sweep_run_time", ["h庆典"])  
+@singlechoice('combined_sweep_consider_unit_order', "刷取顺序", "缺口少优先", ["缺口少优先", "缺口大优先"])  
+@booltype('combined_sweep_consider_high_rarity_first', "三星角色优先", False)  
+@UnitListConfig('combined_sweep_consider_units', "指定刷取角色")  # 新增  
+@description('合并刷hard图和外传图，根据记忆碎片缺口刷取，可指定角色')  
+@name('自定义刷sp专武')  
+@default(False)  
+@tag_stamina_consume  
+class smart_combined_sweep(simple_demand_sweep_base):  
+  
+    async def get_need_list(self, client: pcrclient) -> List[Tuple[ItemType, int]]:  
+        gap_limit = self.get_config('combined_sweep_gap_limit')  
+        consider_units: List[int] = self.get_config('combined_sweep_consider_units')  # 拉取角色  
+          
+        need_list = client.data.get_memory_demand_gap()  
+          
+        # 如果指定了角色，只保留这些角色的碎片  
+        if not consider_units:  
+            raise SkipError("未指定刷取角色")  
+        need_list = {  
+            token: need for token, need in need_list.items()  
+            if db.memory_to_unit.get(token[1]) in consider_units  
+        }
+          
+        need_list = [(token, need) for token, need in need_list.items() if need > -gap_limit]  
+        if not need_list:  
+            raise SkipError("所有记忆碎片均已盈余")  
+          
+        reverse = -1 if self.get_config('combined_sweep_consider_unit_order') == '缺口大优先' else 1  
+        high_rarity_first = self.get_config('combined_sweep_consider_high_rarity_first')  
+        need_list = sorted(need_list, key=lambda x: (  
+            - db.unit_data[db.memory_to_unit[x[0][1]]].rarity * high_rarity_first,  
+            x[1] * reverse))  
+        return need_list  
+  
+    def get_need_quest(self, token: ItemType) -> List[QuestDatum]:  
+        # 合并 hard 和 shiori 两个图库  
+        hard = db.memory_hard_quest.get(token, [])  
+        shiori = db.memory_shiori_quest.get(token, [])  
+        return hard + shiori  
+  
+    def get_max_times(self, client: pcrclient, quest_id: int) -> int:  
+        # shiori图5次，hard图3次  
+        return 5 if db.is_shiori_quest(quest_id) else 3
