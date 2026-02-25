@@ -614,7 +614,7 @@ class talent_sweep2(TalentSweep):
     def get_no_max_no_sweep_areas(self) -> List[int]: 
         return self._parent.get_config('talent_sweep_no_max_no_sweep', list(db.talents.keys()))
 
-@singlechoice('combined_sweep_gap_limit', "盈余阈值", 100, [100, 150, 300])  
+@singlechoice('combined_sweep_gap_limit', "备战数量", 0, [0, 100, 150, 300])  
 @conditional_not_execution("combined_sweep_not_run_time", [])  
 @conditional_execution1("combined_sweep_run_time", ["h庆典"])  
 @singlechoice('combined_sweep_consider_unit_order', "刷取顺序", "缺口少优先", ["缺口少优先", "缺口大优先"])  
