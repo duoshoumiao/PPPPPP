@@ -88,6 +88,16 @@ class ex_equip_rainbow_enchance(Module):
             if target_sum > 0:
                 self._log(f"属性总值阈值: {target_sum}")
 
+            base = 1
+            self.weight = Counter()
+            rank_order = self.get_config('ex_equip_rainbow_enhance_rank')
+            for key in rank_order[::-1]:
+                if key not in target_sub_status:
+                    self.weight[key] += base
+                    base *= 30
+            for key in target_sub_status:
+                self.weight[key] += base
+                
             top = await client.alces_top()
             if top.pending_alces_data:
                 if top.pending_alces_data.serial_id != serial_id:
@@ -105,15 +115,7 @@ class ex_equip_rainbow_enchance(Module):
             last_lock_cnt = 0
             stop = False
             
-            base = 1
-            self.weight = Counter()
-            rank_order = self.get_config('ex_equip_rainbow_enhance_rank')
-            for key in rank_order[::-1]:
-                if key not in target_sub_status:
-                    self.weight[key] += base
-                    base *= 30
-            for key in target_sub_status:
-                self.weight[key] += base
+
 
             # self._log(f"各属性加权值: " + ', '.join(f"{UnitAttribute.index2ch[eParamType(k)]}: {v}" for k, v in self.weight.items()))
 
