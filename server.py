@@ -1492,7 +1492,7 @@ async def ex_equip_info(botev: BotEvent):
     }
     return config
 
-@register_tool("查兑换角色碎片", "redeem_unit_swap")
+@register_tool("兑换角色", "redeem_unit_swap")
 async def redeem_unit_swap(botev: BotEvent):
     await botev.send("请稍等")
     really_do = False
