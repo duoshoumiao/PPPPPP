@@ -199,7 +199,7 @@ sv_help = f"""
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑换角色
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
-- {prefix}拉角色练度 335 31 335 335 335 335 -1 -1 -1 -1 -1 -1 0 可可罗 佩可 凯露    代表 等级 品级 ub s1 s2 ex 左上 右上 左中 右中 左下 右下 专武 角色名（不输入则全选）
+- {prefix}拉角色练度 339 31 339 339 339 339  代表 等级 品级 ub s1 s2 ex 角色名（不输入则全选）
 - {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
   示例：{prefix}大富翁 30 不止搬空商店 0 | {prefix}大富翁所有 0 搬空商店为止  0（需要去批量运行里保存账号）
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
@@ -208,6 +208,8 @@ sv_help = f"""
 - {prefix}炼金 物贯 物贯 物贯 物贯 1 彩装ID +(看属性/看概率/炼成)  炼成之前去网站设置参数《1代表属性总值，需要自己改》
 - {prefix}撤下会战ex装
 - {prefix}撤下普通ex装
+- {prefix}买记忆碎片 可可萝 5 0 开买 界限突破  #分别代表:角色 星级 专武 是否购买 是否突破
+- {prefix}角色升星 5 忽略盈余 升至最高 佩可  #分别代表 星级 是否保留盈余如突破碎片 升到可升最高星 角色名
 """.strip()
 
 if address is None:
@@ -1900,7 +1902,100 @@ async def remove_cb_ex_equip(botev: BotEvent):
 async def remove_normal_ex_equip(botev: BotEvent):
     await botev.send("请稍等")
     return {}  
+
+@register_tool("买记忆碎片", "unit_memory_buy")  
+async def buy_unit_memory(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
+  
+    # 解析角色名  
+    unit_name = ""  
+    unit_id = None  
+    try:  
+        unit_name = msg[0]  
+        unit_id = get_id_from_name(unit_name)  
+        del msg[0]  
+    except:  
+        pass  
+  
+    if not unit_id:  
+        await botev.finish(f"未知昵称{unit_name}，请指定角色")  
+  
+    unit_id = unit_id * 100 + 1  
+  
+    # 解析星级（默认6）  
+    star = 6  
+    try:  
+        star = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+  
+    # 解析专武等级（默认0）  
+    unique_level = 0  
+    try:  
+        unique_level = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+  
+    # 解析开关参数  
+    do_buy = is_args_exist(msg, '开买')  
+    exceed_state = is_args_exist(msg, '界限突破')  
+  
+    config = {  
+        "unit_memory_buy_unit": unit_id,  
+        "unit_memory_unit_star": star,  
+        "unit_memory_unique_equip_level": unique_level,  
+        "unit_memory_unit_exceed_state": exceed_state,  
+        "unit_memory_do_buy": do_buy,  
+    }  
+    return config
     
+@register_tool("角色升星", "unit_evolution")  
+async def unit_evolution_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+  
+    # 解析目标星级（默认5）  
+    target_rarity = 5  
+    try:  
+        val = int(msg[0])  
+        if val in range(2, 6):  
+            target_rarity = val  
+            del msg[0]  
+    except:  
+        pass  
+  
+    # 解析开关参数  
+    to_max_rarity = is_args_exist(msg, '升至最高')  
+    ignore_memory = is_args_exist(msg, '忽略盈余')  
+  
+    # 解析角色列表  
+    units = []  
+    unknown_units = []  
+    while msg:  
+        unit_name = msg[0]  
+        unit = get_id_from_name(unit_name)  
+        if unit:  
+            units.append(unit * 100 + 1)  
+        else:  
+            unknown_units.append(unit_name)  
+        del msg[0]  
+  
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
+  
+    if not units:  
+        await botev.finish("请指定角色")  
+  
+    return {  
+        "unit_evolution_units": units,  
+        "unit_evolution_to_rarity": target_rarity,  
+        "unit_evolution_to_max_rarity": to_max_rarity,  
+        "unit_evolution_ignore_memory": ignore_memory,  
+    }   
+   
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
