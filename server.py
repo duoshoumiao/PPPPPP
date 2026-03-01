@@ -1680,7 +1680,7 @@ async def unit_promote(botev: BotEvent):
     await botev.send("请稍等")
     msg = await botev.message()
     config = {
-        "unit_promote_level_when_fail_to_equip_or_skill": False,
+        "unit_promote_level_when_fail_to_equip_or_skill": True,
         "unit_promote_rank_when_fail_to_unique_equip": False,
         "unit_promote_rank_use_raw_ore": False,
         "unit_promote_level": 1,
