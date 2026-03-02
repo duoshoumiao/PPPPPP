@@ -197,7 +197,6 @@ sv_help = f"""
 - {prefix}一键编队 1 1 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 设置多队编队，队伍不足5人结尾
 - {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
 - {prefix}识图   用于提取图中队伍
-- {prefix}兑换角色
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
 - {prefix}拉角色练度 339 31 339 339 339 339  代表 等级 品级 ub s1 s2 ex 角色名（不输入则全选）
 - {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
@@ -1492,7 +1491,7 @@ async def ex_equip_info(botev: BotEvent):
     }
     return config
 
-@register_tool("兑换角色", "redeem_unit_swap")
+@register_tool("查兑换角色碎片", "redeem_unit_swap")
 async def redeem_unit_swap(botev: BotEvent):
     await botev.send("请稍等")
     really_do = False
@@ -1672,10 +1671,6 @@ async def clan_battle_knive(botev: BotEvent):
     await botev.send("请稍等")
     return {}
     
-@register_tool("兑换角色", "redeem_unit_swap")
-async def redeem_unit_swap(botev: BotEvent):
-    await botev.send("请稍等")
-    return {}
 
 @register_tool("拉角色练度", "unit_promote")
 async def unit_promote(botev: BotEvent):
