@@ -5,7 +5,7 @@ import time
 from ...model.common import ChangeRarityUnit, DeckListData, GachaPointInfo, GrandArenaHistoryDetailInfo, GrandArenaHistoryInfo, GrandArenaSearchOpponent, ProfileUserInfo, RankingSearchOpponent, RedeemUnitInfo, RedeemUnitSlotInfo, UnitData, UnitDataLight, VersusResult, VersusResultDetail
 from ...model.responses import GachaIndexResponse, PsyTopResponse
 from ...db.models import GachaExchangeLineup
-from ...model.custom import ArenaQueryResult, GachaReward, ItemType, eRedeemUnitUnlockCondition
+from ...model.custom import ArenaQueryResult, ArenaQueryType, GachaReward, ItemType, eRedeemUnitUnlockCondition
 from ..modulebase import *
 from ..config import *
 from ...core.pcrclient import pcrclient
@@ -644,27 +644,28 @@ class Arena(Module):
         return defend
 
 
-    async def do_task(self, client: pcrclient):
-        self.available_unit: Set[int] = set(unit_id for unit_id in client.data.unit if client.data.unit[unit_id].promotion_level >= 7)
-
-        defend = await self.get_defend(client)
-        attack = await self.get_attack_team(defend)
-
-        defend_str = self.present_defend(defend)
-
-        if attack == []:
-            raise AbortError(f'{defend_str}\n抱歉没有查询到解法\n※没有作业说明随便拆 发挥你的想象力～★\n')
-
-        rank_id = list(range(len(attack)))
-        best_team_id = await self.choose_best_team(attack, rank_id, client)
-        if best_team_id >= 0 and best_team_id < len(attack):
-            self._log(f"选择第{best_team_id + 1}支队伍作为进攻方队伍")
-            await self.update_deck(attack[best_team_id], client)
-        else:
-            self._warn(f"队伍只有{len(attack)}支，无法选择第{best_team_id + 1}支队伍作为进攻方队伍")
-
-        attack_str = self.present_attack(attack[:max(8, best_team_id + 1)])
-        msg = [defend_str, "-------", attack_str]
+    async def do_task(self, client: pcrclient):  
+        self.available_unit: Set[int] = set(unit_id for unit_id in client.data.unit if client.data.unit[unit_id].promotion_level >= 7)  
+     
+        defend = await self.get_defend(client)  
+        attack = await self.get_attack_team(defend)  
+     
+        defend_str = self.present_defend(defend)  
+     
+        if attack == []:  
+            raise AbortError(f'{defend_str}\n抱歉没有查询到解法\n※没有作业说明随便拆 发挥你的想象力～★\n')  
+     
+        rank_id = list(range(len(attack)))  
+        best_team_id = await self.choose_best_team(attack, rank_id, client)  
+        if best_team_id >= 0 and best_team_id < len(attack):  
+            self._log(f"选择第{best_team_id + 1}支队伍作为进攻方队伍")  
+            await self.update_deck(attack[best_team_id], client)  
+        else:  
+            self._warn(f"队伍只有{len(attack)}支，无法选择第{best_team_id + 1}支队伍作为进攻方队伍")  
+     
+        display_count = max(10, best_team_id + 1)  
+        attack_str = self.present_attack(attack[:display_count])  
+        msg = [f"#一键编队 5 1", defend_str, attack_str]  
         self._log('\n'.join(msg))
 
 @description('查询jjc回刺阵容，并自动设置进攻队伍，对手排名=0则查找对战纪录第一条刺人的，<0则查找对战纪录，-1表示第一条，-2表示第二条，以此类推')
@@ -683,14 +684,22 @@ class jjc_back(Arena):
     def get_rank_from_user_info(self, user_info: ProfileUserInfo) -> int:
         return user_info.arena_rank 
 
-    def present_defend(self, defen: List[int]) -> str:
-        msg = [db.get_unit_name(x) for x in defen]
-        msg = f"防守方【{' '.join(msg)}】"
+    def present_defend(self, defen: List[int]) -> str:  
+        msg = [db.get_unit_name(x) for x in defen]  
+        msg = f"防守方 {' '.join(msg)}"  
         return msg
 
-    def present_attack(self, attack: List[ArenaQueryResult]) -> str:
-        msg = ArenaQuery.str_result(attack)
-        return msg
+    def present_attack(self, attack: List[ArenaQueryResult]) -> str:  
+        lines = []  
+        for id, ret in enumerate(attack):  
+            unit_names = ' '.join([db.get_unit_name(unit.id) for unit in ret.atk])  
+            suffix = ""  
+            if ret.query_type == ArenaQueryType.APPROXIMATION:  
+                suffix = "(近似解)"  
+            elif ret.query_type == ArenaQueryType.PLACEHOLDER:  
+                suffix = "(凑解)"  
+            lines.append(f"{id + 1}.{ret.up}/{ret.down} {unit_names}{suffix}")  
+        return '\n'.join(lines)
 
     async def choose_best_team(self, team: List[ArenaQueryResult], rank_id: List[int], client: pcrclient) -> int: 
         id = int(self.get_config("opponent_jjc_attack_team_id")) - 1
