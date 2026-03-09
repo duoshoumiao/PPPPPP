@@ -439,7 +439,7 @@ class gacha_start(Module):
 
 @description('天井兑换角色')
 @name('兑天井')
-@unitchoice("gacha_exchange_unit_id", "兑换角色")
+@unitlist("gacha_exchange_unit_id", "兑换角色")
 @singlechoice("gacha_exchange_pool_id", "池子", "", db.get_cur_gacha)
 @default(True)
 class gacha_exchange_chara(Module):
@@ -447,7 +447,10 @@ class gacha_exchange_chara(Module):
         if ':' not in self.get_config('gacha_exchange_pool_id'):
             raise ValueError("配置格式不正确")
         gacha_id = int(self.get_config('gacha_exchange_pool_id').split(':')[0])
-        gacha_exchange_unit_id = int(self.get_config('gacha_exchange_unit_id'))
+        unit_list = self.get_config('gacha_exchange_unit_id')  
+        if not unit_list:  
+            raise AbortError("未选择兑换角色")  
+        gacha_exchange_unit_id = int(unit_list[0])
         real_exchange_id = 0
         if gacha_id == 120001:
             if not client.data.return_fes_info_list or all(item.end_time <= client.time for item in client.data.return_fes_info_list):
@@ -698,7 +701,7 @@ class jjc_back(Arena):
                 suffix = "(近似解)"  
             elif ret.query_type == ArenaQueryType.PLACEHOLDER:  
                 suffix = "(凑解)"  
-            lines.append(f"{id + 1}.{ret.up}/{ret.down} {unit_names}{suffix}")  
+            lines.append(f"第{id + 1}解.{ret.up}/{ret.down} {unit_names}{suffix}")  
         return '\n'.join(lines)
 
     async def choose_best_team(self, team: List[ArenaQueryResult], rank_id: List[int], client: pcrclient) -> int: 

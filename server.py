@@ -1539,7 +1539,7 @@ async def gacha_exchange_chara(botev: BotEvent):
 
     config = {
         "gacha_exchange_pool_id": current_gacha[gacha_id],
-        "gacha_exchange_unit_id": unit * 100 + 1
+        "gacha_exchange_unit_id": [unit * 100 + 1]
     }
     return config
 
