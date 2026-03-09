@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Any, Callable, Coroutine, Dict, List, Tuple, Union
 from pathlib import Path
 from .autopcr.model.custom import UnitAttribute
@@ -1543,10 +1543,81 @@ async def gacha_exchange_chara(botev: BotEvent):
     }
     return config
 
-@register_tool("半月刊", "half_schedule")
-async def half_schedule(botev: BotEvent):
-    await botev.send("请稍等")
-    return {}
+@sv.on_fullmatch(f"{prefix}半月刊")  
+@wrap_hoshino_event  
+async def half_schedule_standalone(botev: BotEvent):  
+    await botev.send("请稍等")  
+    import importlib  
+    mod = importlib.import_module('.autopcr.module.modules.nologin', __package__)  
+    HalfScheduleModule = mod.half_schedule  
+  
+    def fmt_time(t):  
+        return db.parse_time(t).strftime("%Y/%m/%d %H:%M")  
+  
+    def abbrev_campaign(desc: str) -> str:  
+        MAP = {  
+            "vh": "VH",  
+            "normal": "N",  
+            "hard": "H",  
+            "normal&hard": "NH",  
+            "圣迹": "圣迹",  
+            "神殿": "神殿",  
+            "探索": "探索",  
+        }  
+        pattern = r'^(' + '|'.join(re.escape(k) for k in MAP) + r') 掉落\*(\d+(?:\.\d+)?)$'  
+        m = re.match(pattern, desc)  
+        if m:  
+            pfx = MAP[m.group(1)]  
+            mult = float(m.group(2))  
+            mult_str = str(int(mult)) if mult == int(mult) else str(mult)  
+            return f"{pfx}{mult_str}"  
+        return desc  
+  
+    FILTER_KEYWORDS = ["*2.0", "玩家经验", "活动normal", "活动hard", "mana"]  
+  
+    schedules_data = defaultdict(list)  
+    for table, factory in HalfScheduleModule.schedules:  
+        for row in table.values():  
+            schedule = factory(row)  
+            if schedule.enabled:  
+                desc = schedule.get_description()  
+                if any(kw in desc for kw in FILTER_KEYWORDS):  
+                    continue  
+                desc = abbrev_campaign(desc)  
+                if desc.startswith("免费十连"):  
+                    desc = "免费十连"  
+                key = (fmt_time(schedule.start_time), fmt_time(schedule.end_time))  
+                schedules_data[key].append(desc)  
+  
+    master_coin_pattern = re.compile(r'^.+ 大师币\*(\d+(?:\.\d+)?)$')  
+    for key in schedules_data:  
+        msgs = schedules_data[key]  
+        master_coin_mult = None  
+        new_msgs = []  
+        for msg in msgs:  
+            mc = master_coin_pattern.match(msg)  
+            if mc:  
+                master_coin_mult = float(mc.group(1))  
+            else:  
+                new_msgs.append(msg)  
+        if master_coin_mult is not None:  
+            mult_str = str(int(master_coin_mult)) if master_coin_mult == int(master_coin_mult) else str(master_coin_mult)  
+            new_msgs.append(f"大师币{mult_str}")  
+        schedules_data[key] = new_msgs  
+  
+    times = sorted(schedules_data.keys())  
+    lines = []  
+    mirai = False  
+    for time in times:  
+        st = time[0]  
+        ed = time[1]  
+        if not mirai and db.parse_time(st) > datetime.datetime.now():  
+            mirai = True  
+            lines.append("\n====未来日程====")  
+        lines.append(f"{st} - {ed}")  
+        for msg in schedules_data[time]:  
+            lines.append(f"    {msg}")  
+    await send_llonebot_forward(botev, "半月刊", '\n'.join(lines))
 
 @register_tool("查box", "get_box_table")
 async def get_box_table(botev: BotEvent):
