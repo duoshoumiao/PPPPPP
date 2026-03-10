@@ -3,7 +3,8 @@ import secrets
 from copy import deepcopy
 from datetime import timedelta
 from typing import Callable, Coroutine, Any
-
+import json  
+import time as time_module
 import asyncio
 import quart
 from quart import request, Blueprint, send_file, send_from_directory
@@ -26,6 +27,166 @@ CACHE_HTTP_DIR = os.path.join(CACHE_DIR, 'http_server')
 PATH = os.path.dirname(os.path.abspath(__file__))
 static_path = os.path.join(PATH, 'ClientApp')
 
+MESSAGES_PATH = os.path.join(CACHE_HTTP_DIR, 'messages.json')
+
+MESSAGEBOARD_SCRIPT = f'''  
+<style>  
+#msg-board-btn {{  
+  position: fixed; bottom: 20px; right: 20px; z-index: 9999;  
+  width: 50px; height: 50px; border-radius: 50%; border: none;  
+  background: #1976d2; color: white; font-size: 24px; cursor: pointer;  
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: none;  
+}}  
+#msg-board-panel {{  
+  position: fixed; bottom: 20px; right: 20px; z-index: 9999;  
+  width: 315px; height: 450px; background: white; border-radius: 8px;  
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3); display: none; flex-direction: column;  
+  font-family: sans-serif; color: #333;  
+}}
+#msg-board-header {{  
+  padding: 12px 16px; background: #1976d2; color: white;  
+  border-radius: 8px 8px 0 0; font-weight: bold; font-size: 16px;  
+  display: flex; justify-content: space-between; align-items: center;  
+}}  
+#msg-board-minimize {{  
+  background: none; border: none; color: white; font-size: 20px;  
+  cursor: pointer; padding: 0 4px; line-height: 1;  
+}}  
+#msg-board-list {{  
+  flex: 1; overflow-y: auto; padding: 8px 12px;  
+}}  
+.msg-item {{  
+  margin-bottom: 10px; padding: 8px; background: #f5f5f5; border-radius: 6px;  
+  font-size: 13px; word-break: break-all;  
+}}  
+.msg-item .msg-meta {{ color: #888; font-size: 11px; margin-bottom: 4px; }}  
+#msg-board-input-area {{  
+  display: flex; padding: 8px; border-top: 1px solid #eee;  
+}}  
+#msg-board-input {{  
+  flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px;  
+  font-size: 13px; outline: none;  
+}}  
+#msg-board-send {{  
+  margin-left: 6px; border: none; background: #1976d2; color: white;  
+  border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px;  
+}}  
+</style>  
+  
+<button id="msg-board-btn" title="留言板">💬</button>  
+<div id="msg-board-panel">  
+  <div id="msg-board-header">  
+    <span>留言板</span>  
+    <button id="msg-board-minimize" title="缩小">&minus;</button>  
+  </div>  
+  <div id="msg-board-list"></div>  
+  <div id="msg-board-input-area">  
+    <input id="msg-board-input" placeholder="输入留言..." maxlength="500" />  
+    <button id="msg-board-send">发送</button>  
+  </div>  
+</div>  
+  
+<script>  
+(function() {{  
+  var btn = document.getElementById('msg-board-btn');  
+  var panel = document.getElementById('msg-board-panel');  
+  var minBtn = document.getElementById('msg-board-minimize');  
+  var list = document.getElementById('msg-board-list');  
+  var input = document.getElementById('msg-board-input');  
+  var sendBtn = document.getElementById('msg-board-send');  
+  var appVersion = '{APP_VERSION_MAJOR}.{APP_VERSION_MINOR}.0';  
+  var loggedIn = false;  
+  var minimized = false;  
+  var timer = null;  
+  
+  function startPolling(interval) {{  
+    if (timer) clearInterval(timer);  
+    timer = setInterval(loadMessages, interval);  
+  }}  
+  
+  // 缩小：隐藏面板，显示小按钮  
+  minBtn.onclick = function() {{  
+    minimized = true;  
+    panel.style.display = 'none';  
+    btn.style.display = 'block';  
+  }};  
+  
+  // 点击小按钮：展开面板  
+  btn.onclick = function() {{  
+    minimized = false;  
+    btn.style.display = 'none';  
+    if (loggedIn) {{  
+      panel.style.display = 'flex';  
+      loadMessages();  
+    }}  
+  }};  
+  
+  function loadMessages() {{  
+    fetch('/daily/api/messages', {{  
+      headers: {{ 'X-App-Version': appVersion }},  
+      credentials: 'same-origin'  
+    }})  
+    .then(function(r) {{  
+      if (r.status === 401) {{  
+        if (loggedIn) {{  
+          panel.style.display = 'none';  
+          btn.style.display = 'none';  
+          loggedIn = false;  
+          minimized = false;  
+          startPolling(2000);  
+        }}  
+        return null;  
+      }}  
+      return r.json();  
+    }})  
+    .then(function(msgs) {{  
+      if (!msgs) return;  
+      if (!loggedIn) {{  
+        loggedIn = true;  
+        if (!minimized) {{  
+          panel.style.display = 'flex';  
+        }} else {{  
+          btn.style.display = 'block';  
+        }}  
+        startPolling(5000);  
+      }}  
+      list.innerHTML = '';  
+      msgs.forEach(function(m) {{  
+        var div = document.createElement('div');  
+        div.className = 'msg-item';  
+        div.innerHTML = '<div class="msg-meta">' + m.qq + ' &middot; ' + m.time + '</div>' + m.content;  
+        list.appendChild(div);  
+      }});  
+      list.scrollTop = list.scrollHeight;  
+    }})  
+    .catch(function(e) {{ console.error(e); }});  
+  }}  
+  
+  sendBtn.onclick = function() {{  
+    var content = input.value.trim();  
+    if (!content) return;  
+    fetch('/daily/api/messages', {{  
+      method: 'POST',  
+      headers: {{ 'Content-Type': 'application/json', 'X-App-Version': appVersion }},  
+      credentials: 'same-origin',  
+      body: JSON.stringify({{ content: content }})  
+    }})  
+    .then(function(r) {{  
+      if (r.ok) {{ input.value = ''; loadMessages(); }}  
+      else r.text().then(function(t) {{ alert(t); }});  
+    }})  
+    .catch(function(e) {{ console.error(e); }});  
+  }};  
+  
+  input.addEventListener('keydown', function(e) {{  
+    if (e.key === 'Enter') sendBtn.click();  
+  }});  
+  
+  loadMessages();  
+  startPolling(2000);  
+}})();  
+</script>  
+'''
 
 class HttpServer:
     def __init__(self, host = '0.0.0.0', port = 2, qq_mod = False):
@@ -551,15 +712,75 @@ data: {ret}\n\n'''
             logout_user()
             return "再见, " + accountmgr.qid, 200
 
-        # frontend
-        @self.web.route("/", defaults={"path": ""})
-        @self.web.route("/<path:path>")
-        async def index(path):
-            if os.path.exists(os.path.join(str(self.web.static_folder), path)):
-                return await send_from_directory(str(self.web.static_folder), path, mimetype=("text/javascript" if path.endswith(".js") else None))
-            else:
-                return await send_from_directory(str(self.web.static_folder), 'index.html')
+        # frontend  
+        @self.web.route("/", defaults={"path": ""})  
+        @self.web.route("/<path:path>")  
+        async def index(path):  
+            if os.path.exists(os.path.join(str(self.web.static_folder), path)):  
+                return await send_from_directory(str(self.web.static_folder), path, mimetype=("text/javascript" if path.endswith(".js") else None))  
+            else:  
+                # 读取 index.html 并注入留言板脚本  
+                index_path = os.path.join(str(self.web.static_folder), 'index.html')  
+                with open(index_path, 'r', encoding='utf-8') as f:  
+                    html = f.read()  
+                html = html.replace('</body>', MESSAGEBOARD_SCRIPT + '</body>')  
+                return html, 200, {'Content-Type': 'text/html; charset=utf-8'}
 
-    def run_forever(self, loop):
-        self.quart.register_blueprint(self.app)
-        self.quart.run(host=self.host, port=self.port, loop=loop)
+        def run_forever(self, loop):
+            self.quart.register_blueprint(self.app)
+            self.quart.run(host=self.host, port=self.port, loop=loop)
+            
+            
+            
+            
+            
+        def _load_messages():  
+            if os.path.exists(MESSAGES_PATH):  
+                with open(MESSAGES_PATH, 'r', encoding='utf-8') as f:  
+                    return json.load(f)  
+            return []  
+          
+        def _save_messages(messages):  
+            os.makedirs(os.path.dirname(MESSAGES_PATH), exist_ok=True)  
+            with open(MESSAGES_PATH, 'w', encoding='utf-8') as f:  
+                json.dump(messages, f, ensure_ascii=False)    
+            
+        @self.api.route('/messages', methods=['GET'])  
+        @HttpServer.login_required()  
+        async def get_messages():  
+            messages = _load_messages()  
+            return messages, 200        
+            
+        @self.api.route('/messages', methods=['POST'])  
+        @HttpServer.login_required()  
+        @rate_limit(1, timedelta(seconds=3))  
+        async def post_message():  
+            data = await request.get_json()  
+            content = data.get('content', '').strip()  
+            if not content:  
+                return "留言内容不能为空", 400  
+            if len(content) > 500:  
+                return "留言内容不能超过500字", 400  
+              
+            messages = _load_messages()  
+            msg = {  
+                'id': secrets.token_urlsafe(8),  
+                'qq': current_user.auth_id,  
+                'content': content,  
+                'time': time_module.strftime('%Y-%m-%d %H:%M:%S')  
+            }  
+            messages.append(msg)  
+            # 只保留最近100条  
+            if len(messages) > 100:  
+                messages = messages[-100:]  
+            _save_messages(messages)  
+            return msg, 200    
+            
+        @self.api.route('/messages/<string:msg_id>', methods=['DELETE'])  
+        @HttpServer.login_required()  
+        @HttpServer.admin_required()  
+        async def delete_message(msg_id: str):  
+            messages = _load_messages()  
+            messages = [m for m in messages if m['id'] != msg_id]  
+            _save_messages(messages)  
+            return "删除成功", 200    
