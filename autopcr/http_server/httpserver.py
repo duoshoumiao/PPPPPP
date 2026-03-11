@@ -675,12 +675,15 @@ class HttpServer:
             mgr.data.config.update(data)
             return "配置保存成功", 200
 
-        @self.api.route('/account/<string:acc>/do_daily', methods = ['POST'])
-        @HttpServer.login_required()
-        @HttpServer.wrapaccountmgr(readonly=True)
-        @HttpServer.wrapaccount()
-        async def do_daily(mgr: Account):
-            await mgr.do_daily(mgr._parent.secret.clan)
+        @self.api.route('/account/<string:acc>/do_daily', methods = ['POST'])  
+        @HttpServer.login_required()  
+        @HttpServer.wrapaccountmgr(readonly=True)  
+        @HttpServer.wrapaccount()  
+        async def do_daily(mgr: Account):  
+            try:  
+                await asyncio.wait_for(mgr.do_daily(mgr._parent.secret.clan), timeout=600)  # 10 min timeout  
+            except asyncio.TimeoutError:  
+                return "清日常超时，请稍后重试", 504  
             return mgr.generate_result_info(), 200
 
         @self.api.route('/account/<string:acc>/daily_result', methods = ['GET'])
