@@ -303,7 +303,7 @@ MESSAGEBOARD_SCRIPT = f'''
         }} else {{  
           btn.style.display = 'block';  
         }}  
-        startPolling(5000);  
+        startPolling(3000);  
         checkRole();  
       }}  
       var wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 30;  
