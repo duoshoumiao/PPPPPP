@@ -849,8 +849,21 @@ data: {ret}\n\n'''
         def _load_messages():  
             if os.path.exists(MESSAGES_PATH):  
                 with open(MESSAGES_PATH, 'r', encoding='utf-8') as f:  
-                    return json.load(f)  
-            return []  
+                    messages = json.load(f)  
+                # 过滤掉超过7天的留言  
+                now = _time.time()  
+                filtered = []  
+                for m in messages:  
+                    try:  
+                        t = _time.mktime(_time.strptime(m['time'], '%Y-%m-%d %H:%M:%S'))  
+                        if now - t < 7 * 86400:  
+                            filtered.append(m)  
+                    except Exception:  
+                        filtered.append(m)  # 解析失败的保留  
+                if len(filtered) != len(messages):  
+                    _save_messages(filtered)  # 有过期的就顺便清理掉文件  
+                return filtered  
+            return [] 
           
         def _save_messages(messages):  
             os.makedirs(os.path.dirname(MESSAGES_PATH), exist_ok=True)  
