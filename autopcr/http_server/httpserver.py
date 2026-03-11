@@ -65,18 +65,18 @@ MESSAGEBOARD_SCRIPT = f'''
 }}  
 #msg-board-input {{  
   flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px;  
-  font-size: 13px; outline: none;  
-}}  
+  font-size: 13px; outline: none; background: white; color: #333;  
+}} 
 #msg-board-send {{  
   margin-left: 6px; border: none; background: #1976d2; color: white;  
   border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px;  
 }}  
 </style>  
   
-<button id="msg-board-btn" title="留言板">💬</button>  
+<button id="msg-board-btn" title="聊天室">💬</button>  
 <div id="msg-board-panel">  
   <div id="msg-board-header">  
-    <span>留言板</span>  
+    <span>聊天室</span>  
     <button id="msg-board-minimize" title="缩小">&minus;</button>  
   </div>  
   <div id="msg-board-list"></div>  
