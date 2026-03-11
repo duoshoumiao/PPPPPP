@@ -103,9 +103,10 @@ MESSAGEBOARD_SCRIPT = f'''
     <button id="msg-board-preview-close">&times;</button>  
   </div>  
   <div id="msg-board-input-area">  
+    <button id="msg-board-img-btn" title="上传图片" style="background:none;border:none;font-size:18px;cursor:pointer;">🖼</button>  
+    <button id="msg-board-ss-btn" title="截图" style="background:none;border:none;font-size:18px;cursor:pointer;">✂</button>  
     <input id="msg-board-input" placeholder="输入留言..." maxlength="500" />  
-    <button id="msg-board-img-btn" title="上传图片">🖼</button>  
-    <button id="msg-board-send">发送</button>  
+    <button id="msg-board-send">发送</button>   
     <input id="msg-board-file" type="file" accept="image/*" style="display:none" />  
   </div>  
 </div>  
@@ -119,6 +120,7 @@ MESSAGEBOARD_SCRIPT = f'''
   var input = document.getElementById('msg-board-input');  
   var sendBtn = document.getElementById('msg-board-send');  
   var imgBtn = document.getElementById('msg-board-img-btn');  
+  var ssBtn = document.getElementById('msg-board-ss-btn');
   var fileInput = document.getElementById('msg-board-file');  
   var preview = document.getElementById('msg-board-preview');  
   var previewImg = document.getElementById('msg-board-preview-img');  
@@ -186,6 +188,79 @@ MESSAGEBOARD_SCRIPT = f'''
     preview.style.display = 'none';  
     previewImg.src = '';  
   }};  
+  
+  ssBtn.onclick = function() {{  
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {{  
+      alert('当前浏览器不支持截图功能，请使用 Ctrl+V 粘贴截图');  
+      return;  
+    }}  
+    navigator.mediaDevices.getDisplayMedia({{ video: true }}).then(function(stream) {{  
+      var video = document.createElement('video');  
+      video.srcObject = stream;  
+      video.onloadedmetadata = function() {{  
+        video.play();  
+        setTimeout(function() {{  
+          var canvas = document.createElement('canvas');  
+          canvas.width = video.videoWidth;  
+          canvas.height = video.videoHeight;  
+          canvas.getContext('2d').drawImage(video, 0, 0);  
+          stream.getTracks().forEach(function(t) {{ t.stop(); }});  
+          canvas.toBlob(function(blob) {{  
+            if (!blob) return;  
+            var formData = new FormData();  
+            formData.append('image', blob, 'screenshot.png');  
+            fetch('/daily/api/messages/upload', {{  
+              method: 'POST',  
+              headers: {{ 'X-App-Version': appVersion }},  
+              credentials: 'same-origin',  
+              body: formData  
+            }})  
+            .then(function(r) {{  
+              if (r.ok) return r.json();  
+              return r.text().then(function(t) {{ throw new Error(t); }});  
+            }})  
+            .then(function(data) {{  
+              pendingImage = data.filename;  
+              previewImg.src = '/daily/api/messages/image/' + data.filename;  
+              preview.style.display = 'block';  
+            }})  
+            .catch(function(e) {{ alert(e.message || '上传失败'); }});  
+          }}, 'image/png');  
+        }}, 300);  
+      }};  
+    }}).catch(function(e) {{  
+      if (e.name !== 'NotAllowedError') console.error(e);  
+    }});  
+  }};
+  
+  panel.addEventListener('paste', function(e) {{  
+    var items = (e.clipboardData || e.originalEvent.clipboardData).items;  
+    for (var i = 0; i < items.length; i++) {{  
+      if (items[i].type.indexOf('image') !== -1) {{  
+        e.preventDefault();  
+        var blob = items[i].getAsFile();  
+        var formData = new FormData();  
+        formData.append('image', blob, 'paste.png');  
+        fetch('/daily/api/messages/upload', {{  
+          method: 'POST',  
+          headers: {{ 'X-App-Version': appVersion }},  
+          credentials: 'same-origin',  
+          body: formData  
+        }})  
+        .then(function(r) {{  
+          if (r.ok) return r.json();  
+          return r.text().then(function(t) {{ throw new Error(t); }});  
+        }})  
+        .then(function(data) {{  
+          pendingImage = data.filename;  
+          previewImg.src = '/daily/api/messages/image/' + data.filename;  
+          preview.style.display = 'block';  
+        }})  
+        .catch(function(e) {{ alert(e.message || '上传失败'); }});  
+        break;  
+      }}  
+    }}  
+  }});
   
   // 检测管理员身份  
   function checkRole() {{  
@@ -956,4 +1031,6 @@ data: {ret}\n\n'''
             filepath = os.path.join(IMG_DIR, filename)  
             if not os.path.exists(filepath):  
                 return "图片不存在", 404  
-            return await send_file(filepath)           
+            return await send_file(filepath)       
+
+                    
