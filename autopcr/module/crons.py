@@ -41,14 +41,14 @@ async def _cron(task):
             last += datetime.timedelta(minutes=1)
             asyncio.get_event_loop().create_task(task(last))
 
-async def real_run_cron(accountmgr: AccountManager, accounts_to_run, cur):
+async def real_run_cron(accountmgr: AccountManager, accounts_to_run, cur):  
     async def run_one_account(account):  
         nonlocal cur  
         async with accountmgr.load(account) as mgr:  
             try:  
                 await mgr.pre_cron_run(cur.hour, cur.minute)  
                 await write_cron_log(eCronOperation.START, cur, accountmgr.qid, account, eResultStatus.SUCCESS)  
-                res = await asyncio.wait_for(mgr.do_daily(), timeout=600)  # 10 min timeout  
+                res = await asyncio.wait_for(mgr.do_daily(), timeout=600)  
                 status = res.status  
                 cur = datetime.datetime.now()  
                 await write_cron_log(eCronOperation.FINISH, cur, accountmgr.qid, account, status)  
@@ -57,11 +57,12 @@ async def real_run_cron(accountmgr: AccountManager, accounts_to_run, cur):
                 await write_cron_log(eCronOperation.START, cur, accountmgr.qid, account, eResultStatus.ERROR, "timeout")  
             except Exception as e:  
                 logger.exception(f"error in cron job {accountmgr.qid} {account}: {e}")  
-                await write_cron_log(eCronOperation.START, cur, accountmgr.qid, account, eResultStatus.ERROR, str(e))
-
-                await asyncio.gather(*[run_one_account(account) for account in accounts_to_run], return_exceptions=True)  
-            finally:  
-                await accountmgr.__aexit__(None, None, None)
+                await write_cron_log(eCronOperation.START, cur, accountmgr.qid, account, eResultStatus.ERROR, str(e))  
+  
+    try:  
+        await asyncio.gather(*[run_one_account(account) for account in accounts_to_run], return_exceptions=True)  
+    finally:  
+        await accountmgr.__aexit__(None, None, None)
             
 
 async def _run_crons(cur: datetime.datetime):
