@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import timedelta
 from typing import Callable, Coroutine, Any
 import json  
-import time as time_module
+import time as _time
 import asyncio
 import quart
 from quart import request, Blueprint, send_file, send_from_directory
@@ -22,7 +22,7 @@ from ..util.logger import instance as logger
 APP_VERSION_MAJOR = 1
 APP_VERSION_MINOR = 7
 
-CACHE_HTTP_DIR = os.path.join(CACHE_DIR, 'http_server')
+CACHE_HTTP_DIR = os.path.join(CACHE_DIR)
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 static_path = os.path.join(PATH, 'ClientApp')
@@ -42,7 +42,7 @@ MESSAGEBOARD_SCRIPT = f'''
   width: 315px; height: 450px; background: white; border-radius: 8px;  
   box-shadow: 0 4px 16px rgba(0,0,0,0.3); display: none; flex-direction: column;  
   font-family: sans-serif; color: #333;  
-}}
+}}  
 #msg-board-header {{  
   padding: 12px 16px; background: #1976d2; color: white;  
   border-radius: 8px 8px 0 0; font-weight: bold; font-size: 16px;  
@@ -60,16 +60,34 @@ MESSAGEBOARD_SCRIPT = f'''
   font-size: 13px; word-break: break-all;  
 }}  
 .msg-item .msg-meta {{ color: #888; font-size: 11px; margin-bottom: 4px; }}  
+.msg-item .msg-del {{  
+  float: right; color: #e53935; cursor: pointer; font-size: 11px;  
+  background: none; border: none; padding: 0;  
+}}  
+.msg-item img {{ max-width: 100%; border-radius: 4px; margin-top: 4px; cursor: pointer; }}  
+#msg-board-preview {{  
+  display: none; padding: 4px 8px; border-top: 1px solid #eee; position: relative;  
+}}  
+#msg-board-preview img {{ max-height: 60px; border-radius: 4px; }}  
+#msg-board-preview-close {{  
+  position: absolute; top: 2px; right: 8px; cursor: pointer;  
+  background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%;  
+  width: 18px; height: 18px; font-size: 12px; line-height: 18px; text-align: center;  
+}}  
 #msg-board-input-area {{  
-  display: flex; padding: 8px; border-top: 1px solid #eee;  
+  display: flex; padding: 8px; border-top: 1px solid #eee; align-items: center;  
 }}  
 #msg-board-input {{  
   flex: 1; border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px;  
   font-size: 13px; outline: none; background: white; color: #333;  
-}} 
+}}  
 #msg-board-send {{  
   margin-left: 6px; border: none; background: #1976d2; color: white;  
   border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px;  
+}}  
+#msg-board-img-btn {{  
+  margin-left: 4px; border: none; background: none; cursor: pointer;  
+  font-size: 18px; padding: 2px 4px; color: #1976d2;  
 }}  
 </style>  
   
@@ -80,9 +98,15 @@ MESSAGEBOARD_SCRIPT = f'''
     <button id="msg-board-minimize" title="缩小">&minus;</button>  
   </div>  
   <div id="msg-board-list"></div>  
+  <div id="msg-board-preview">  
+    <img id="msg-board-preview-img" />  
+    <button id="msg-board-preview-close">&times;</button>  
+  </div>  
   <div id="msg-board-input-area">  
     <input id="msg-board-input" placeholder="输入留言..." maxlength="500" />  
+    <button id="msg-board-img-btn" title="上传图片">🖼</button>  
     <button id="msg-board-send">发送</button>  
+    <input id="msg-board-file" type="file" accept="image/*" style="display:none" />  
   </div>  
 </div>  
   
@@ -94,24 +118,29 @@ MESSAGEBOARD_SCRIPT = f'''
   var list = document.getElementById('msg-board-list');  
   var input = document.getElementById('msg-board-input');  
   var sendBtn = document.getElementById('msg-board-send');  
+  var imgBtn = document.getElementById('msg-board-img-btn');  
+  var fileInput = document.getElementById('msg-board-file');  
+  var preview = document.getElementById('msg-board-preview');  
+  var previewImg = document.getElementById('msg-board-preview-img');  
+  var previewClose = document.getElementById('msg-board-preview-close');  
   var appVersion = '{APP_VERSION_MAJOR}.{APP_VERSION_MINOR}.0';  
   var loggedIn = false;  
   var minimized = false;  
+  var isAdmin = false;  
   var timer = null;  
+  var pendingImage = '';  
   
   function startPolling(interval) {{  
     if (timer) clearInterval(timer);  
     timer = setInterval(loadMessages, interval);  
   }}  
   
-  // 缩小：隐藏面板，显示小按钮  
   minBtn.onclick = function() {{  
     minimized = true;  
     panel.style.display = 'none';  
     btn.style.display = 'block';  
   }};  
   
-  // 点击小按钮：展开面板  
   btn.onclick = function() {{  
     minimized = false;  
     btn.style.display = 'none';  
@@ -120,6 +149,55 @@ MESSAGEBOARD_SCRIPT = f'''
       loadMessages();  
     }}  
   }};  
+  
+  imgBtn.onclick = function() {{ fileInput.click(); }};  
+  
+  fileInput.onchange = function() {{  
+    var file = fileInput.files[0];  
+    if (!file) return;  
+    if (file.size > 2 * 1024 * 1024) {{  
+      alert('图片不能超过2MB');  
+      fileInput.value = '';  
+      return;  
+    }}  
+    var formData = new FormData();  
+    formData.append('image', file);  
+    fetch('/daily/api/messages/upload', {{  
+      method: 'POST',  
+      headers: {{ 'X-App-Version': appVersion }},  
+      credentials: 'same-origin',  
+      body: formData  
+    }})  
+    .then(function(r) {{  
+      if (r.ok) return r.json();  
+      return r.text().then(function(t) {{ throw new Error(t); }});  
+    }})  
+    .then(function(data) {{  
+      pendingImage = data.filename;  
+      previewImg.src = '/daily/api/messages/image/' + data.filename;  
+      preview.style.display = 'block';  
+    }})  
+    .catch(function(e) {{ alert(e.message || '上传失败'); }});  
+    fileInput.value = '';  
+  }};  
+  
+  previewClose.onclick = function() {{  
+    pendingImage = '';  
+    preview.style.display = 'none';  
+    previewImg.src = '';  
+  }};  
+  
+  // 检测管理员身份  
+  function checkRole() {{  
+    fetch('/daily/api/role', {{  
+      credentials: 'same-origin'  
+    }})  
+    .then(function(r) {{ if (r.ok) return r.json(); return null; }})  
+    .then(function(data) {{  
+      if (data) isAdmin = data.admin || data.super_user;  
+    }})  
+    .catch(function() {{}});  
+  }}  
   
   function loadMessages() {{  
     fetch('/daily/api/messages', {{  
@@ -133,6 +211,7 @@ MESSAGEBOARD_SCRIPT = f'''
           btn.style.display = 'none';  
           loggedIn = false;  
           minimized = false;  
+          isAdmin = false;  
           startPolling(2000);  
         }}  
         return null;  
@@ -143,6 +222,7 @@ MESSAGEBOARD_SCRIPT = f'''
       if (!msgs) return;  
       if (!loggedIn) {{  
         loggedIn = true;  
+        checkRole();  
         if (!minimized) {{  
           panel.style.display = 'flex';  
         }} else {{  
@@ -154,8 +234,32 @@ MESSAGEBOARD_SCRIPT = f'''
       msgs.forEach(function(m) {{  
         var div = document.createElement('div');  
         div.className = 'msg-item';  
-        div.innerHTML = '<div class="msg-meta">' + m.qq + ' &middot; ' + m.time + '</div>' + m.content;  
+        var html = '<div class="msg-meta">' + m.qq + ' &middot; ' + m.time;  
+        if (isAdmin) {{  
+          html += ' <button class="msg-del" data-id="' + m.id + '">&times; 删除</button>';  
+        }}  
+        html += '</div>';  
+        if (m.content) html += '<div>' + m.content + '</div>';  
+        if (m.image) html += '<img src="/daily/api/messages/image/' + m.image + '" onclick="window.open(this.src)" />';  
+        div.innerHTML = html;  
         list.appendChild(div);  
+      }});  
+      // 绑定删除按钮事件  
+      list.querySelectorAll('.msg-del').forEach(function(delBtn) {{  
+        delBtn.onclick = function() {{  
+          if (!confirm('确定删除这条留言？')) return;  
+          var msgId = this.getAttribute('data-id');  
+          fetch('/daily/api/messages/' + msgId, {{  
+            method: 'DELETE',  
+            headers: {{ 'X-App-Version': appVersion }},  
+            credentials: 'same-origin'  
+          }})  
+          .then(function(r) {{  
+            if (r.ok) loadMessages();  
+            else r.text().then(function(t) {{ alert(t); }});  
+          }})  
+          .catch(function(e) {{ console.error(e); }});  
+        }};  
       }});  
       list.scrollTop = list.scrollHeight;  
     }})  
@@ -164,15 +268,23 @@ MESSAGEBOARD_SCRIPT = f'''
   
   sendBtn.onclick = function() {{  
     var content = input.value.trim();  
-    if (!content) return;  
+    if (!content && !pendingImage) return;  
+    var body = {{ content: content }};  
+    if (pendingImage) body.image = pendingImage;  
     fetch('/daily/api/messages', {{  
       method: 'POST',  
       headers: {{ 'Content-Type': 'application/json', 'X-App-Version': appVersion }},  
       credentials: 'same-origin',  
-      body: JSON.stringify({{ content: content }})  
+      body: JSON.stringify(body)  
     }})  
     .then(function(r) {{  
-      if (r.ok) {{ input.value = ''; loadMessages(); }}  
+      if (r.ok) {{  
+        input.value = '';  
+        pendingImage = '';  
+        preview.style.display = 'none';  
+        previewImg.src = '';  
+        loadMessages();  
+      }}  
       else r.text().then(function(t) {{ alert(t); }});  
     }})  
     .catch(function(e) {{ console.error(e); }});  
@@ -719,7 +831,7 @@ data: {ret}\n\n'''
             if os.path.exists(os.path.join(str(self.web.static_folder), path)):  
                 return await send_from_directory(str(self.web.static_folder), path, mimetype=("text/javascript" if path.endswith(".js") else None))  
             else:  
-                # 读取 index.html 并注入留言板脚本  
+                # 读取 index.html 并注入聊天室脚本  
                 index_path = os.path.join(str(self.web.static_folder), 'index.html')  
                 with open(index_path, 'r', encoding='utf-8') as f:  
                     html = f.read()  
@@ -752,35 +864,83 @@ data: {ret}\n\n'''
             return messages, 200        
             
         @self.api.route('/messages', methods=['POST'])  
-        @HttpServer.login_required()  
+        @login_required  
         @rate_limit(1, timedelta(seconds=3))  
         async def post_message():  
             data = await request.get_json()  
             content = data.get('content', '').strip()  
-            if not content:  
+            image = data.get('image', '').strip()  
+            if not content and not image:  
                 return "留言内容不能为空", 400  
             if len(content) > 500:  
                 return "留言内容不能超过500字", 400  
-              
+            # 验证图片文件名是否合法  
+            if image:  
+                if '/' in image or '\\' in image or '..' in image:  
+                    return "无效的图片文件名", 400  
+                if not os.path.exists(os.path.join(IMG_DIR, image)):  
+                    return "图片不存在", 400  
             messages = _load_messages()  
             msg = {  
                 'id': secrets.token_urlsafe(8),  
                 'qq': current_user.auth_id,  
                 'content': content,  
-                'time': time_module.strftime('%Y-%m-%d %H:%M:%S')  
+                'time': _time.strftime('%Y-%m-%d %H:%M:%S')  
             }  
+            if image:  
+                msg['image'] = image  
             messages.append(msg)  
-            # 只保留最近100条  
             if len(messages) > 100:  
                 messages = messages[-100:]  
             _save_messages(messages)  
-            return msg, 200    
+            return msg, 200  
             
         @self.api.route('/messages/<string:msg_id>', methods=['DELETE'])  
         @HttpServer.login_required()  
         @HttpServer.admin_required()  
         async def delete_message(msg_id: str):  
             messages = _load_messages()  
+            for m in messages:  
+                if m['id'] == msg_id and m.get('image'):  
+                    imgpath = os.path.join(IMG_DIR, m['image'])  
+                    if os.path.exists(imgpath):  
+                        os.remove(imgpath)  
             messages = [m for m in messages if m['id'] != msg_id]  
             _save_messages(messages)  
-            return "删除成功", 200    
+            return "删除成功", 200
+
+        IMG_DIR = os.path.join(CACHE_DIR, 'msg_images')  
+  
+        @self.api.route('/messages/upload', methods=['POST'])  
+        @login_required  
+        @rate_limit(1, timedelta(seconds=3))  
+        async def upload_msg_image():  
+            files = await request.files  
+            img = files.get('image')  
+            if not img:  
+                return "没有上传图片", 400  
+            # 限制 2MB  
+            data = img.read()  
+            if len(data) > 2 * 1024 * 1024:  
+                return "图片不能超过2MB", 400  
+            # 只允许常见图片格式  
+            ext = os.path.splitext(img.filename)[1].lower()  
+            if ext not in ('.jpg', '.jpeg', '.png', '.gif', '.webp'):  
+                return "不支持的图片格式", 400  
+            os.makedirs(IMG_DIR, exist_ok=True)  
+            filename = secrets.token_urlsafe(12) + ext  
+            filepath = os.path.join(IMG_DIR, filename)  
+            with open(filepath, 'wb') as f:  
+                f.write(data)  
+            return {"filename": filename}, 200
+           
+        @self.api.route('/messages/image/<string:filename>', methods=['GET'])  
+        @login_required  
+        async def get_msg_image(filename: str):  
+            # 防止路径穿越  
+            if '/' in filename or '\\' in filename or '..' in filename:  
+                return "无效文件名", 400  
+            filepath = os.path.join(IMG_DIR, filename)  
+            if not os.path.exists(filepath):  
+                return "图片不存在", 404  
+            return await send_file(filepath)           
