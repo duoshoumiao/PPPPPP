@@ -304,8 +304,10 @@ MESSAGEBOARD_SCRIPT = f'''
           btn.style.display = 'block';  
         }}  
         startPolling(5000);  
+        checkRole();  
       }}  
-      list.innerHTML = '';  
+      var wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 30;  
+      list.innerHTML = ''; 
       msgs.forEach(function(m) {{  
         var div = document.createElement('div');  
         div.className = 'msg-item';  
@@ -336,7 +338,7 @@ MESSAGEBOARD_SCRIPT = f'''
           .catch(function(e) {{ console.error(e); }});  
         }};  
       }});  
-      list.scrollTop = list.scrollHeight;  
+      if (wasAtBottom) list.scrollTop = list.scrollHeight;
     }})  
     .catch(function(e) {{ console.error(e); }});  
   }}  
