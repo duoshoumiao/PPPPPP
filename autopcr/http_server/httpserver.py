@@ -32,16 +32,18 @@ MESSAGES_PATH = os.path.join(CACHE_HTTP_DIR, 'messages.json')
 MESSAGEBOARD_SCRIPT = f'''  
 <style>  
 #msg-board-btn {{  
-  position: fixed; bottom: 20px; right: 20px; z-index: 9999;  
+  position: fixed; bottom: 20px; right: 20px; z-index: 2147483647;  
   width: 50px; height: 50px; border-radius: 50%; border: none;  
   background: #1976d2; color: white; font-size: 24px; cursor: pointer;  
   box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: none;  
+  pointer-events: auto;
 }}  
 #msg-board-panel {{  
-  position: fixed; bottom: 20px; right: 20px; z-index: 9999;  
+  position: fixed; bottom: 20px; right: 20px; z-index: 2147483647;  
   width: 315px; height: 450px; background: white; border-radius: 8px;  
   box-shadow: 0 4px 16px rgba(0,0,0,0.3); display: none; flex-direction: column;  
   font-family: sans-serif; color: #333;  
+  pointer-events: auto;
 }}  
 #msg-board-header {{  
   padding: 12px 16px; background: #1976d2; color: white;  
@@ -91,10 +93,10 @@ MESSAGEBOARD_SCRIPT = f'''
 }}  
 </style>  
   
-<button id="msg-board-btn" title="聊天室">💬</button>  
+<button id="msg-board-btn" title="留言板">💬</button>  
 <div id="msg-board-panel">  
   <div id="msg-board-header">  
-    <span>聊天室</span>  
+    <span>留言板</span>  
     <button id="msg-board-minimize" title="缩小">&minus;</button>  
   </div>  
   <div id="msg-board-list"></div>  
@@ -911,7 +913,7 @@ data: {ret}\n\n'''
             if os.path.exists(os.path.join(str(self.web.static_folder), path)):  
                 return await send_from_directory(str(self.web.static_folder), path, mimetype=("text/javascript" if path.endswith(".js") else None))  
             else:  
-                # 读取 index.html 并注入聊天室脚本  
+                # 读取 index.html 并注入留言板脚本  
                 index_path = os.path.join(str(self.web.static_folder), 'index.html')  
                 with open(index_path, 'r', encoding='utf-8') as f:  
                     html = f.read()  
