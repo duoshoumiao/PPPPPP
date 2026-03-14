@@ -93,7 +93,7 @@ MESSAGEBOARD_SCRIPT = f'''
 }}  
 </style>  
   
-<button id="msg-board-btn" title="留言板">💬</button>  
+<button id="msg-board-btn" title="留言板">💬</button>
 <div id="msg-board-panel">  
   <div id="msg-board-header">  
     <span>留言板</span>  
@@ -132,7 +132,9 @@ MESSAGEBOARD_SCRIPT = f'''
   var minimized = false;  
   var isAdmin = false;  
   var timer = null;  
+  var lastSeenId = localStorage.getItem('msg_board_last_seen') || '';
   var pendingImage = '';  
+  
   
   function startPolling(interval) {{  
     if (timer) clearInterval(timer);  
@@ -146,13 +148,14 @@ MESSAGEBOARD_SCRIPT = f'''
   }};  
   
   btn.onclick = function() {{  
-    minimized = false;  
+    panel.style.display = 'flex';  
     btn.style.display = 'none';  
-    if (loggedIn) {{  
-      panel.style.display = 'flex';  
-      loadMessages();  
-    }}  
-  }};  
+    btn.textContent = '💬';  
+    btn.style.fontSize = '24px';  
+    btn.style.background = '#1976d2';  
+    minimized = false;  
+    loadMessages();  
+  }};
   
   imgBtn.onclick = function() {{ fileInput.click(); }};  
   
@@ -299,12 +302,7 @@ MESSAGEBOARD_SCRIPT = f'''
       if (!msgs) return;  
       if (!loggedIn) {{  
         loggedIn = true;  
-        checkRole();  
-        if (!minimized) {{  
-          panel.style.display = 'flex';  
-        }} else {{  
-          btn.style.display = 'block';  
-        }}  
+        btn.style.display = 'block';  
         startPolling(3000);  
         checkRole();  
       }}  
@@ -341,6 +339,25 @@ MESSAGEBOARD_SCRIPT = f'''
         }};  
       }});  
       if (wasAtBottom) list.scrollTop = list.scrollHeight;
+      // 新消息红点逻辑  
+      if (msgs.length > 0) {{  
+        var latestId = msgs[msgs.length - 1].id;  
+        if (panel.style.display === 'flex') {{  
+          lastSeenId = latestId;  
+          localStorage.setItem('msg_board_last_seen', latestId);  
+          btn.textContent = '💬';  
+          btn.style.fontSize = '24px';  
+          btn.style.background = '#1976d2';  
+        }} else if (latestId !== lastSeenId) {{  
+          btn.textContent = '新消息';  
+          btn.style.fontSize = '12px';  
+          btn.style.background = '#e53935';  
+        }}  
+      }} else {{  
+        btn.textContent = '💬';  
+        btn.style.fontSize = '24px';  
+        btn.style.background = '#1976d2';  
+      }}
     }})  
     .catch(function(e) {{ console.error(e); }});  
   }}  
