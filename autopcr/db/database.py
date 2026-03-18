@@ -955,6 +955,14 @@ class database():
                     x.to_dict(lambda x: x.level, lambda x: x))
         )
         
+    @lazy_property  
+    def music_list(self) -> Dict[int, MusicList]:  
+        with self.dbmgr.session() as db:  
+            return (  
+                MusicList.query(db)  
+                .to_dict(lambda x: x.music_id, lambda x: x)  
+            )    
+        
     @lazy_property
     def daily_mission_data(self) -> Dict[int, DailyMissionDatum]:
         with self.dbmgr.session() as db:

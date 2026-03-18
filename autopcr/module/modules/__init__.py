@@ -83,6 +83,9 @@ daily_modules = ModuleList(
         smart_very_hard_sweep,
         jjc_reward,
         talent_sweep,
+        hatsune_dear_reading,
+        present_receive,
+        talent_sweep2,
         xinsui8_sweep,
         xinsui7_sweep,
         xinsui6_sweep,
@@ -94,9 +97,6 @@ daily_modules = ModuleList(
         starcup3_sweep,
         starcup2_sweep,
         starcup1_sweep, 
-        hatsune_dear_reading,
-        present_receive,
-        talent_sweep2,
         hatsune_h_sweep,
         smart_sweep,
         mirai_very_hard_sweep,
@@ -144,6 +144,7 @@ daily_modules = ModuleList(
         unit_story_reading,
         birthday_story_reading,
         room_upper_all,
+        music_buy_all,  # 新增  
         user_info,
     ]
 )

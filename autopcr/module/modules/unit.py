@@ -989,7 +989,7 @@ class unit_memory_buy_batch(UnitController):
 )
 @name("角色突破")
 @unitlist("unit_exceed_units", "角色")
-@booltype("unit_exceed_ignore_memory", "忽略盈余", False)
+@booltype("unit_exceed_ignore_memory", "不保留突破碎片", False)
 @inttype("unit_exceed_mana_keep", "保留Mana下限（亿）", 10, range(1000))
 @default(False)
 class unit_exceed(UnitController):
@@ -1066,7 +1066,7 @@ class unit_exceed(UnitController):
 @unitlist("unit_evolution_units", "角色")
 @singlechoice("unit_evolution_to_rarity", "目标星级", 5, range(2, 6))
 @booltype("unit_evolution_to_max_rarity", "升至最高星级", False)
-@booltype("unit_evolution_ignore_memory", "忽略盈余", False)
+@booltype("unit_evolution_ignore_memory", "不保留突破碎片", False)
 @default(False)
 class unit_evolution(UnitController):
     async def do_task(self, client: pcrclient):

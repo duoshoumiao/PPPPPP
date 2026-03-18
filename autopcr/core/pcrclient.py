@@ -29,7 +29,7 @@ class pcrclient(apiclient):
     def set_config(self, config: dict):
         self._base_keys = config
         self._keys = {}
-
+ 
     @property
     def id(self) -> str:
         return self.session.id
@@ -1681,6 +1681,16 @@ class pcrclient(apiclient):
             raise SkipError("小屋未解锁")
         req = RoomStartRequest()
         req.wac_auto_option_flag = 1
+        return await self.request(req)
+
+    async def music_top(self) -> MusicTopResponse:  
+        req = MusicTopRequest()  
+        return await self.request(req)  
+      
+    async def music_buy(self, music_id: int) -> MusicBuyResponse:  
+        req = MusicBuyRequest()  
+        req.music_id = music_id  
+        req.room_coin = self.data.get_shop_gold(eSystemId.GOLD_SHOP)  
         return await self.request(req)
 
     async def borrow_dungeon_member(self, viewer_id):
