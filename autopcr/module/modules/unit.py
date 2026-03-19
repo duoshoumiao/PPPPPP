@@ -428,9 +428,9 @@ class UnitController(Module):
             self._log(f"{self.unit_name}专武1升至{target_level}级")
             await self.client.equipment_enhance_unique(self.unit.id, 1, cost_stone, current_enhancement_pt)
 
-    async def get_memory_gap(self, star: int, unique_level: int, exceed_state: bool) -> int:
-        client = self.client
-        unique_rank = db.get_unique_equip_rank_from_level(1, unique_level)
+    async def get_memory_gap(self, star: int, unique_level: int, exceed_state: bool) -> int:  
+        client = self.client  
+        unique_rank = 0 if unique_level == 0 else db.get_unique_equip_rank_from_level(1, unique_level)  
 
         token = (eInventoryType.Item, self.memory_id)
         demand = client.data.get_unit_memory_demand(self.unit_id, star, unique_rank, exceed_state)
