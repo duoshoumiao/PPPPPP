@@ -209,6 +209,7 @@ sv_help = f"""
 - {prefix}撤下普通ex装
 - {prefix}买记忆碎片 可可萝 5 0 开买 界限突破  #分别代表:角色 星级 专武 是否购买 是否突破
 - {prefix}角色升星 5 忽略盈余 升至最高 佩可  #分别代表 星级 是否保留盈余如突破碎片 升到可升最高星 角色名
+- {prefix}角色突破 忽略盈余 20 凯露 佩可（其中 20 是保留Mana下限亿，忽略盈余：选这个，碎片不溢出就不突破）
 """.strip()
 
 if address is None:
@@ -2061,7 +2062,47 @@ async def unit_evolution_tool(botev: BotEvent):
         "unit_evolution_to_max_rarity": to_max_rarity,  
         "unit_evolution_ignore_memory": ignore_memory,  
     }   
-   
+
+@register_tool("角色突破", "unit_exceed")  
+async def unit_exceed_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+  
+    # 解析保留Mana下限（亿），默认10  
+    mana_keep = 10  
+    try:  
+        val = int(msg[0])  
+        mana_keep = val  
+        del msg[0]  
+    except:  
+        pass  
+  
+    # 解析开关参数  
+    ignore_memory = is_args_exist(msg, '忽略盈余')  
+  
+    # 解析角色列表  
+    units = []  
+    unknown_units = []  
+    while msg:  
+        unit_name = msg[0]  
+        unit = get_id_from_name(unit_name)  
+        if unit:  
+            units.append(unit * 100 + 1)  
+        else:  
+            unknown_units.append(unit_name)  
+        del msg[0]  
+  
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
+  
+    if not units:  
+        await botev.finish("请指定角色")  
+  
+    return {  
+        "unit_exceed_units": units,  
+        "unit_exceed_ignore_memory": ignore_memory,  
+        "unit_exceed_mana_keep": mana_keep,  
+    }   
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
