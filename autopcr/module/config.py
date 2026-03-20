@@ -258,7 +258,7 @@ class UnitConfigMixin:
 
 class UnitChoiceConfig(UnitConfigMixin, SingleChoiceConfig):
     def __init__(self, key: str, desc: str):
-        super().__init__(key, desc, 100101, db.unlock_unit_condition)
+        super().__init__(key, desc, 100101, db.unlock_unit_condition_candidate) 
 
     def process_value(self, value):
         if isinstance(value, str) and ':' in value: # Compatible with the old version
