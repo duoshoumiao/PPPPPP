@@ -147,6 +147,8 @@ RateLimiter(app)
 Compress(app)
 app.secret_key = secrets.token_urlsafe(16)  # cookie expires when reboot
 app.register_blueprint(server.app)
+# 自动换防停止事件字典，key: sender_qq, value: asyncio.Event  
+_auto_def_stop_events = {}
 
 prefix = '#'
 
@@ -210,6 +212,7 @@ sv_help = f"""
 - {prefix}买记忆碎片 可可萝 5 0 开买 界限突破  #分别代表:角色 星级 专武 是否购买 是否突破
 - {prefix}角色升星 5 忽略盈余 升至最高 佩可  #分别代表 星级 是否保留盈余如突破碎片 升到可升最高星 角色名
 - {prefix}角色突破 忽略盈余 凯露 佩可（忽略盈余：选这个，碎片不溢出就不突破）
+- {prefix}pjjc自动换防
 """.strip()
 
 if address is None:
@@ -2103,6 +2106,171 @@ async def unit_exceed_tool(botev: BotEvent):
         "unit_exceed_ignore_memory": ignore_memory,  
         "unit_exceed_mana_keep": mana_keep,  
     }   
+    
+@sv.on_prefix(f"{prefix}pjjc自动换防")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def pjjc_auto_def_switch(botev: BotEvent, acc):  
+    import time as _time  
+    import random  
+    import itertools  
+    from datetime import datetime as dt  
+      
+    alias = getattr(acc, 'alias', '未知账号')  
+    sender_qq = await botev.send_qq()  
+      
+    # 检查是否已有运行中的任务  
+    if sender_qq in _auto_def_stop_events:  
+        await botev.finish(f"已有正在运行的自动换防任务，请先发送 {prefix}终止换防")  
+      
+    duration = 600  # 10 minutes  
+    interval = 15   # 15 seconds  
+    shuffle_count = 0  
+      
+    stop_event = asyncio.Event()  
+    _auto_def_stop_events[sender_qq] = stop_event  
+      
+    try:  
+        client = acc.client  
+        await client.activate()  
+          
+        # Login if needed (参考 autopcr/module/modulebase.py 中 Module.do_from 的登录逻辑)  
+        from .autopcr.core.pcrclient import eLoginStatus  
+        if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+            await client.login()  
+          
+        # Get initial history baseline  
+        history_resp = await client.get_grand_arena_history()  
+        known_log_ids = set()  
+        if history_resp.grand_arena_history_list:  
+            for h in history_resp.grand_arena_history_list:  
+                known_log_ids.add(h.log_id)  
+          
+        await botev.send(f"{alias} pjjc自动换防已开启，持续10分钟，每15秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
+          
+        start_time = _time.time()  
+          
+        while _time.time() - start_time < duration:  
+            # 用 wait_for 替代 sleep，这样收到终止信号时可以立即响应  
+            try:  
+                await asyncio.wait_for(stop_event.wait(), timeout=interval)  
+                # 如果到这里，说明 stop_event 被 set 了（用户发送了终止换防）  
+                await botev.send(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")  
+                client.deactivate()  
+                return  
+            except asyncio.TimeoutError:  
+                # 正常超时，继续检查历史记录  
+                pass  
+              
+            try:  
+                # Query current history  
+                history_resp = await client.get_grand_arena_history()  
+                if not history_resp.grand_arena_history_list:  
+                    continue  
+                  
+                # Check for new 被刺 records  
+                new_attacks = []  
+                for h in history_resp.grand_arena_history_list:  
+                    if h.log_id not in known_log_ids:  
+                        known_log_ids.add(h.log_id)  
+                        # is_challenge == 0 means 被刺 (you were attacked)  
+                        # 注意：如果列表项的 is_challenge 不可靠，需改用 get_grand_arena_history_detail  
+                        if not h.is_challenge:  
+                            opponent = h.opponent_user  
+                            attack_time = dt.fromtimestamp(h.versus_time)  
+                            new_attacks.append(f"{opponent.user_name}({opponent.viewer_id}) {attack_time} 被刺")  
+                  
+                if new_attacks:  
+                    # Notify about detected attacks  
+                    attack_msg = "\n".join(new_attacks)  
+                    await botev.send(f"{alias} 检测到新的被刺记录：\n{attack_msg}\n正在执行换防...")  
+                      
+                    # --- Inline pjjc_def_shuffle_team logic (from autopcr/module/modules/tools.py lines 950-964) ---  
+                    from .autopcr.model.common import DeckListData  
+                    from .autopcr.model.enums import ePartyType  
+                      
+                    # Check rate limit  
+                    info = await client.get_grand_arena_info()  
+                    limit_info = info.update_deck_times_limit  
+                    if limit_info.round_times == limit_info.round_max_limited_times:  
+                        ok_time = db.format_time(db.parse_time(limit_info.round_end_time))  
+                        await botev.send(f"{alias} 已达到换防次数上限{limit_info.round_max_limited_times}，请于{ok_time}后再试，自动换防终止")  
+                        break  
+                    if limit_info.daily_times == limit_info.daily_max_limited_times:  
+                        await botev.send(f"{alias} 已达到每日换防次数上限{limit_info.daily_max_limited_times}，自动换防终止")  
+                        break  
+                      
+                    limit_msg = ""  
+                    if limit_info.round_times:  
+                        limit_msg = f"{db.format_time(db.parse_time(limit_info.round_end_time))}刷新"  
+                      
+                    # Generate shuffle permutation (derangement)  
+                    team_cnt = 3  
+                    teams = [list(x) for x in itertools.permutations(range(team_cnt))]  
+                    teams = [x for x in teams if all(x[i] != i for i in range(team_cnt))]  
+                    ids = random.choice(teams)  
+                      
+                    # Build deck list  
+                    deck_list = []  
+                    for i in range(team_cnt):  
+                        deck_number_src = getattr(ePartyType, f"GRAND_ARENA_DEF_{i + 1}")  
+                        units = client.data.deck_list[deck_number_src]  
+                        units_id = [getattr(units, f"unit_id_{j + 1}") for j in range(5)]  
+                          
+                        deck = DeckListData()  
+                        deck.deck_number = getattr(ePartyType, f"GRAND_ARENA_DEF_{ids[i] + 1}")  
+                        deck.unit_list = units_id  
+                        deck_list.append(deck)  
+                      
+                    deck_list.sort(key=lambda x: x.deck_number)  
+                    await client.deck_update_list(deck_list)  
+                      
+                    shuffle_msg = '\n'.join([f"队伍{i+1} -> 位置{ids[i]+1}" for i in range(team_cnt)])  
+                    await botev.send(  
+                        f"{alias} 换防完成！\n"  
+                        f"{shuffle_msg}\n"  
+                        f"本轮换防次数{limit_info.round_times + 1}/{limit_info.round_max_limited_times}，{limit_msg}\n"  
+                        f"今日换防次数{limit_info.daily_times + 1}/{limit_info.daily_max_limited_times}"  
+                    )  
+                    shuffle_count += 1  
+                    # 注意：换防后不 break，继续监控  
+                      
+            except Exception as e:  
+                logger.error(f"pjjc自动换防检查出错: {str(e)}")  
+                await botev.send(f"{alias} 检查出错: {str(e)[:200]}")  
+                try:  
+                    if client.logged == eLoginStatus.NOT_LOGGED:  
+                        await client.login()  
+                except:  
+                    await botev.send(f"{alias} 重新登录失败，自动换防终止")  
+                    break  
+          
+        client.deactivate()  
+        if shuffle_count > 0:  
+            await botev.send(f"{alias} pjjc自动换防已结束（10分钟到期），共执行换防{shuffle_count}次")  
+        else:  
+            await botev.send(f"{alias} pjjc自动换防已结束（10分钟内未检测到被刺）")  
+          
+    except Exception as e:  
+        try:  
+            client.deactivate()  
+        except:  
+            pass  
+        await botev.send(f"{alias} pjjc自动换防异常终止: {str(e)[:300]}")  
+    finally:  
+        _auto_def_stop_events.pop(sender_qq, None)
+        
+@sv.on_fullmatch(f"{prefix}终止换防")  
+@wrap_hoshino_event  
+async def pjjc_stop_auto_def(botev: BotEvent):  
+    sender_qq = await botev.send_qq()  
+    if sender_qq in _auto_def_stop_events:  
+        _auto_def_stop_events[sender_qq].set()  
+        # 不需要在这里发送"已停止"，监控循环会发送停止消息  
+    else:  
+        await botev.send("当前没有正在运行的自动换防任务")
+
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
