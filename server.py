@@ -2124,8 +2124,8 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
     if sender_qq in _auto_def_stop_events:  
         await botev.finish(f"已有正在运行的自动换防任务，请先发送 {prefix}终止换防")  
       
-    duration = 600  # 10 minutes  
-    interval = 15   # 15 seconds  
+    duration = 1800  # 30 分钟  
+    interval = 15   # 15 秒  
     shuffle_count = 0  
       
     stop_event = asyncio.Event()  
@@ -2147,7 +2147,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
             for h in history_resp.grand_arena_history_list:  
                 known_log_ids.add(h.log_id)  
           
-        await botev.send(f"{alias} pjjc自动换防已开启，持续10分钟，每15秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
+        await botev.send(f"{alias} pjjc自动换防已开启，持续30分钟，每15秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
           
         start_time = _time.time()  
           
@@ -2248,9 +2248,9 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
           
         client.deactivate()  
         if shuffle_count > 0:  
-            await botev.send(f"{alias} pjjc自动换防已结束（10分钟到期），共执行换防{shuffle_count}次")  
+            await botev.send(f"{alias} pjjc自动换防已结束（30分钟到期），共执行换防{shuffle_count}次")  
         else:  
-            await botev.send(f"{alias} pjjc自动换防已结束（10分钟内未检测到被刺）")  
+            await botev.send(f"{alias} pjjc自动换防已结束（30分钟内未检测到被刺）")  
           
     except Exception as e:  
         try:  
