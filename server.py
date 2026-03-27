@@ -213,6 +213,7 @@ sv_help = f"""
 - {prefix}角色升星 5 忽略盈余 升至最高 佩可  #分别代表 星级 是否保留盈余如突破碎片 升到可升最高星 角色名
 - {prefix}角色突破 忽略盈余 凯露 佩可（忽略盈余：选这个，碎片不溢出就不突破）
 - {prefix}pjjc自动换防
+- {prefix}挂会战支援 角色1 [角色2]  设置角色为会战支援并穿满会战EX装（最多2个）
 """.strip()
 
 if address is None:
@@ -2270,6 +2271,43 @@ async def pjjc_stop_auto_def(botev: BotEvent):
         # 不需要在这里发送"已停止"，监控循环会发送停止消息  
     else:  
         await botev.send("当前没有正在运行的自动换防任务")
+
+@register_tool("挂会战支援", "set_cb_support")  
+async def set_cb_support(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
+      
+    units = []  
+    unknown_units = []  
+    # Parse up to 2 character names  
+    for _ in range(2):  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                units.append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
+      
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
+      
+    if not units:  
+        await botev.finish("请指定至少一个角色，如：#挂会战支援 角色1 角色2")  
+      
+    if len(units) > 2:  
+        units = units[:2]  
+      
+    config = {  
+        "set_cb_support_unit_id_1": units[0],  
+    }  
+    if len(units) > 1:  
+        config["set_cb_support_unit_id_2"] = units[1]  
+      
+    return config
 
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):

@@ -220,7 +220,7 @@ tool_modules = ModuleList(
         ex_equip_power_maximun,
         set_my_party2,
         bsm_auto,
-        return_jewel,
+        set_cb_support,
         nbb_game,
         remove_normal_ex_equip,
         # calc_best_3star_ex_equip,
