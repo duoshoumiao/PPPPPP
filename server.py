@@ -2276,10 +2276,9 @@ async def pjjc_stop_auto_def(botev: BotEvent):
 async def set_cb_support(botev: BotEvent):  
     msg = await botev.message()  
     await botev.send("请稍等")  
-      
+  
     units = []  
     unknown_units = []  
-    # Parse up to 2 character names  
     for _ in range(2):  
         try:  
             unit_name = msg[0]  
@@ -2291,22 +2290,17 @@ async def set_cb_support(botev: BotEvent):
             del msg[0]  
         except:  
             break  
-      
+  
     if unknown_units:  
         await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
-      
+  
     if not units:  
         await botev.finish("请指定至少一个角色，如：#挂会战支援 角色1 角色2")  
-      
-    if len(units) > 2:  
-        units = units[:2]  
-      
+  
     config = {  
         "set_cb_support_unit_id_1": units[0],  
+        "set_cb_support_unit_id_2": units[1] if len(units) > 1 else units[0],  
     }  
-    if len(units) > 1:  
-        config["set_cb_support_unit_id_2"] = units[1]  
-      
     return config
 
 # @register_tool("获取导入", "get_library_import_data")
