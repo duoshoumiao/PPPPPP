@@ -1339,16 +1339,35 @@ class set_cb_support(Module):
                 if support.support_start_time and now - support.support_start_time < SUPPORT_COOLDOWN:  
                     cooldown_positions.add(support.position)  
   
-        # 移除不在目标列表中、且不在冷却中的旧支援  
+        # 统计当前状态：已就位的目标角色、非目标支援、空位  
+        already_placed = set()  
+        non_target_supports = []  
+        occupied_positions = set()  
         for support in support_info.clan_support_units:  
             if support.position in positions and support.unit_id and support.unit_id != 0:  
-                if support.unit_id not in unit_ids:  
-                    if support.position in cooldown_positions:  
-                        remaining = SUPPORT_COOLDOWN - (now - support.support_start_time)  
-                        self._warn(f"支援位{support.position - 2}的{db.get_unit_name(support.unit_id)}在冷却中（剩余{remaining // 60}分{remaining % 60}秒），无法移除")  
-                    else:  
-                        self._log(f"移除旧支援{db.get_unit_name(support.unit_id)}")  
-                        await client.support_unit_change_setting(1, support.position, 2, support.unit_id)  
+                occupied_positions.add(support.position)  
+                if support.unit_id in unit_ids:  
+                    already_placed.add(support.unit_id)  
+                else:  
+                    non_target_supports.append(support)  
+  
+        # 计算空位数和需要放置的角色数  
+        empty_positions = [pos for pos in positions if pos not in occupied_positions and pos not in cooldown_positions]  
+        need_placement = [uid for uid in unit_ids if uid not in already_placed]  
+        slots_to_free = max(0, len(need_placement) - len(empty_positions))  
+  
+        # 只在空位不够时，移除刚好够数量的非目标支援  
+        removed = 0  
+        for support in non_target_supports:  
+            if removed >= slots_to_free:  
+                break  
+            if support.position in cooldown_positions:  
+                remaining = SUPPORT_COOLDOWN - (now - support.support_start_time)  
+                self._warn(f"支援位{support.position - 2}的{db.get_unit_name(support.unit_id)}在冷却中（剩余{remaining // 60}分{remaining % 60}秒），无法移除")  
+            else:  
+                self._log(f"移除旧支援{db.get_unit_name(support.unit_id)}")  
+                await client.support_unit_change_setting(1, support.position, 2, support.unit_id)  
+                removed += 1  
   
         # Re-fetch after removal  
         support_info = await client.support_unit_get_setting()  
