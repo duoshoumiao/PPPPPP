@@ -214,6 +214,10 @@ sv_help = f"""
 - {prefix}角色突破 忽略盈余 凯露 佩可（忽略盈余：选这个，碎片不溢出就不突破）
 - {prefix}pjjc自动换防
 - {prefix}挂会战支援 角色1 [角色2]  设置角色为会战支援并穿满会战EX装（最多2个）
+- {prefix}穿ex彩装 角色名 彩装ID  示例：#穿ex彩装 凯露 12345  #查ex装备 看ID
+- {prefix}穿ex粉装 角色名 粉装serial_id    #查ID 看ID
+- {prefix}穿ex金装 角色名 金装serial_id    #查ID 看ID
+- {prefix}查ID 泪          ← 模糊匹配，会匹配所有名称含"泪"的装备
 """.strip()
 
 if address is None:
@@ -2303,6 +2307,117 @@ async def set_cb_support(botev: BotEvent):
     }  
     return config
 
+@register_tool("穿ex彩装", "equip_rainbow_ex")  
+async def equip_rainbow_ex_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+    unit_name = ""  
+    unit_id = None  
+    try:  
+        unit_name = msg[0]  
+        unit_id = get_id_from_name(unit_name)  
+        del msg[0]  
+    except:  
+        pass  
+    if not unit_id:  
+        await botev.finish(f"未知角色名{unit_name}")  
+    unit_id = unit_id * 100 + 1  
+    serial_id = ""  
+    try:  
+        serial_id = msg[0]  
+        del msg[0]  
+    except:  
+        await botev.finish("请输入彩装serial_id")  
+    if not serial_id.isdigit():  
+        await botev.finish(f"彩装ID必须是数字: {serial_id}")  
+    return {  
+        "equip_rainbow_unit_id": unit_id,  
+        "equip_rainbow_serial_id": serial_id,  
+    }  
+  
+  
+@register_tool("穿ex粉装", "equip_pink_ex")  
+async def equip_pink_ex_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+  
+    unit_name = ""  
+    unit_id = None  
+    try:  
+        unit_name = msg[0]  
+        unit_id = get_id_from_name(unit_name)  
+        del msg[0]  
+    except:  
+        pass  
+  
+    if not unit_id:  
+        await botev.finish(f"未知角色名{unit_name}，请指定角色")  
+  
+    unit_id = unit_id * 100 + 1  
+  
+    serial_id = ""  
+    try:  
+        serial_id = msg[0]  
+        del msg[0]  
+    except:  
+        await botev.finish("请输入粉装ID")  
+  
+    if not serial_id.isdigit():  
+        await botev.finish(f"粉装ID必须是数字: {serial_id}")  
+  
+    return {  
+        "equip_pink_unit_id": unit_id,  
+        "equip_pink_serial_id": serial_id,  
+    }  
+  
+  
+@register_tool("穿ex金装", "equip_gold_ex")  
+async def equip_gold_ex_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+  
+    unit_name = ""  
+    unit_id = None  
+    try:  
+        unit_name = msg[0]  
+        unit_id = get_id_from_name(unit_name)  
+        del msg[0]  
+    except:  
+        pass  
+  
+    if not unit_id:  
+        await botev.finish(f"未知角色名{unit_name}，请指定角色")  
+  
+    unit_id = unit_id * 100 + 1  
+  
+    serial_id = ""  
+    try:  
+        serial_id = msg[0]  
+        del msg[0]  
+    except:  
+        await botev.finish("请输入金装ID")  
+  
+    if not serial_id.isdigit():  
+        await botev.finish(f"金装ID必须是数字: {serial_id}")  
+  
+    return {  
+        "equip_gold_unit_id": unit_id,  
+        "equip_gold_serial_id": serial_id,  
+    }
+    
+@register_tool("查ID", "search_ex_equip_id")  
+async def search_ex_equip_id(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+    equip_name = ""  
+    try:  
+        equip_name = msg[0]  
+        del msg[0]  
+    except:  
+        await botev.finish("请输入装备名称")  
+    return {  
+        "search_ex_equip_name": equip_name,  
+    }
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}

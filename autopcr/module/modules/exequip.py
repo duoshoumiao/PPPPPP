@@ -590,3 +590,99 @@ class ex_equip_power_maximun(Module):
                 msg.append(f"{db.get_ex_equip_name(ex_equipment_id)}★{star}")
             msg = ','.join(msg)
             self._log(f"{db.get_unit_name(unit_id)} 装备 {msg}")
+           
+# ---- 通用穿EX装备辅助函数 ----  
+async def _equip_ex_by_serial(module: Module, client: pcrclient,   
+                               config_unit_key: str, config_serial_key: str,  
+                               target_rarity: int, rarity_name: str):  
+    """通用穿EX装备逻辑，供彩/粉/金装共用"""  
+    unit_id = int(module.get_config(config_unit_key))  
+    serial_id_str = module.get_config(config_serial_key)  
+  
+    if not serial_id_str or not str(serial_id_str).strip().isdigit():  
+        raise AbortError(f"请输入有效的{rarity_name}装ID（数字）")  
+    serial_id = int(serial_id_str)  
+  
+    if unit_id not in client.data.unit:  
+        raise AbortError(f"未拥有角色{db.get_unit_name(unit_id)}")  
+  
+    if serial_id not in client.data.ex_equips:  
+        raise AbortError(f"{rarity_name}装ID {serial_id} 不存在")  
+  
+    ex_equip = client.data.ex_equips[serial_id]  
+    actual_rarity = db.get_ex_equip_rarity(ex_equip.ex_equipment_id)  
+    if actual_rarity != target_rarity:  
+        raise AbortError(f"ID {serial_id} 不是{rarity_name}装（实际稀有度: {db.ex_rarity_name.get(actual_rarity, actual_rarity)}）")  
+  
+    equip_category = db.ex_equipment_data[ex_equip.ex_equipment_id].category  
+    equip_name = db.get_ex_equip_name(ex_equip.ex_equipment_id)  
+    unit_name = db.get_unit_name(unit_id)  
+  
+    # 检查装备是否已被其他角色装备，先撤下  
+    for uid, u in client.data.unit.items():  
+        for slot_idx, ex_slot in enumerate(u.ex_equip_slot):  
+            if ex_slot.serial_id == serial_id and uid != unit_id:  
+                module._log(f"{equip_name}当前装备在{db.get_unit_name(uid)}的槽{slot_idx + 1}上，将先撤下")  
+                await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                    unit_id=uid,  
+                    ex_equip_slot=[ExtraEquipChangeSlot(slot=slot_idx + 1, serial_id=0)],  
+                    cb_ex_equip_slot=None  
+                )])  
+                break  
+  
+    # 根据装备类别找到角色匹配的槽位  
+    slot_data = db.unit_ex_equipment_slot[unit_id]  
+    target_slot = None  
+    for slot_id, cat in enumerate(  
+        [slot_data.slot_category_1, slot_data.slot_category_2, slot_data.slot_category_3], start=1  
+    ):  
+        if cat == equip_category:  
+            target_slot = slot_id  
+            break  
+  
+    if target_slot is None:  
+        raise AbortError(f"{unit_name}没有匹配{equip_name}类别的EX装备槽")  
+  
+    # 检查是否已装备  
+    unit = client.data.unit[unit_id]  
+    current_slot = unit.ex_equip_slot[target_slot - 1]  
+    if current_slot.serial_id == serial_id:  
+        raise SkipError(f"{unit_name}的槽{target_slot}已装备该{rarity_name}装")  
+  
+    # 装备  
+    exchange_list = [ExtraEquipChangeSlot(slot=target_slot, serial_id=serial_id)]  
+    await client.unit_equip_ex([ExtraEquipChangeUnit(  
+        unit_id=unit_id,  
+        ex_equip_slot=exchange_list,  
+        cb_ex_equip_slot=None  
+    )])  
+  
+    module._log(f"已为{unit_name}装备{equip_name}（槽{target_slot}）")  
+  
+@name('穿ex彩装')  
+@default(True)  
+@texttype('equip_rainbow_serial_id', '彩装ID', '')  
+@unitchoice('equip_rainbow_unit_id', '角色')  
+@description('将指定彩装(serial_id)穿到指定角色的普通EX装备栏')  
+class equip_rainbow_ex(Module):  
+    async def do_task(self, client: pcrclient):  
+        await _equip_ex_by_serial(self, client, 'equip_rainbow_unit_id', 'equip_rainbow_serial_id', 5, '彩')
+        
+@name('穿ex粉装')  
+@default(True)  
+@texttype('equip_pink_serial_id', '粉装ID', '')  
+@unitchoice('equip_pink_unit_id', '角色')  
+@description('将指定粉装(serial_id)穿到指定角色的普通EX装备栏')  
+class equip_pink_ex(Module):  
+    async def do_task(self, client: pcrclient):  
+        await _equip_ex_by_serial(self, client, 'equip_pink_unit_id', 'equip_pink_serial_id', 4, '粉')  
+  
+  
+@name('穿ex金装')  
+@default(True)  
+@texttype('equip_gold_serial_id', '金装ID', '')  
+@unitchoice('equip_gold_unit_id', '角色')  
+@description('将指定金装(serial_id)穿到指定角色的普通EX装备栏')  
+class equip_gold_ex(Module):  
+    async def do_task(self, client: pcrclient):  
+        await _equip_ex_by_serial(self, client, 'equip_gold_unit_id', 'equip_gold_serial_id', 3, '金')   

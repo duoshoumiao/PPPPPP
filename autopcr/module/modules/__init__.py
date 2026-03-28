@@ -186,6 +186,9 @@ unit_modules = ModuleList(
         unit_set_unique_equip_growth,
         unit_exceed,
         unit_evolution,
+        equip_rainbow_ex,
+        equip_pink_ex,
+        equip_gold_ex,
     ]
 )
 
@@ -216,6 +219,7 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        search_ex_equip_id,
         ex_equip_rainbow_enchance,
         ex_equip_power_maximun,
         set_my_party2,
