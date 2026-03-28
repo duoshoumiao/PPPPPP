@@ -297,59 +297,34 @@ class cook_pudding(Module):
         if is_abort: raise AbortError("")
         if is_skip: raise SkipError("")
 
-@description('看看你的特别装备数量')  
-@name('查ex装备')  
-@booltype('ex_equip_info_cb_only', '会战', False)  
-@notlogin(check_data = True)  
-@default(True)  
-class ex_equip_info(Module):  
-    async def do_task(self, client: pcrclient):  
-        cb_only = self.get_config('ex_equip_info_cb_only')  
-        cnt = sorted(   
-                list(Counter(  
-                (ex.ex_equipment_id, ex.rank) for ex in client.data.ex_equips.values()   
-                if not cb_only or db.ex_equipment_data[ex.ex_equipment_id].clan_battle_equip_flag).items()),  
-                key=lambda x: (db.ex_equipment_data[x[0][0]].rarity, db.ex_equipment_data[x[0][0]].clan_battle_equip_flag, x[0][0], x[0][1]), reverse=True  
-                )  
-        rainbow_cnt = sum(1 * c for (id, rank), c in cnt if db.ex_equipment_data[id].rarity == 5)  
-        pink_cnt = sum(1 * c for (id, rank), c in cnt if db.ex_equipment_data[id].rarity == 4)  
-        history_pink_cnt = sum((rank + 1) * c for (id, rank), c in cnt if db.ex_equipment_data[id].rarity == 4)  
-        if not cb_only:  
-            self._log(f"彩装数量：{rainbow_cnt}")  
-            self._log(f"粉装数量：{pink_cnt}/{history_pink_cnt}")  
-            if rainbow_cnt:  
-                rainbow = [ex for ex in client.data.ex_equips.values() if db.ex_equipment_data[ex.ex_equipment_id].rarity == 5]  
-                msg = '\n'.join(f"{ex.serial_id}: {db.get_ex_equip_name(ex.ex_equipment_id)}: {db.get_ex_equip_sub_status_str(ex.ex_equipment_id, ex.sub_status or [])}" for ex in rainbow)  
-                self._log(msg)  
-  
-        # 粉装：逐个列出，带 serial_id  
-        pink = sorted(  
-            [ex for ex in client.data.ex_equips.values()  
-             if db.ex_equipment_data[ex.ex_equipment_id].rarity == 4  
-             and (not cb_only or db.ex_equipment_data[ex.ex_equipment_id].clan_battle_equip_flag)],  
-            key=lambda ex: (db.ex_equipment_data[ex.ex_equipment_id].clan_battle_equip_flag, ex.ex_equipment_id, ex.rank, ex.enhancement_pt),  
-            reverse=True  
-        )  
-        if pink:  
-            msg = '\n'.join(f"{ex.serial_id}: {db.get_ex_equip_name(ex.ex_equipment_id, ex.rank)}" for ex in pink)  
-            self._log(msg)  
-  
-        # 金装：逐个列出，带 serial_id  
-        gold = sorted(  
-            [ex for ex in client.data.ex_equips.values()  
-             if db.ex_equipment_data[ex.ex_equipment_id].rarity == 3  
-             and (not cb_only or db.ex_equipment_data[ex.ex_equipment_id].clan_battle_equip_flag)],  
-            key=lambda ex: (db.ex_equipment_data[ex.ex_equipment_id].clan_battle_equip_flag, ex.ex_equipment_id, ex.rank, ex.enhancement_pt),  
-            reverse=True  
-        )  
-        if gold:  
-            msg = '\n'.join(f"{ex.serial_id}: {db.get_ex_equip_name(ex.ex_equipment_id, ex.rank)}" for ex in gold)  
-            self._log(msg)  
-  
-        # 银装及以下：保持聚合格式  
-        low_rarity = [((id, rank), c) for (id, rank), c in cnt if db.ex_equipment_data[id].rarity < 3]  
-        if low_rarity:  
-            msg = '\n'.join(f"{db.get_ex_equip_name(id, rank)}x{c}" for (id, rank), c in low_rarity)  
+@description('看看你的特别装备数量')
+@name('查ex装备')
+@booltype('ex_equip_info_cb_only', '会战', False)
+@notlogin(check_data = True)
+@default(True)
+class ex_equip_info(Module):
+    async def do_task(self, client: pcrclient):
+        cb_only = self.get_config('ex_equip_info_cb_only')
+        cnt = sorted( 
+                list(Counter(
+                (ex.ex_equipment_id, ex.rank) for ex in client.data.ex_equips.values() 
+                if not cb_only or db.ex_equipment_data[ex.ex_equipment_id].clan_battle_equip_flag).items()),
+                key=lambda x: (db.ex_equipment_data[x[0][0]].rarity, db.ex_equipment_data[x[0][0]].clan_battle_equip_flag, x[0][0], x[0][1]), reverse=True
+                )
+        rainbow_cnt = sum(1 * c for (id, rank), c in cnt if db.ex_equipment_data[id].rarity == 5)
+        pink_cnt = sum(1 * c for (id, rank), c in cnt if db.ex_equipment_data[id].rarity == 4)
+        history_pink_cnt = sum((rank + 1) * c for (id, rank), c in cnt if db.ex_equipment_data[id].rarity == 4)
+        if not cb_only:
+            self._log(f"彩装数量：{rainbow_cnt}")
+            self._log(f"粉装数量：{pink_cnt}/{history_pink_cnt}")
+            if rainbow_cnt:
+                rainbow = [ex for ex in client.data.ex_equips.values() if db.ex_equipment_data[ex.ex_equipment_id].rarity == 5]
+                msg = '\n'.join(f"{ex.serial_id}: {db.get_ex_equip_name(ex.ex_equipment_id)}: {db.get_ex_equip_sub_status_str(ex.ex_equipment_id, ex.sub_status or [])}" for ex in rainbow)
+                self._log(msg)
+
+        no_rainbow = [ ((id, rank), c) for (id, rank), c in cnt if db.ex_equipment_data[id].rarity < 5 ]
+        if no_rainbow:
+            msg = '\n'.join(f"{db.get_ex_equip_name(id, rank)}x{c}" for (id, rank), c in no_rainbow)
             self._log(msg)
 
 @description('看看你缺了什么称号')
@@ -1487,7 +1462,7 @@ class set_cb_support(Module):
   
         if not self.log:  
             raise SkipError("无操作")
-            
+           
 @description('根据EX装备名称查询对应的serial_id')  
 @name('查ID')  
 @texttype('search_ex_equip_name', '装备名称', '')  
@@ -1535,5 +1510,4 @@ class search_ex_equip_id(Module):
                 line = f"{serial_id}: {display_name} ({sub_str}) [{owner}]"  
             lines.append(line)  
   
-        self._log('\n'.join(lines))           
-           
+        self._log('\n'.join(lines))             
