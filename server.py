@@ -2,11 +2,13 @@ from collections import Counter, defaultdict
 from typing import Any, Callable, Coroutine, Dict, List, Tuple, Union
 from pathlib import Path
 from .autopcr.model.custom import UnitAttribute
+from .autopcr.util import aiorequests
 from .autopcr.module.accountmgr import BATCHINFO, AccountBatch, TaskResultInfo
 from .autopcr.module.modulebase import eResultStatus
 from .autopcr.util.draw_table import outp_b64
 from .autopcr.http_server.httpserver import HttpServer
 from .autopcr.db.database import db
+from .autopcr.util.unit_recognizer import instance as unit_recognizer
 from .autopcr.module.accountmgr import Account, AccountManager, instance as usermgr
 from .autopcr.db.dbstart import db_start
 from .autopcr.util.draw import instance as drawer
@@ -1139,18 +1141,12 @@ async def set_my_party(botev: BotEvent):
     }
     return config
 
+async def get_pic(address: str):
+    return await (await aiorequests.get(address, timeout=6)).content
 
 @sv.on_prefix(f"{prefix}识图")
 @wrap_hoshino_event
 async def ocr_team(botev: BotEvent):
-    try:
-        from hoshino.modules.priconne.arena import getBox, get_pic
-    except ImportError:
-        try:
-            from hoshino.modules.priconne.arena.old_main import getBox, get_pic
-        except ImportError:
-            await botev.finish("未安装怎么拆截图版，无法使用识图")
-            return
 
     img_urls = await botev.image()
     if not img_urls:
@@ -1163,7 +1159,7 @@ async def ocr_team(botev: BotEvent):
         except Exception as e:
             await botev.send(f"图片{id+1}下载失败: {e}")
             continue
-        box, s = await getBox(image)
+        box, s = await unit_recognizer.recognize(image)
         await botev.send(f"图片{id+1}识别结果: {s}")
         if not box:
             await botev.send(f"图片{id+1}未识别到任何队伍！")

@@ -153,7 +153,9 @@ class ModuleManager:
                 )
 
             client = self.client
+            activated = False
             await client.activate()
+            activated = True
             try:
                 self.config["stamina_relative_not_run"] = any(db.is_campaign(campaign) for campaign in self.config.get("stamina_relative_not_run_campaign_before_one_day", []))
 
@@ -172,6 +174,8 @@ class ModuleManager:
 
                 return resp
             finally:
-                client.deactivate()
+                if activated:
+                    client.deactivate()
         finally:
             await db.exit_cache_scope()
+
