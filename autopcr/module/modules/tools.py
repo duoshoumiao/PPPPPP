@@ -1799,7 +1799,7 @@ class search_ex_equip_id(Module):
 @default(True)  
 @texttype('one_click_ex_selection', '选择(试穿/数字如 1 1 2)', '试穿')  
 @unitchoice('one_click_ex_unit_id', '角色')  
-@description('试穿模式：显示每个槽位可选的EX装备及属性。数字模式(如 1 1 2)：选择每个槽位的第N个装备并穿上，0表示不改动。')  
+@description('试穿模式：显示每个槽位可选的EX装备及属性。数字模式(如 1 1 2)：选择每个槽位的第N个装备并穿上，0表示不改动。从其他角色拿装备时会互换而非卸下。')  
 class one_click_ex_equip(Module):  
     async def do_task(self, client: pcrclient):  
         unit_id = int(self.get_config('one_click_ex_unit_id'))  
@@ -1851,7 +1851,6 @@ class one_click_ex_equip(Module):
                 bonus = unit_attr.ex_equipment_mul(attr).ceil()  
                 power = int(bonus.get_power(coefficient) + 0.5)  
   
-                # Build attribute string showing non-zero bonuses  
                 attr_parts = []  
                 for param_type, ch_name in UnitAttribute.index2ch.items():  
                     en_name = UnitAttribute.index2name.get(param_type)  
@@ -1862,13 +1861,10 @@ class one_click_ex_equip(Module):
                 attr_str = "/".join(attr_parts) if attr_parts else "无属性"  
   
                 equip_name = db.get_ex_equip_name(ex_id)  
-                # Sort serial_ids: prefer unequipped ones first  
                 serial_ids = sorted(  
                     [e.serial_id for e in ex_list],  
                     key=lambda sid: sid in equip_on_unit,  
                 )  
-  
-                # Count how many are equipped on other characters  
                 on_others = [(equip_on_unit[sid], sid) for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] != unit_id]  
   
                 candidates.append((ex_id, star, equip_name, attr_str, power, serial_ids, on_others))  
@@ -1911,7 +1907,6 @@ class one_click_ex_equip(Module):
                 cands = slot_candidates[slot_id]  
   
                 if choice == 0:  
-                    # 0 means no change for this slot  
                     continue  
   
                 if choice > len(cands):  
@@ -1919,7 +1914,6 @@ class one_click_ex_equip(Module):
   
                 ex_id, star, name, attr_str, power, serial_ids, on_others = cands[choice - 1]  
   
-                # Find an available serial_id not yet used in this equip action  
                 target_serial = None  
                 for sid in serial_ids:  
                     if sid not in used_serial_ids:  
@@ -1935,12 +1929,29 @@ class one_click_ex_equip(Module):
             if not selected:  
                 raise SkipError("无需操作")  
   
+            # Collect swap pairs: (other_uid, other_slot, old_serial_id_from_target)  
+            # When we take equip_X from another character, we give them the target's current equip in return  
+            swap_pairs = []  # list of (owner_uid, owner_slot, target_old_serial_id)  
+            slots_to_change = set(s[0] for s in selected)  
+  
+            for slot_id, sid, name, star, power in selected:  
+                if sid in equip_on_unit:  
+                    owner_uid, owner_slot = equip_on_unit[sid]  
+                    if owner_uid != unit_id:  
+                        # Get what the target character currently has in this slot  
+                        target_old_serial = unit.ex_equip_slot[slot_id - 1].serial_id  
+                        if target_old_serial != 0:  
+                            swap_pairs.append((owner_uid, owner_slot, target_old_serial))  
+                            self._log(f"与{db.get_unit_name(owner_uid)}槽{owner_slot}互换装备")  
+                        else:  
+                            swap_pairs.append((owner_uid, owner_slot, 0))  
+                            self._log(f"从{db.get_unit_name(owner_uid)}的槽{owner_slot}取下{name}")  
+  
             # Step 1: Unequip selected serial_ids from OTHER characters  
             for slot_id, sid, name, star, power in selected:  
                 if sid in equip_on_unit:  
                     owner_uid, owner_slot = equip_on_unit[sid]  
                     if owner_uid != unit_id:  
-                        self._log(f"从{db.get_unit_name(owner_uid)}的槽{owner_slot}撤下{name}")  
                         await client.unit_equip_ex([ExtraEquipChangeUnit(  
                             unit_id=owner_uid,  
                             ex_equip_slot=[ExtraEquipChangeSlot(slot=owner_slot, serial_id=0)],  
@@ -1949,7 +1960,6 @@ class one_click_ex_equip(Module):
   
             # Step 2: Clear target character's slots that will be changed  
             clear_list = []  
-            slots_to_change = set(s[0] for s in selected)  
             for ex_slot in unit.ex_equip_slot:  
                 if ex_slot.serial_id != 0 and (ex_slot.slot in slots_to_change or ex_slot.serial_id in used_serial_ids):  
                     clear_list.append(ExtraEquipChangeSlot(slot=ex_slot.slot, serial_id=0))  
@@ -1960,11 +1970,21 @@ class one_click_ex_equip(Module):
                     cb_ex_equip_slot=None  
                 )])  
   
-            # Step 3: Equip the new selections  
+            # Step 3: Equip the new selections on target character  
             exchange_list = [ExtraEquipChangeSlot(slot=slot_id, serial_id=sid) for slot_id, sid, _, _, _ in selected]  
             await client.unit_equip_ex([ExtraEquipChangeUnit(  
                 unit_id=unit_id,  
                 ex_equip_slot=exchange_list,  
                 cb_ex_equip_slot=None  
             )])  
-            self._log(f"已为{unit_name}装备完成！")      
+  
+            # Step 4: Swap — equip the target's old equipment onto the other characters  
+            for owner_uid, owner_slot, old_serial in swap_pairs:  
+                if old_serial != 0:  
+                    await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                        unit_id=owner_uid,  
+                        ex_equip_slot=[ExtraEquipChangeSlot(slot=owner_slot, serial_id=old_serial)],  
+                        cb_ex_equip_slot=None  
+                    )])  
+  
+            self._log(f"已为{unit_name}装备完成！")
