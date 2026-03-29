@@ -1793,4 +1793,178 @@ class search_ex_equip_id(Module):
                 line = f"{serial_id}: {display_name} ({sub_str}) [{owner}]"  
             lines.append(line)  
   
-        self._log('\n'.join(lines))             
+        self._log('\n'.join(lines))       
+
+@name('一键穿ex')  
+@default(True)  
+@texttype('one_click_ex_selection', '选择(试穿/数字如 1 1 2)', '试穿')  
+@unitchoice('one_click_ex_unit_id', '角色')  
+@description('试穿模式：显示每个槽位可选的EX装备及属性。数字模式(如 1 1 2)：选择每个槽位的第N个装备并穿上，0表示不改动。')  
+class one_click_ex_equip(Module):  
+    async def do_task(self, client: pcrclient):  
+        unit_id = int(self.get_config('one_click_ex_unit_id'))  
+        selection = str(self.get_config('one_click_ex_selection')).strip()  
+  
+        if unit_id not in client.data.unit:  
+            raise AbortError(f"未拥有角色{db.get_unit_name(unit_id)}")  
+  
+        unit = client.data.unit[unit_id]  
+        unit_name = db.get_unit_name(unit_id)  
+        slot_data = db.unit_ex_equipment_slot[unit_id]  
+  
+        read_story = set(client.data.read_story_ids)  
+        unit_attr = db.calc_unit_attribute(unit, read_story, client.data.ex_equips, exclude_ex_equip=True)  
+        coefficient = db.unit_status_coefficient[1]  
+  
+        # Build mapping: serial_id -> (owner_unit_id, slot_index_1based)  
+        equip_on_unit = {}  
+        for uid, u in client.data.unit.items():  
+            for slot_idx, ex_slot in enumerate(u.ex_equip_slot):  
+                if ex_slot.serial_id != 0:  
+                    equip_on_unit[ex_slot.serial_id] = (uid, slot_idx + 1)  
+  
+        # Build candidates per slot  
+        from collections import defaultdict  
+        slot_candidates = {}  
+  
+        for slot_id, ex_category in enumerate(  
+            [slot_data.slot_category_1, slot_data.slot_category_2, slot_data.slot_category_3], start=1  
+        ):  
+            candidates = []  
+            equip_groups = defaultdict(list)  
+            for ex in client.data.ex_equips.values():  
+                if db.ex_equipment_data[ex.ex_equipment_id].category != ex_category:  
+                    continue  
+                star = db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt)  
+                equip_groups[(ex.ex_equipment_id, star)].append(ex)  
+  
+            for (ex_id, star), ex_list in sorted(  
+                equip_groups.items(),  
+                key=lambda kv: (  
+                    db.ex_equipment_data[kv[0][0]].rarity,  
+                    kv[0][1],  
+                    kv[0][0],  
+                ),  
+                reverse=True,  
+            ):  
+                attr = db.ex_equipment_data[ex_id].get_unit_attribute(star)  
+                bonus = unit_attr.ex_equipment_mul(attr).ceil()  
+                power = int(bonus.get_power(coefficient) + 0.5)  
+  
+                # Build attribute string showing non-zero bonuses  
+                attr_parts = []  
+                for param_type, ch_name in UnitAttribute.index2ch.items():  
+                    en_name = UnitAttribute.index2name.get(param_type)  
+                    if en_name:  
+                        val = getattr(bonus, en_name, 0)  
+                        if val and val != 0:  
+                            attr_parts.append(f"{ch_name}{int(val)}")  
+                attr_str = "/".join(attr_parts) if attr_parts else "无属性"  
+  
+                equip_name = db.get_ex_equip_name(ex_id)  
+                # Sort serial_ids: prefer unequipped ones first  
+                serial_ids = sorted(  
+                    [e.serial_id for e in ex_list],  
+                    key=lambda sid: sid in equip_on_unit,  
+                )  
+  
+                # Count how many are equipped on other characters  
+                on_others = [(equip_on_unit[sid], sid) for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] != unit_id]  
+  
+                candidates.append((ex_id, star, equip_name, attr_str, power, serial_ids, on_others))  
+  
+            slot_candidates[slot_id] = candidates  
+  
+        is_preview = selection == '试穿'  
+  
+        if is_preview:  
+            self._log(f"=== {unit_name} EX装备试穿 ===")  
+            for slot_id in [1, 2, 3]:  
+                cands = slot_candidates[slot_id]  
+                self._log(f"\n【槽位{slot_id}】共{len(cands)}种穿法：")  
+                for idx, (ex_id, star, name, attr_str, power, serial_ids, on_others) in enumerate(cands, start=1):  
+                    owner_info = ""  
+                    if on_others:  
+                        owners = [f"{db.get_unit_name(oid)}槽{oslot}" for (oid, oslot), _ in on_others]  
+                        free_cnt = len(serial_ids) - len(on_others)  
+                        owner_info = f" [共{len(serial_ids)}件"  
+                        if free_cnt > 0:  
+                            owner_info += f", {free_cnt}件空闲"  
+                        owner_info += f", {', '.join(owners)}]"  
+                    self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){owner_info}")  
+                if not cands:  
+                    self._log(f"  无可用装备")  
+        else:  
+            # Equip mode: parse space-separated selection like "1 1 2"  
+            parts = selection.split()  
+            if len(parts) != 3:  
+                raise AbortError(f"选择格式错误：请输入3个空格分隔的数字(如 1 1 2)或'试穿'，当前输入: {selection}")  
+            try:  
+                choices = [int(p) for p in parts]  
+            except ValueError:  
+                raise AbortError(f"选择格式错误：每个槽位必须是数字，当前输入: {selection}")  
+  
+            used_serial_ids = set()  
+            selected = []  # list of (slot_id, serial_id, name, star, power)  
+  
+            for slot_id, choice in enumerate(choices, start=1):  
+                cands = slot_candidates[slot_id]  
+  
+                if choice == 0:  
+                    # 0 means no change for this slot  
+                    continue  
+  
+                if choice > len(cands):  
+                    raise AbortError(f"槽位{slot_id}只有{len(cands)}种装备，无法选择第{choice}个")  
+  
+                ex_id, star, name, attr_str, power, serial_ids, on_others = cands[choice - 1]  
+  
+                # Find an available serial_id not yet used in this equip action  
+                target_serial = None  
+                for sid in serial_ids:  
+                    if sid not in used_serial_ids:  
+                        target_serial = sid  
+                        break  
+                if target_serial is None:  
+                    raise AbortError(f"槽位{slot_id}: {name}★{star} 无可用装备(已被其他槽位选用)")  
+  
+                used_serial_ids.add(target_serial)  
+                selected.append((slot_id, target_serial, name, star, power))  
+                self._log(f"槽位{slot_id}: {name}★{star} 战力+{power}")  
+  
+            if not selected:  
+                raise SkipError("无需操作")  
+  
+            # Step 1: Unequip selected serial_ids from OTHER characters  
+            for slot_id, sid, name, star, power in selected:  
+                if sid in equip_on_unit:  
+                    owner_uid, owner_slot = equip_on_unit[sid]  
+                    if owner_uid != unit_id:  
+                        self._log(f"从{db.get_unit_name(owner_uid)}的槽{owner_slot}撤下{name}")  
+                        await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                            unit_id=owner_uid,  
+                            ex_equip_slot=[ExtraEquipChangeSlot(slot=owner_slot, serial_id=0)],  
+                            cb_ex_equip_slot=None  
+                        )])  
+  
+            # Step 2: Clear target character's slots that will be changed  
+            clear_list = []  
+            slots_to_change = set(s[0] for s in selected)  
+            for ex_slot in unit.ex_equip_slot:  
+                if ex_slot.serial_id != 0 and (ex_slot.slot in slots_to_change or ex_slot.serial_id in used_serial_ids):  
+                    clear_list.append(ExtraEquipChangeSlot(slot=ex_slot.slot, serial_id=0))  
+            if clear_list:  
+                await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                    unit_id=unit_id,  
+                    ex_equip_slot=clear_list,  
+                    cb_ex_equip_slot=None  
+                )])  
+  
+            # Step 3: Equip the new selections  
+            exchange_list = [ExtraEquipChangeSlot(slot=slot_id, serial_id=sid) for slot_id, sid, _, _, _ in selected]  
+            await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                unit_id=unit_id,  
+                ex_equip_slot=exchange_list,  
+                cb_ex_equip_slot=None  
+            )])  
+            self._log(f"已为{unit_name}装备完成！")      

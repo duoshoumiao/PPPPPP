@@ -178,6 +178,7 @@ unit_modules = ModuleList(
     '角色',
     'unit',
     [
+        one_click_ex_equip,
         search_unit,
         missing_unit,
         refresh_box,

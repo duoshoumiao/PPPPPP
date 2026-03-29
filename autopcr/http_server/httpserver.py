@@ -519,7 +519,7 @@ class HttpServer:
 
         @self.api.errorhandler(UserDisabledException)
         async def disabled(*_: Exception):
-            return "用户被禁用，请联系管理员", 403
+            return "已到期，请联系管理员", 403
 
         @self.api.errorhandler(UserException)
         async def handle_user_exception(e):
@@ -892,7 +892,7 @@ data: {ret}\n\n'''
             if not usermgr.validate_password(str(qq), str(password)):
                 return "无效的QQ或密码", 400
             if not usermgr.check_enabled(str(qq)):
-                return "用户被禁用，请联系管理员", 403
+                return "已到期，请联系管理员", 403
             login_user(AuthUser(qq))
             return "欢迎回来，" + qq, 200
 
@@ -900,7 +900,7 @@ data: {ret}\n\n'''
         @rate_limit(1, timedelta(minutes=1))
         async def register():
             if not ALLOW_REGISTER:
-                return "当前禁止注册，请联系管理员", 400
+                return "请在群里发送 清日常创建", 400
 
             data = await request.get_json()
             qq = data.get('qq', "")

@@ -214,6 +214,7 @@ sv_help = f"""
 - {prefix}角色突破 忽略盈余 凯露 佩可（忽略盈余：选这个，碎片不溢出就不突破）
 - {prefix}pjjc自动换防
 - {prefix}挂地下城/会战/好友支援 角色1 [角色2]  设置角色为会战支援并穿满会战EX装（最多2个）
+- {prefix}一键穿ex +角色名 试穿/数字 1 2 3      数字0表示不改动     
 - {prefix}穿ex彩装 角色名 彩装ID  示例：#穿ex彩装 凯露 12345  #查ex装备 看ID
 - {prefix}穿ex粉装 角色名 粉装serial_id    #查ID 看ID
 - {prefix}穿ex金装 角色名 金装serial_id    #查ID 看ID
@@ -2468,6 +2469,49 @@ async def equip_gold_ex_tool(botev: BotEvent):
     return {  
         "equip_gold_unit_id": unit_id,  
         "equip_gold_serial_id": serial_id,  
+    }
+
+@register_tool("一键穿ex", "one_click_ex_equip")  
+async def one_click_ex_equip_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+  
+    unit_name = ""  
+    unit_id = None  
+    try:  
+        unit_name = msg[0]  
+        unit_id = get_id_from_name(unit_name)  
+        del msg[0]  
+    except:  
+        pass  
+  
+    if not unit_id:  
+        await botev.finish(f"未知角色名{unit_name}")  
+  
+    unit_id = unit_id * 100 + 1  
+  
+    # Parse selection: "试穿" or 3 space-separated numbers  
+    selection = "试穿"  
+    if msg:  
+        if msg[0] == '试穿':  
+            del msg[0]  
+        else:  
+            # Collect 3 numbers from msg  
+            parts = []  
+            for _ in range(3):  
+                try:  
+                    parts.append(msg[0])  
+                    del msg[0]  
+                except:  
+                    break  
+            if len(parts) == 3:  
+                selection = ' '.join(parts)  
+            else:  
+                await botev.finish(f"请输入3个数字(如 1 1 2)或'试穿'")  
+  
+    return {  
+        "one_click_ex_unit_id": unit_id,  
+        "one_click_ex_selection": selection,  
     }
     
 @register_tool("查ID", "search_ex_equip_id")  
