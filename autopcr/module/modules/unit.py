@@ -78,7 +78,9 @@ class UnitController(Module):
             growth_limit = db.growth_parameter[growth_id[0]]
             return growth_limit
         ret = old()
-        ret = ret if ret else self.client.data.get_synchro_parameter()
+        if not ret:  
+            synchro = self.client.data.get_synchro_parameter()  
+            ret = synchro if synchro.promotion_level is not None else None
         return ret
 
     async def is_unique_growth_unit(self) -> Union[GrowthParameterUnique, None]:
@@ -176,7 +178,7 @@ class UnitController(Module):
         demand_level = db.get_promotion_demand_level(self.unit.id, target_promotion_level)
         if self.unit.unit_level < demand_level:
             self._log(f"{self.unit_name}升至品级{target_promotion_level}需要升至{demand_level}级")
-            await self.unit_level_up_aware(demand_level, limit)
+            await self.unit_level_up_aware(demand_level)
 
         await self.unit_promotion_up(target_promotion_level, 
                                      limit is not None and target_promotion_level <= limit.promotion_level, 
