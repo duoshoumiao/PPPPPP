@@ -1875,6 +1875,31 @@ class one_click_ex_equip(Module):
   
         if is_preview:  
             self._log(f"=== {unit_name} EX装备试穿 ===")  
+  
+            # 显示当前3个槽位的EX装备  
+            self._log(f"\n【当前装备】")  
+            for slot_id in [1, 2, 3]:  
+                ex_slot = unit.ex_equip_slot[slot_id - 1]  
+                if not ex_slot.serial_id:  
+                    self._log(f"  槽位{slot_id}: -")  
+                else:  
+                    ex = client.data.ex_equips[ex_slot.serial_id]  
+                    star = db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt)  
+                    name = db.get_ex_equip_name(ex.ex_equipment_id)  
+                    # 计算当前装备的战力加成  
+                    cur_attr = db.ex_equipment_data[ex.ex_equipment_id].get_unit_attribute(star)  
+                    cur_bonus = unit_attr.ex_equipment_mul(cur_attr).ceil()  
+                    cur_power = int(cur_bonus.get_power(coefficient) + 0.5)  
+                    cur_attr_parts = []  
+                    for param_type, ch_name in UnitAttribute.index2ch.items():  
+                        en_name = UnitAttribute.index2name.get(param_type)  
+                        if en_name:  
+                            val = getattr(cur_bonus, en_name, 0)  
+                            if val and val != 0:  
+                                cur_attr_parts.append(f"{ch_name}{int(val)}")  
+                    cur_attr_str = "/".join(cur_attr_parts) if cur_attr_parts else "无属性"  
+                    self._log(f"  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str})")  
+  
             for slot_id in [1, 2, 3]:  
                 cands = slot_candidates[slot_id]  
                 self._log(f"\n【槽位{slot_id}】共{len(cands)}种穿法：")  
@@ -1889,7 +1914,7 @@ class one_click_ex_equip(Module):
                         owner_info += f", {', '.join(owners)}]"  
                     self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){owner_info}")  
                 if not cands:  
-                    self._log(f"  无可用装备")  
+                    self._log(f"  无可用装备") 
         else:  
             # Equip mode: parse space-separated selection like "1 1 2"  
             parts = selection.split()  
