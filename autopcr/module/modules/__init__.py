@@ -186,6 +186,7 @@ unit_modules = ModuleList(
         unit_set_unique_equip_growth,
         unit_exceed,
         unit_evolution,
+        search_ex_equip_id,
         equip_rainbow_ex,
         equip_pink_ex,
         equip_gold_ex,
