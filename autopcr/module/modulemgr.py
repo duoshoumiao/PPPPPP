@@ -138,35 +138,40 @@ class ModuleManager:
         return res
 
     async def do_task(self, config: dict, modules: List[Module], isAdminCall: bool = False) -> TaskResult:
-        if db.is_clan_battle_time() and self.is_clan_battle_forbidden() and not isAdminCall:
-            key = 'clan_battle' if not modules else modules[0].key
-            return TaskResult(
-                order = [key],
-                result = {
-                    key: ModuleResult(
-                        status = eResultStatus.PANIC,
-                        log = "会战期间禁止执行任务"
-                    )
-                }
-            )
+        await db.enter_cache_scope()
+        try:
+            if db.is_clan_battle_time() and self.is_clan_battle_forbidden() and not isAdminCall:
+                key = 'clan_battle' if not modules else modules[0].key
+                return TaskResult(
+                    order = [key],
+                    result = {
+                        key: ModuleResult(
+                            status = eResultStatus.PANIC,
+                            log = "会战期间禁止执行任务"
+                        )
+                    }
+                )
 
-        client = self.client
-        await client.activate()
-        self.config["stamina_relative_not_run"] = any(db.is_campaign(campaign) for campaign in self.config.get("stamina_relative_not_run_campaign_before_one_day", []))
+            client = self.client
+            await client.activate()
+            try:
+                self.config["stamina_relative_not_run"] = any(db.is_campaign(campaign) for campaign in self.config.get("stamina_relative_not_run_campaign_before_one_day", []))
 
-        self.config.update(config)
+                self.config.update(config)
 
-        resp: TaskResult = TaskResult(
-                order = [],
-                result = {}
-        )
+                resp: TaskResult = TaskResult(
+                        order = [],
+                        result = {}
+                )
 
-        for module in modules:
-            resp.order.append(module.key)
-            resp.result[module.key] = await module.do_from(client)
-            if resp.result[module.key].status == eResultStatus.PANIC:
-                break
+                for module in modules:
+                    resp.order.append(module.key)
+                    resp.result[module.key] = await module.do_from(client)
+                    if resp.result[module.key].status == eResultStatus.PANIC:
+                        break
 
-        client.deactivate()
-        return resp
-
+                return resp
+            finally:
+                client.deactivate()
+        finally:
+            await db.exit_cache_scope()

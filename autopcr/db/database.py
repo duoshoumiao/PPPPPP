@@ -1,9 +1,12 @@
-from typing import List, Dict, Set, Tuple, Union
+
+from typing import List, Dict, Set, Tuple, Union, Optional
 import typing
+import asyncio
 from ..model.enums import eCampaignCategory, eParamType
 from ..model.common import ExtraEquipInfo, ExtraEquipSubStatus, UnitData, eInventoryType, RoomUserItem, InventoryInfo
 from ..model.custom import ItemType, eDifficulty
 import datetime
+import time
 from collections import Counter, defaultdict
 from .dbmgr import dbmgr
 from .methods import *
@@ -29,6 +32,7 @@ class lazy_property(Generic[T]):
         if instance is None:
             return self # type: ignore
 
+        instance._touch_cache_access()
         dbmgr = getattr(instance, "dbmgr", None)
         if dbmgr is None:
             raise ValueError("数据库未初始化完成，请稍等片刻")
@@ -67,8 +71,84 @@ class database():
     dark_ball: ItemType = (eInventoryType.Item, 25015)
     ex_rainbow_enhance_pt: ItemType = (eInventoryType.Item, 26202)
 
+    def __init__(self):
+        self.dbmgr: Optional[dbmgr] = None
+        self._cache_active_tasks: int = 0
+        self._cache_last_access: float = time.monotonic()
+        self._cache_cleanup_task: Optional[asyncio.Task] = None
+        self._cache_cooldown_seconds: int = 90
+
     def update(self, dbmgr):
         self.dbmgr = dbmgr
+        self._touch_cache_access()
+
+    def _touch_cache_access(self):
+        self._cache_last_access = time.monotonic()
+
+    def cached_props(self) -> List[str]:
+        return [
+            key[len("__cached_"):] for key in self.__dict__
+            if key.startswith("__cached_") and not key.startswith("__cached_version_")
+        ]
+
+    def clear_cache(self, keep: Optional[Set[str]] = None) -> Tuple[int, int]:
+        keep = keep or set()
+        cached = self.cached_props()
+        before = len(cached)
+        for name in cached:
+            if name in keep:
+                continue
+            self.__dict__.pop(f"__cached_{name}", None)
+            self.__dict__.pop(f"__cached_version_{name}", None)
+        after = len(self.cached_props())
+        return before, after
+
+    async def enter_cache_scope(self):
+        self._cache_active_tasks += 1
+        self._touch_cache_access()
+        if self._cache_cleanup_task and not self._cache_cleanup_task.done():
+            self._cache_cleanup_task.cancel()
+        self._cache_cleanup_task = None
+
+    async def exit_cache_scope(self):
+        self._cache_active_tasks = max(0, self._cache_active_tasks - 1)
+        self._touch_cache_access()
+        if self._cache_active_tasks == 0:
+            self._schedule_idle_cleanup()
+
+    def _schedule_idle_cleanup(self):
+        if self._cache_cleanup_task and not self._cache_cleanup_task.done():
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        self._cache_cleanup_task = loop.create_task(self._clear_cache_when_idle())
+
+    async def _clear_cache_when_idle(self):
+        try:
+            while True:
+                if self._cache_active_tasks > 0:
+                    return
+
+                idle_for = time.monotonic() - self._cache_last_access
+                wait = self._cache_cooldown_seconds - idle_for
+                if wait > 0:
+                    await asyncio.sleep(wait)
+                    continue
+
+                before, after = self.clear_cache()
+                if before > after:
+                    logger.info(
+                        f"db cache cleared after idle {idle_for:.1f}s, "
+                        f"cached props: {before} -> {after}"
+                    )
+                return
+        except asyncio.CancelledError:
+            return
+        finally:
+            if asyncio.current_task() is self._cache_cleanup_task:
+                self._cache_cleanup_task = None
 
     @lazy_property
     def redeem_unit(self) -> Dict[int, Dict[int, RedeemUnit]]:
@@ -954,14 +1034,6 @@ class database():
                 .to_dict(lambda x: x.key, lambda x: 
                     x.to_dict(lambda x: x.level, lambda x: x))
         )
-        
-    @lazy_property  
-    def music_list(self) -> Dict[int, MusicList]:  
-        with self.dbmgr.session() as db:  
-            return (  
-                MusicList.query(db)  
-                .to_dict(lambda x: x.music_id, lambda x: x)  
-            )    
         
     @lazy_property
     def daily_mission_data(self) -> Dict[int, DailyMissionDatum]:

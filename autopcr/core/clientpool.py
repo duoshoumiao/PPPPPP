@@ -70,6 +70,7 @@ class PoolClientWrapper(pcrclient):
         self.pool = pool
         self.uid: str = None
         self.last_access = int(time.time())
+        self._sema_acquired = False
         self.register(errorhandler())
         self.register(self._data_wrapper)
         self.register(PreRequestHandler(pool))
@@ -102,29 +103,52 @@ class PoolClientWrapper(pcrclient):
         self._data_wrapper.component = self.data
 
     async def activate(self):
+        if self._sema_acquired:
+            logger.warning("Client %s activate called repeatedly without deactivate", self.id)
+            return
         await self.pool.sema_require(self)
+        self._sema_acquired = True
         try:
-            if os.path.exists(self.cache):
-                with open(self.cache, 'rb') as f:
-                    tmp = pickle.loads(f.read())
-                    if tmp.version == self.data.version:
-                        self.data = tmp
-                        self._data_wrapper.component = self.data
-                logger.debug("Client %s data loaded", self.data.uid)
-        except:
-            self.dispose()
+            try:
+                if os.path.exists(self.cache):
+                    with open(self.cache, 'rb') as f:
+                        tmp = pickle.loads(f.read())
+                        if tmp.version == self.data.version:
+                            self.data = tmp
+                            self._data_wrapper.component = self.data
+                    logger.debug("Client %s data loaded", self.data.uid)
+            except Exception:
+                logger.exception("Client %s failed to load cache, cache file will be discarded", self.id)
+                self.dispose()
+        except BaseException:
+            self._release_sema_if_needed()
+            raise
 
     def dispose(self):
-        os.remove(self.cache)
+        try:
+            os.remove(self.cache)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            logger.exception("Client %s failed to remove cache file %s", self.id, self.cache)
+
+    def _release_sema_if_needed(self):
+        if self._sema_acquired:
+            self.pool.sema_release(self)
+            self._sema_acquired = False
 
     def deactivate(self):
-        self.pool.sema_release(self)
-        if self.data.ready:
-            with open(self.cache, 'wb') as f:
-                f.write(pickle.dumps(self.data))
-            logger.debug("Client %s data saved", self.data.uid)
-        self.data = datamgr()
-        self._data_wrapper.component = self.data
+        self._release_sema_if_needed()
+        try:
+            if self.data.ready:
+                with open(self.cache, 'wb') as f:
+                    f.write(pickle.dumps(self.data))
+                logger.debug("Client %s data saved", self.data.uid)
+        except Exception:
+            logger.exception("Client %s failed to persist cache", self.id)
+        finally:
+            self.data = datamgr()
+            self._data_wrapper.component = self.data
 
 class CountingSemaphore:
     def __init__(self, max_count):
@@ -135,11 +159,16 @@ class CountingSemaphore:
 
     async def acquire(self):
         self.waiting += 1
-        await self._sema.acquire()
-        self.waiting -= 1
+        try:
+            await self._sema.acquire()
+        finally:
+            self.waiting -= 1
         self.running += 1
 
     def release(self):
+        if self.running <= 0:
+            logger.warning("Semaphore release called without matching acquire")
+            return
         self.running -= 1
         self._sema.release()
 

@@ -397,7 +397,7 @@ unique_equip_2_pure_memory_id = [
         114501, # 圣电
 ]
 @conditional_execution1("very_hard_sweep_run_time", ["vh庆典"])
-@description('储备专二需求的150碎片，包括' + ','.join(db.get_unit_name(unit_id) for unit_id in unique_equip_2_pure_memory_id))
+@description('储备专二需求的150碎片（目标角色见模块内 `unique_equip_2_pure_memory_id`）')
 @name('专二纯净碎片储备')
 @default(False)
 @tag_stamina_consume
@@ -593,7 +593,7 @@ class TalentSweep(DIY_sweep):
 '''.strip())
 @name("深域扫荡")
 @TalentConfig("talent_sweep_target_recovery_areas", "重置扫荡", [])
-@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", list(db.talents.keys()))
+@TalentConfig("talent_sweep_no_max_no_sweep", "非最高不扫荡", lambda: list(db.talents.keys()))
 @default(True)
 @tag_stamina_consume
 class talent_sweep(TalentSweep):

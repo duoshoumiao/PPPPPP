@@ -5,7 +5,7 @@ from ..model.modelbase import *
 from typing import Callable, Set, Dict, Tuple, Union
 import typing
 from ..model.common import *
-from ..model.custom import ItemType
+from ..model.custom import EffectiveUnitData, ItemType
 import json, base64, gzip
 from ..db.assetmgr import instance as assetmgr
 from ..db.dbmgr import instance as dbmgr
@@ -455,32 +455,63 @@ class datamgr(BaseModel, Component[apiclient]):
         mana = self.gold.gold_id_free + self.gold.gold_id_pay + (self.user_gold_bank_info.bank_gold if include_bank and self.user_gold_bank_info else 0)
         return mana
 
-    def get_synchro_parameter(self) -> GrowthParameterList: # something wrong with ball-used units, but 99% is ok.
+    def get_synchro_effective_data(self) -> List[EffectiveUnitData]:
+        ret: Dict[int, EffectiveUnitData] = {}
+        for unit_id in self.unit:
+            unit = self.unit[unit_id]
+            if unit.promotion_level < 7:
+                continue
+            if unit_id in ret:
+                effective_data = ret[unit_id]
+            else:
+                effective_data = EffectiveUnitData()
+                effective_data.unit_id = unit_id
+                ret[unit_id] = effective_data
+            level = min(
+                unit.unit_level, 
+                flow(unit.union_burst + unit.main_skill + unit.ex_skill).select(lambda x: x.skill_level).min(),
+            )
+            effective_data.unit_lv = level
+            effective_data.rank = unit.promotion_level
+            effective_data.equip_num = sum(equip.is_slot for equip in unit.equip_slot)
+            effective_data.equip_enhance_num = sum(equip.enhancement_level == db.get_equip_max_star(equip.id) for equip in unit.equip_slot if equip.is_slot and db.equip_data[equip.id].promotion_level > 2)
 
-        def get_equip_slot_num(equips: List[EquipSlot]) -> int:
-            return sum(e.is_slot for e in equips)
-        def get_equip_max_enhance_num(equips: List[EquipSlot]) -> int:
-            return sum(e.enhancement_level == db.get_equip_max_star(e.id) for e in equips if e.is_slot and db.equip_data[e.id].promotion_level > 2)
+        for unit in self.growth_unit:
+            if self.growth_unit[unit].growth_parameter_list and self.growth_unit[unit].growth_parameter_list.growth_id_list:
+                growth_ids = list(set(self.growth_unit[unit].growth_parameter_list.growth_id_list) & set(db.growth_parameter.keys())) 
+                for growth_id in growth_ids:
+                    growth_limit = db.growth_parameter[growth_id]
+                    effective_data = ret.get(unit, EffectiveUnitData(unit_id=unit))
+                    level = min(
+                        growth_limit.unit_level,
+                        growth_limit.skill_level,
+                    )
+                    effective_data.unit_lv = max(effective_data.unit_lv, level)
+                    effective_data.rank = max(effective_data.rank, growth_limit.promotion_level)
+                    effective_data.equip_num = max(effective_data.equip_num, sum(1 for i in range(6) if getattr(growth_limit, f"equipment_{i+1}") >= 0))
+                    effective_data.equip_enhance_num = max(effective_data.equip_enhance_num, sum(1 for i in range(6) if getattr(growth_limit, f"equipment_{i+1}") == 5))
 
+        return list(ret.values())
+
+    def get_synchro_parameter(self) -> GrowthParameterList:
         ret = GrowthParameterList()
 
-        units = [unit_id for unit_id in self.unit if self.unit[unit_id].promotion_level >= 7]
+        effective_data = self.get_synchro_effective_data()
+        effective_data.sort(key=lambda x: x.unit_lv, reverse=True)
+        if len(effective_data) >= self.settings.synchro.level_threshold_unit_num:
+            ret.unit_level = ret.skill_level = effective_data[self.settings.synchro.level_threshold_unit_num - 1].unit_lv
 
-        level = sorted(units, key=lambda x: self.unit[x].unit_level, reverse=True)
-        if len(level) >= self.settings.synchro.level_threshold_unit_num:
-            ret.unit_level = ret.skill_level = self.unit[level[self.settings.synchro.level_threshold_unit_num - 1]].unit_level
-
-        rank = sorted(units, key=lambda x: (self.unit[x].promotion_level, get_equip_slot_num(self.unit[x].equip_slot)), reverse=True)
+        effective_data.sort(key=lambda x: (x.rank, x.equip_num), reverse=True)
 
         equip_slot_num = 0
-        if len(rank) >= self.settings.synchro.rank_threshold_unit_num:
-            ret.promotion_level = self.unit[rank[self.settings.synchro.rank_threshold_unit_num - 1]].promotion_level
-            equip_slot_num = get_equip_slot_num(self.unit[rank[self.settings.synchro.rank_threshold_unit_num - 1]].equip_slot)
+        if len(effective_data) >= self.settings.synchro.rank_threshold_unit_num:
+            ret.promotion_level = effective_data[self.settings.synchro.rank_threshold_unit_num - 1].rank
+            equip_slot_num = effective_data[self.settings.synchro.rank_threshold_unit_num - 1].equip_num
 
-        equip = sorted(units, key=lambda x: (self.unit[x].promotion_level, get_equip_max_enhance_num(self.unit[x].equip_slot)), reverse=True)
+        effective_data.sort(key=lambda x: (x.rank, x.equip_enhance_num), reverse=True)
 
-        if len(equip) >= self.settings.synchro.rank_threshold_unit_num:
-            max_enhance_num = get_equip_max_enhance_num(self.unit[equip[self.settings.synchro.rank_threshold_unit_num - 1]].equip_slot)
+        if len(effective_data) >= self.settings.synchro.rank_threshold_unit_num:
+            max_enhance_num = effective_data[self.settings.synchro.rank_threshold_unit_num - 1].equip_enhance_num
 
             for i, j in zip(range(1, 6 + 1), [6, 4, 2, 5, 3, 1]):
                 if i > equip_slot_num:
@@ -684,3 +715,4 @@ class datamgr(BaseModel, Component[apiclient]):
             await resp.update(self, request)
         self.data_time = apiclient.time
         return resp
+
