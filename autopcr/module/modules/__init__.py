@@ -225,6 +225,8 @@ tool_modules = ModuleList(
         set_my_party2,
         bsm_auto,
         set_cb_support,
+        set_dungeon_support,  
+        set_friend_support,
         nbb_game,
         remove_normal_ex_equip,
         # calc_best_3star_ex_equip,

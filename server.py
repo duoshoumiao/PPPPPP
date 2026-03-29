@@ -2307,6 +2307,71 @@ async def set_cb_support(botev: BotEvent):
     }  
     return config
 
+
+  
+@register_tool("挂地下城支援", "set_dungeon_support")  
+async def set_dungeon_support(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
+  
+    units = []  
+    unknown_units = []  
+    for _ in range(2):  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                units.append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
+  
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
+  
+    if not units:  
+        await botev.finish("请指定至少一个角色，如：#挂地下城支援 角色1 角色2")  
+  
+    config = {  
+        "set_dungeon_support_unit_id_1": units[0],  
+        "set_dungeon_support_unit_id_2": units[1] if len(units) > 1 else units[0],  
+    }  
+    return config  
+  
+  
+@register_tool("挂好友支援", "set_friend_support")  
+async def set_friend_support(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
+  
+    units = []  
+    unknown_units = []  
+    for _ in range(2):  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                units.append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
+  
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
+  
+    if not units:  
+        await botev.finish("请指定至少一个角色，如：#挂好友支援 角色1 角色2")  
+  
+    config = {  
+        "set_friend_support_unit_id_1": units[0],  
+        "set_friend_support_unit_id_2": units[1] if len(units) > 1 else units[0],  
+    }  
+    return config
+
 @register_tool("穿ex彩装", "equip_rainbow_ex")  
 async def equip_rainbow_ex_tool(botev: BotEvent):  
     await botev.send("请稍等")  

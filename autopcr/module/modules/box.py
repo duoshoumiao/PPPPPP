@@ -52,6 +52,19 @@ class search_unit(Module):
             if len(unitinfo.unique_equip_slot) > 1:
                 info.append("无" if not unitinfo.unique_equip_slot[1].is_slot else f"{unitinfo.unique_equip_slot[1].enhancement_level}星") 
 
+            # 普通EX装备  
+            normal_ex_equip = []  
+            for ex_slot in unitinfo.ex_equip_slot:  
+                if not ex_slot.serial_id:  
+                    normal_ex_equip.append("-")  
+                else:  
+                    ex = client.data.ex_equips[ex_slot.serial_id]  
+                    rarity = db.get_ex_equip_rarity_name(ex.ex_equipment_id)  
+                    star = db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt)  
+                    name = db.get_ex_equip_name(ex.ex_equipment_id)  
+                    normal_ex_equip.append(f"{name}({rarity}{star}★)")  
+            info.append("EX装:" + "/".join(i for i in normal_ex_equip))
+            
             ex_equip = []
             for cb_ex in unitinfo.cb_ex_equip_slot:
                 if not cb_ex.serial_id:

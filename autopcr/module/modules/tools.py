@@ -1303,6 +1303,62 @@ class set_my_party(SetMyParty):
 
         return token
 
+# tools.py, 在 set_cb_support 类之前新增  
+  
+async def _remove_unit_from_other_supports(client: pcrclient, support_info, unit_ids, target_support_type, target_positions, now, log_func, warn_func):  
+    """  
+    检查 unit_ids 中的角色是否在其他类型的支援位中，如果在则先撤下。  
+    返回因冷却无法移除的 unit_id 集合。  
+  
+    支援位分类：  
+    - 地下城: clan_support_units 中 position 1/2, API support_type=1  
+    - 会战:   clan_support_units 中 position 3/4, API support_type=1  
+    - 好友:   friend_support_units 中 position 1/2, API support_type=2  
+    """  
+    SUPPORT_COOLDOWN = 1800  
+    blocked_units = set()  
+  
+    dungeon_positions = {eClanSupportMemberType.DUNGEON_SUPPORT_UNIT_1,  
+                         eClanSupportMemberType.DUNGEON_SUPPORT_UNIT_2}  
+    cb_positions = {eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_1,  
+                    eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_2}  
+    friend_positions = {1, 2}  
+  
+    # 构建"其他类型"的支援列表: (support_setting, api_support_type, type_name)  
+    other_supports = []  
+  
+    for support in (support_info.clan_support_units or []):  
+        if support.unit_id and support.unit_id != 0:  
+            # 判断是否属于当前目标类型（目标类型不算"其他"）  
+            is_target = (target_support_type == 1 and support.position in target_positions)  
+            if not is_target:  
+                if support.position in dungeon_positions:  
+                    other_supports.append((support, 1, "地下城"))  
+                elif support.position in cb_positions:  
+                    other_supports.append((support, 1, "会战"))  
+  
+    for support in (support_info.friend_support_units or []):  
+        if support.unit_id and support.unit_id != 0:  
+            is_target = (target_support_type == 2 and support.position in target_positions)  
+            if not is_target:  
+                other_supports.append((support, 2, "好友"))  
+  
+    # 检查目标角色是否在其他类型中  
+    for uid in unit_ids:  
+        for support, api_type, type_name in other_supports:  
+            if support.unit_id == uid:  
+                unit_name = db.get_unit_name(uid)  
+                if support.support_start_time and now - support.support_start_time < SUPPORT_COOLDOWN:  
+                    remaining = SUPPORT_COOLDOWN - (now - support.support_start_time)  
+                    warn_func(f"{unit_name}当前在{type_name}支援中，且挂上不足30分钟（剩余{remaining // 60}分{remaining % 60}秒），跳过该角色")  
+                    blocked_units.add(uid)  
+                else:  
+                    log_func(f"{unit_name}当前在{type_name}支援中，正在移除...")  
+                    await client.support_unit_change_setting(api_type, support.position, 2, support.unit_id)  
+                    log_func(f"已将{unit_name}从{type_name}支援中移除")  
+  
+    return blocked_units
+
 @name('挂会战支援')  
 @default(True)  
 @unitchoice("set_cb_support_unit_id_2", "角色2（选填）")  
@@ -1310,7 +1366,7 @@ class set_my_party(SetMyParty):
 @description('设置指定角色为会战支援（最多2个），并自动穿满会战EX装备')  
 class set_cb_support(Module):  
     async def do_task(self, client: pcrclient):  
-        SUPPORT_COOLDOWN = 1800  # 30分钟冷却  
+        SUPPORT_COOLDOWN = 1800  
   
         unit_id_1 = int(self.get_config('set_cb_support_unit_id_1'))  
         unit_id_2 = int(self.get_config('set_cb_support_unit_id_2'))  
@@ -1327,10 +1383,25 @@ class set_cb_support(Module):
         positions = [eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_1,  
                      eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_2]  
   
-        # Step 1: Get current support settings  
         support_info = await client.support_unit_get_setting()  
-  
         now = apiclient.time  
+  
+        # 跨类型冲突检测：从其他支援类型中移除目标角色  
+        blocked = await _remove_unit_from_other_supports(  
+            client, support_info, unit_ids,  
+            target_support_type=1,  
+            target_positions=set(positions),  
+            now=now, log_func=self._log, warn_func=self._warn  
+        )  
+        unit_ids = [uid for uid in unit_ids if uid not in blocked]  
+  
+        if not unit_ids:  
+            if not self.log:  
+                raise SkipError("无操作")  
+            return  
+  
+        # 重新获取支援信息  
+        support_info = await client.support_unit_get_setting()  
   
         # 识别冷却中的槽位  
         cooldown_positions = set()  
@@ -1339,7 +1410,7 @@ class set_cb_support(Module):
                 if support.support_start_time and now - support.support_start_time < SUPPORT_COOLDOWN:  
                     cooldown_positions.add(support.position)  
   
-        # 统计当前状态：已就位的目标角色、非目标支援、空位  
+        # 统计当前状态  
         already_placed = set()  
         non_target_supports = []  
         occupied_positions = set()  
@@ -1351,12 +1422,10 @@ class set_cb_support(Module):
                 else:  
                     non_target_supports.append(support)  
   
-        # 计算空位数和需要放置的角色数  
         empty_positions = [pos for pos in positions if pos not in occupied_positions and pos not in cooldown_positions]  
         need_placement = [uid for uid in unit_ids if uid not in already_placed]  
         slots_to_free = max(0, len(need_placement) - len(empty_positions))  
   
-        # 只在空位不够时，移除刚好够数量的非目标支援  
         removed = 0  
         for support in non_target_supports:  
             if removed >= slots_to_free:  
@@ -1369,10 +1438,8 @@ class set_cb_support(Module):
                 await client.support_unit_change_setting(1, support.position, 2, support.unit_id)  
                 removed += 1  
   
-        # Re-fetch after removal  
         support_info = await client.support_unit_get_setting()  
   
-        # Check which units are already set and which positions are free  
         already_set = {}  
         occupied_positions = set()  
         for support in support_info.clan_support_units:  
@@ -1380,14 +1447,12 @@ class set_cb_support(Module):
                 already_set[support.unit_id] = support.position  
                 occupied_positions.add(support.position)  
   
-        # Set each unit to a position  
         for uid in unit_ids:  
             unit_name = db.get_unit_name(uid)  
             if uid in already_set:  
                 self._log(f"{unit_name}已经是会战支援位{already_set[uid] - 2}")  
                 continue  
   
-            # Find free position (not occupied, not in cooldown)  
             target_pos = None  
             for pos in positions:  
                 if pos not in occupied_positions and pos not in cooldown_positions:  
@@ -1462,7 +1527,225 @@ class set_cb_support(Module):
   
         if not self.log:  
             raise SkipError("无操作")
-           
+       
+@name('挂地下城支援')  
+@default(True)  
+@unitchoice("set_dungeon_support_unit_id_2", "角色2（选填）")  
+@unitchoice("set_dungeon_support_unit_id_1", "角色1")  
+@description('设置指定角色为地下城支援（最多2个）')  
+class set_dungeon_support(Module):  
+    async def do_task(self, client: pcrclient):  
+        SUPPORT_COOLDOWN = 1800  
+  
+        unit_id_1 = int(self.get_config('set_dungeon_support_unit_id_1'))  
+        unit_id_2 = int(self.get_config('set_dungeon_support_unit_id_2'))  
+  
+        unit_ids = []  
+        if unit_id_1 and unit_id_1 in client.data.unit:  
+            unit_ids.append(unit_id_1)  
+        if unit_id_2 and unit_id_2 in client.data.unit and unit_id_2 != unit_id_1:  
+            unit_ids.append(unit_id_2)  
+  
+        if not unit_ids:  
+            raise AbortError("请指定至少一个角色")  
+  
+        positions = [eClanSupportMemberType.DUNGEON_SUPPORT_UNIT_1,  
+                     eClanSupportMemberType.DUNGEON_SUPPORT_UNIT_2]  
+  
+        support_info = await client.support_unit_get_setting()  
+        now = apiclient.time  
+  
+        # 跨类型冲突检测：从其他支援类型中移除目标角色  
+        blocked = await _remove_unit_from_other_supports(  
+            client, support_info, unit_ids,  
+            target_support_type=1,  
+            target_positions=set(positions),  
+            now=now, log_func=self._log, warn_func=self._warn  
+        )  
+        unit_ids = [uid for uid in unit_ids if uid not in blocked]  
+  
+        if not unit_ids:  
+            if not self.log:  
+                raise SkipError("无操作")  
+            return  
+  
+        support_info = await client.support_unit_get_setting()  
+  
+        cooldown_positions = set()  
+        for support in support_info.clan_support_units:  
+            if support.position in positions and support.unit_id and support.unit_id != 0:  
+                if support.support_start_time and now - support.support_start_time < SUPPORT_COOLDOWN:  
+                    cooldown_positions.add(support.position)  
+  
+        already_placed = set()  
+        non_target_supports = []  
+        occupied_positions = set()  
+        for support in support_info.clan_support_units:  
+            if support.position in positions and support.unit_id and support.unit_id != 0:  
+                occupied_positions.add(support.position)  
+                if support.unit_id in unit_ids:  
+                    already_placed.add(support.unit_id)  
+                else:  
+                    non_target_supports.append(support)  
+  
+        empty_positions = [pos for pos in positions if pos not in occupied_positions and pos not in cooldown_positions]  
+        need_placement = [uid for uid in unit_ids if uid not in already_placed]  
+        slots_to_free = max(0, len(need_placement) - len(empty_positions))  
+  
+        removed = 0  
+        for support in non_target_supports:  
+            if removed >= slots_to_free:  
+                break  
+            if support.position in cooldown_positions:  
+                remaining = SUPPORT_COOLDOWN - (now - support.support_start_time)  
+                self._warn(f"支援位{support.position}的{db.get_unit_name(support.unit_id)}在冷却中（剩余{remaining // 60}分{remaining % 60}秒），无法移除")  
+            else:  
+                self._log(f"移除旧支援{db.get_unit_name(support.unit_id)}")  
+                await client.support_unit_change_setting(1, support.position, 2, support.unit_id)  
+                removed += 1  
+  
+        support_info = await client.support_unit_get_setting()  
+  
+        already_set = {}  
+        occupied_positions = set()  
+        for support in support_info.clan_support_units:  
+            if support.position in positions and support.unit_id and support.unit_id != 0:  
+                already_set[support.unit_id] = support.position  
+                occupied_positions.add(support.position)  
+  
+        for uid in unit_ids:  
+            unit_name = db.get_unit_name(uid)  
+            if uid in already_set:  
+                self._log(f"{unit_name}已经是地下城支援位{already_set[uid]}")  
+                continue  
+  
+            target_pos = None  
+            for pos in positions:  
+                if pos not in occupied_positions and pos not in cooldown_positions:  
+                    target_pos = pos  
+                    break  
+  
+            if target_pos is None:  
+                self._warn(f"没有可用的支援位给{unit_name}（槽位被占用或在冷却中）")  
+                continue  
+  
+            await client.support_unit_change_setting(1, target_pos, 1, uid)  
+            already_set[uid] = target_pos  
+            occupied_positions.add(target_pos)  
+            self._log(f"已设置{unit_name}为地下城支援位{target_pos}")  
+  
+        if not self.log:  
+            raise SkipError("无操作")
+            
+            
+@name('挂好友支援')  
+@default(True)  
+@unitchoice("set_friend_support_unit_id_2", "角色2（选填）")  
+@unitchoice("set_friend_support_unit_id_1", "角色1")  
+@description('设置指定角色为好友支援（最多2个），好友可在关卡中借用')  
+class set_friend_support(Module):  
+    async def do_task(self, client: pcrclient):  
+        SUPPORT_COOLDOWN = 1800  
+  
+        unit_id_1 = int(self.get_config('set_friend_support_unit_id_1'))  
+        unit_id_2 = int(self.get_config('set_friend_support_unit_id_2'))  
+  
+        unit_ids = []  
+        if unit_id_1 and unit_id_1 in client.data.unit:  
+            unit_ids.append(unit_id_1)  
+        if unit_id_2 and unit_id_2 in client.data.unit and unit_id_2 != unit_id_1:  
+            unit_ids.append(unit_id_2)  
+  
+        if not unit_ids:  
+            raise AbortError("请指定至少一个角色")  
+  
+        positions = [1, 2]  # friend_support_units 的 position  
+  
+        support_info = await client.support_unit_get_setting()  
+        now = apiclient.time  
+  
+        # 跨类型冲突检测：从其他支援类型中移除目标角色  
+        blocked = await _remove_unit_from_other_supports(  
+            client, support_info, unit_ids,  
+            target_support_type=2,  
+            target_positions=set(positions),  
+            now=now, log_func=self._log, warn_func=self._warn  
+        )  
+        unit_ids = [uid for uid in unit_ids if uid not in blocked]  
+  
+        if not unit_ids:  
+            if not self.log:  
+                raise SkipError("无操作")  
+            return  
+  
+        support_info = await client.support_unit_get_setting()  
+  
+        cooldown_positions = set()  
+        for support in support_info.friend_support_units:  
+            if support.position in positions and support.unit_id and support.unit_id != 0:  
+                if support.support_start_time and now - support.support_start_time < SUPPORT_COOLDOWN:  
+                    cooldown_positions.add(support.position)  
+  
+        already_placed = set()  
+        non_target_supports = []  
+        occupied_positions = set()  
+        for support in support_info.friend_support_units:  
+            if support.position in positions and support.unit_id and support.unit_id != 0:  
+                occupied_positions.add(support.position)  
+                if support.unit_id in unit_ids:  
+                    already_placed.add(support.unit_id)  
+                else:  
+                    non_target_supports.append(support)  
+  
+        empty_positions = [pos for pos in positions if pos not in occupied_positions and pos not in cooldown_positions]  
+        need_placement = [uid for uid in unit_ids if uid not in already_placed]  
+        slots_to_free = max(0, len(need_placement) - len(empty_positions))  
+  
+        removed = 0  
+        for support in non_target_supports:  
+            if removed >= slots_to_free:  
+                break  
+            if support.position in cooldown_positions:  
+                remaining = SUPPORT_COOLDOWN - (now - support.support_start_time)  
+                self._warn(f"支援位{support.position}的{db.get_unit_name(support.unit_id)}在冷却中（剩余{remaining // 60}分{remaining % 60}秒），无法移除")  
+            else:  
+                self._log(f"移除旧支援{db.get_unit_name(support.unit_id)}")  
+                await client.support_unit_change_setting(2, support.position, 2, support.unit_id)  
+                removed += 1  
+  
+        support_info = await client.support_unit_get_setting()  
+  
+        already_set = {}  
+        occupied_positions = set()  
+        for support in support_info.friend_support_units:  
+            if support.position in positions and support.unit_id and support.unit_id != 0:  
+                already_set[support.unit_id] = support.position  
+                occupied_positions.add(support.position)  
+  
+        for uid in unit_ids:  
+            unit_name = db.get_unit_name(uid)  
+            if uid in already_set:  
+                self._log(f"{unit_name}已经是好友支援位{already_set[uid]}")  
+                continue  
+  
+            target_pos = None  
+            for pos in positions:  
+                if pos not in occupied_positions and pos not in cooldown_positions:  
+                    target_pos = pos  
+                    break  
+  
+            if target_pos is None:  
+                self._warn(f"没有可用的支援位给{unit_name}（槽位被占用或在冷却中）")  
+                continue  
+  
+            await client.support_unit_change_setting(2, target_pos, 1, uid)  
+            already_set[uid] = target_pos  
+            occupied_positions.add(target_pos)  
+            self._log(f"已设置{unit_name}为好友支援位{target_pos}")  
+  
+        if not self.log:  
+            raise SkipError("无操作")          
+       
 @description('根据EX装备名称查询对应的serial_id')  
 @name('查ID')  
 @texttype('search_ex_equip_name', '装备名称', '')  
