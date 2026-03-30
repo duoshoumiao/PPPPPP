@@ -1799,7 +1799,7 @@ class search_ex_equip_id(Module):
 @default(True)  
 @texttype('one_click_ex_selection', '选择(试穿/数字如 1 1 2)', '试穿')  
 @unitchoice('one_click_ex_unit_id', '角色')  
-@description('试穿模式：显示每个槽位可选的EX装备及属性。数字模式(如 1 1 2)：选择每个槽位的第N个装备并穿上，0表示不改动。从其他角色拿装备时会互换而非卸下。')  
+@description('试穿模式：显示每个槽位可选的EX装备及属性。数字模式(如 1 1 2)：选择每个槽位的第N个装备并穿上，0表示不改动。多件在他人身上时可用字母后缀指定从谁换(如 1A 1 2)。从其他角色拿装备时会互换而非卸下。')  
 class one_click_ex_equip(Module):  
     async def do_task(self, client: pcrclient):  
         unit_id = int(self.get_config('one_click_ex_unit_id'))  
@@ -1925,45 +1925,72 @@ class one_click_ex_equip(Module):
                 for idx, (ex_id, star, name, attr_str, power, serial_ids, on_others, sub_str) in enumerate(cands, start=1):  
                     owner_info = ""  
                     if on_others:  
-                        owners = [f"{db.get_unit_name(oid)}槽{oslot}" for (oid, oslot), _ in on_others]  
-                        free_cnt = len(serial_ids) - len(on_others)  
+                        # 给每个在他人身上的装备加字母标记  
+                        owner_parts = []  
+                        for letter_idx, ((oid, oslot), _sid) in enumerate(on_others):  
+                            letter = chr(ord('A') + letter_idx)  
+                            owner_parts.append(f"{letter}:{db.get_unit_name(oid)}槽{oslot}")  
+                        on_self_cnt = sum(1 for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] == unit_id)  
+                        free_cnt = len(serial_ids) - len(on_others) - on_self_cnt  
                         owner_info = f" [共{len(serial_ids)}件"  
+                        if on_self_cnt > 0:  
+                            owner_info += f", {on_self_cnt}件已穿戴"  
                         if free_cnt > 0:  
-                            owner_info += f", {free_cnt}件空闲"  
-                        owner_info += f", {', '.join(owners)}]"  
+                            owner_info += f", {free_cnt}件空闲"
+                        owner_info += f", {', '.join(owner_parts)}]"  
                     sub_info = f" 词条:{sub_str}" if sub_str else ""  
                     self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){sub_info}{owner_info}")  
                 if not cands:  
                     self._log(f"  无可用装备")  
         else:  
-            # Equip mode: parse space-separated selection like "1 1 2"  
+            # Equip mode: parse space-separated selection like "1 1 2" or "1A 1 2"  
+            import re as _re  
             parts = selection.split()  
             if len(parts) != 3:  
                 raise AbortError(f"选择格式错误：请输入3个空格分隔的数字(如 1 1 2)或'试穿'，当前输入: {selection}")  
-            try:  
-                choices = [int(p) for p in parts]  
-            except ValueError:  
-                raise AbortError(f"选择格式错误：每个槽位必须是数字，当前输入: {selection}")  
   
             used_serial_ids = set()  
             selected = []  # list of (slot_id, serial_id, name, star, power)  
   
-            for slot_id, choice in enumerate(choices, start=1):  
+            for slot_id, part in enumerate(parts, start=1):  
                 cands = slot_candidates[slot_id]  
   
-                if choice == 0:  
+                if part == '0':  
                     continue  
   
-                if choice > len(cands):  
+                # 解析数字和可选字母后缀  
+                m = _re.match(r'^(\d+)([A-Za-z]?)$', part)  
+                if not m:  
+                    raise AbortError(f"槽位{slot_id}选择格式错误: {part}，请输入数字或数字+字母(如 1A)")  
+  
+                choice = int(m.group(1))  
+                letter = m.group(2).upper()  # '' or 'A'-'Z'  
+  
+                if choice < 1 or choice > len(cands):  
                     raise AbortError(f"槽位{slot_id}只有{len(cands)}种装备，无法选择第{choice}个")  
   
                 ex_id, star, name, attr_str, power, serial_ids, on_others, sub_str = cands[choice - 1]  
   
                 target_serial = None  
-                for sid in serial_ids:  
-                    if sid not in used_serial_ids:  
-                        target_serial = sid  
-                        break  
+  
+                if letter:  
+                    # 用户指定了字母，从 on_others 中按字母索引选择  
+                    letter_index = ord(letter) - ord('A')  
+                    if letter_index < 0 or letter_index >= len(on_others):  
+                        available = [chr(ord('A') + i) + ':' + db.get_unit_name(oid) for i, ((oid, oslot), _sid) in enumerate(on_others)]  
+                        if not available:  
+                            raise AbortError(f"槽位{slot_id}编号{choice}没有在他人身上的装备，不需要字母后缀")  
+                        raise AbortError(f"槽位{slot_id}编号{choice}字母{letter}超出范围，可选: {', '.join(available)}")  
+                    (owner_uid, owner_slot), target_serial = on_others[letter_index]  
+                    if target_serial in used_serial_ids:  
+                        raise AbortError(f"槽位{slot_id}: {name}★{star} 的{letter}号装备已被其他槽位选用")  
+                else:  
+                    # 无字母，按原逻辑选第一个可用的  
+                    for sid in serial_ids:  
+                        if sid not in used_serial_ids:  
+                            target_serial = sid  
+                            break  
+  
                 if target_serial is None:  
                     raise AbortError(f"槽位{slot_id}: {name}★{star} 无可用装备(已被其他槽位选用)")  
   
