@@ -1760,97 +1760,120 @@ async def clan_battle_knive(botev: BotEvent):
 @register_tool("拉角色练度", "unit_promote")
 async def unit_promote(botev: BotEvent):
     await botev.send("请稍等")
-    msg = await botev.message()
-    config = {
-        "unit_promote_level_when_fail_to_equip_or_skill": False,
-        "unit_promote_rank_when_fail_to_unique_equip": False,
-        "unit_promote_rank_use_raw_ore": False,
-        "unit_promote_level": 1,
-        "unit_promote_rank": 1,
-        "unit_promote_skill_ub": 1,
-        "unit_promote_skill_s1": 1,
-        "unit_promote_skill_s2": 1,
-        "unit_promote_skill_ex": 1,
-        "unit_promote_unique_equip1_level": 0,
-        "unit_promote_equip_0": -1,
-        "unit_promote_equip_1": -1,
-        "unit_promote_equip_2": -1,
-        "unit_promote_equip_3": -1,
-        "unit_promote_equip_4": -1,
-        "unit_promote_equip_5": -1,
-        "unit_promote_units": []
-    }
-    try:
-        config["unit_promote_level"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    try:
-        config["unit_promote_rank"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    try:
-        config["unit_promote_skill_ub"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    try:
-        config["unit_promote_skill_s1"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    try:
-        config["unit_promote_skill_s2"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    try:
-        config["unit_promote_skill_ex"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-
-    # 解析6个装备星级（左上到右下）
-    equip_slots = ["unit_promote_equip_0", "unit_promote_equip_1", 
-                   "unit_promote_equip_2", "unit_promote_equip_3", 
-                   "unit_promote_equip_4", "unit_promote_equip_5"]
-    for slot in equip_slots:
-        try:
-            val = int(msg[0])
-            if val in [-1, 0, 1, 2, 3, 4, 5]:  # 装备星级有效范围
-                config[slot] = val
-            del msg[0]
-        except:
-            pass
-
-    # 专武等级
-    try:
-        config["unit_promote_unique_equip1_level"] = int(msg[0])
-        del msg[0]
-    except:
-        pass
-
-    # 角色列表（参考search_unit的角色昵称处理方式）
-    unknown_units = []
-    while msg:
-        try:
-            unit_name = msg[0]
-            unit = get_id_from_name(unit_name)
-            if unit:
-                config["unit_promote_units"].append(unit * 100 + 1)  # 转换为角色ID
-            else:
-                unknown_units.append(unit_name)
-            del msg[0]
-        except:
-            break
-
-    # 错误处理
-    if unknown_units:
-        await botev.finish(f"未知昵称{', '.join(unknown_units)}")
-    if not config["unit_promote_units"]:
-        config["unit_promote_units"] = list(range(100101, 199901, 100))
-
+    msg = await botev.message()@register_tool("拉角色练度", "unit_promote")  
+async def unit_promote(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+  
+    config = {  
+        "unit_promote_level_when_fail_to_equip_or_skill": False,  
+        "unit_promote_rank_when_fail_to_unique_equip": False,  
+        "unit_promote_rank_use_raw_ore": False,  
+        "unit_promote_unique2_when_fail_to_unique_equip2": False,  
+        "unit_promote_to_max_level": False,  
+        "unit_promote_level": 1,  
+        "unit_promote_rank": 1,  
+        "unit_promote_skill_ub": 1,  
+        "unit_promote_skill_s1": 1,  
+        "unit_promote_skill_s2": 1,  
+        "unit_promote_skill_ex": 1,  
+        "unit_promote_unique_equip1_level": 0,  
+        "unit_promote_unique_equip2_level": 0,  
+        "unit_promote_equip_0": -1,  
+        "unit_promote_equip_1": -1,  
+        "unit_promote_equip_2": -1,  
+        "unit_promote_equip_3": -1,  
+        "unit_promote_equip_4": -1,  
+        "unit_promote_equip_5": -1,  
+        "unit_promote_units": []  
+    }  
+  
+    # 先解析布尔关键词参数（会从msg中移除匹配项）  
+    config["unit_promote_level_when_fail_to_equip_or_skill"] = is_args_exist(msg, '自动拉等级')  
+    config["unit_promote_rank_when_fail_to_unique_equip"] = is_args_exist(msg, '自动拉品级')  
+    config["unit_promote_rank_use_raw_ore"] = is_args_exist(msg, '使用原矿')  
+    config["unit_promote_unique2_when_fail_to_unique_equip2"] = is_args_exist(msg, '自动专武1')  
+    config["unit_promote_to_max_level"] = is_args_exist(msg, '等级升至上限')  
+  
+    # 按顺序解析数值参数：等级 品级 ub s1 s2 ex  
+    try:  
+        config["unit_promote_level"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        config["unit_promote_rank"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        config["unit_promote_skill_ub"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        config["unit_promote_skill_s1"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        config["unit_promote_skill_s2"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        config["unit_promote_skill_ex"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+  
+    # 解析6个装备星级（左上到右下）  
+    equip_slots = ["unit_promote_equip_0", "unit_promote_equip_1",  
+                   "unit_promote_equip_2", "unit_promote_equip_3",  
+                   "unit_promote_equip_4", "unit_promote_equip_5"]  
+    for slot in equip_slots:  
+        try:  
+            val = int(msg[0])  
+            if val in [-1, 0, 1, 2, 3, 4, 5]:  
+                config[slot] = val  
+            del msg[0]  
+        except:  
+            pass  
+  
+    # 专武1等级  
+    try:  
+        config["unit_promote_unique_equip1_level"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+  
+    # 专武2等级  
+    try:  
+        config["unit_promote_unique_equip2_level"] = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+  
+    # 角色列表  
+    unknown_units = []  
+    while msg:  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                config["unit_promote_units"].append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
+  
+    # 错误处理  
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
+    if not config["unit_promote_units"]:  
+        config["unit_promote_units"] = list(range(100101, 199901, 100))  
+  
     return config
 
 @register_tool("大富翁", "caravan_play")
