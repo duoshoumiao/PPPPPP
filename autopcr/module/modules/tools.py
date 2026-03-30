@@ -1847,6 +1847,7 @@ class one_click_ex_equip(Module):
                 ),  
                 reverse=True,  
             ):  
+                rarity = db.ex_equipment_data[ex_id].rarity  
                 attr = db.ex_equipment_data[ex_id].get_unit_attribute(star)  
                 bonus = unit_attr.ex_equipment_mul(attr).ceil()  
                 power = int(bonus.get_power(coefficient) + 0.5)  
@@ -1861,13 +1862,26 @@ class one_click_ex_equip(Module):
                 attr_str = "/".join(attr_parts) if attr_parts else "无属性"  
   
                 equip_name = db.get_ex_equip_name(ex_id)  
-                serial_ids = sorted(  
-                    [e.serial_id for e in ex_list],  
-                    key=lambda sid: sid in equip_on_unit,  
-                )  
-                on_others = [(equip_on_unit[sid], sid) for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] != unit_id]  
   
-                candidates.append((ex_id, star, equip_name, attr_str, power, serial_ids, on_others))  
+                if rarity == 5:  
+                    # 彩装：每件单独列出，附带词条  
+                    for ex in sorted(ex_list, key=lambda e: e.serial_id in equip_on_unit):  
+                        sub_str = db.get_ex_equip_sub_status_str(ex.ex_equipment_id, ex.sub_status or [])  
+                        sid = ex.serial_id  
+                        on_others = [  
+                            (equip_on_unit[sid], sid)  
+                            for sid in [sid]  
+                            if sid in equip_on_unit and equip_on_unit[sid][0] != unit_id  
+                        ]  
+                        candidates.append((ex_id, star, equip_name, attr_str, power, [sid], on_others, sub_str))  
+                else:  
+                    # 非彩装：保持原有分组逻辑  
+                    serial_ids = sorted(  
+                        [e.serial_id for e in ex_list],  
+                        key=lambda sid: sid in equip_on_unit,  
+                    )  
+                    on_others = [(equip_on_unit[sid], sid) for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] != unit_id]  
+                    candidates.append((ex_id, star, equip_name, attr_str, power, serial_ids, on_others, ""))  
   
             slot_candidates[slot_id] = candidates  
   
@@ -1898,12 +1912,17 @@ class one_click_ex_equip(Module):
                             if val and val != 0:  
                                 cur_attr_parts.append(f"{ch_name}{int(val)}")  
                     cur_attr_str = "/".join(cur_attr_parts) if cur_attr_parts else "无属性"  
-                    self._log(f"  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str})")  
+                    # 彩装额外显示词条  
+                    if db.ex_equipment_data[ex.ex_equipment_id].rarity == 5:  
+                        sub_str = db.get_ex_equip_sub_status_str(ex.ex_equipment_id, ex.sub_status or [])  
+                        self._log(f"  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str}) 词条:{sub_str}")  
+                    else:  
+                        self._log(f"  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str})")  
   
             for slot_id in [1, 2, 3]:  
                 cands = slot_candidates[slot_id]  
                 self._log(f"\n【槽位{slot_id}】共{len(cands)}种穿法：")  
-                for idx, (ex_id, star, name, attr_str, power, serial_ids, on_others) in enumerate(cands, start=1):  
+                for idx, (ex_id, star, name, attr_str, power, serial_ids, on_others, sub_str) in enumerate(cands, start=1):  
                     owner_info = ""  
                     if on_others:  
                         owners = [f"{db.get_unit_name(oid)}槽{oslot}" for (oid, oslot), _ in on_others]  
@@ -1912,9 +1931,10 @@ class one_click_ex_equip(Module):
                         if free_cnt > 0:  
                             owner_info += f", {free_cnt}件空闲"  
                         owner_info += f", {', '.join(owners)}]"  
-                    self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){owner_info}")  
+                    sub_info = f" 词条:{sub_str}" if sub_str else ""  
+                    self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){sub_info}{owner_info}")  
                 if not cands:  
-                    self._log(f"  无可用装备") 
+                    self._log(f"  无可用装备")  
         else:  
             # Equip mode: parse space-separated selection like "1 1 2"  
             parts = selection.split()  
@@ -1937,7 +1957,7 @@ class one_click_ex_equip(Module):
                 if choice > len(cands):  
                     raise AbortError(f"槽位{slot_id}只有{len(cands)}种装备，无法选择第{choice}个")  
   
-                ex_id, star, name, attr_str, power, serial_ids, on_others = cands[choice - 1]  
+                ex_id, star, name, attr_str, power, serial_ids, on_others, sub_str = cands[choice - 1]  
   
                 target_serial = None  
                 for sid in serial_ids:  
