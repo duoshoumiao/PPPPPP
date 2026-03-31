@@ -139,6 +139,7 @@ daily_modules = ModuleList(
         main_story_reading,
         tower_story_reading,
         hatsune_story_reading,
+        seven_obtent_reading,
         hatsune_sub_story_reading,
         guild_story_reading,
         unit_story_reading,

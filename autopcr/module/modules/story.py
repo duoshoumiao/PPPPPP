@@ -7,6 +7,7 @@ from ...db.database import db
 from ...model.enums import *
 from ...util.linq import flow
 from ...util.substory import GetSubStoryReader
+from typing import Set
 
 @name('阅读公会剧情')
 @default(True)
@@ -146,10 +147,14 @@ class tower_story_reading(Module):
 @name('阅读活动剧情')
 @default(True)
 class hatsune_story_reading(Module):
+    def update_unlock_story(self, unlock_story: Set[int], resp):
+        if resp.unlock_story_ids:
+            unlock_story.update(resp.unlock_story_ids)
+
     async def do_task(self, client: pcrclient):
-        read_story = set(client.data.read_story_ids)
+        read_story = set(client.data.read_story_ids or [])
         read_story.add(0) # no pre story
-        unlock_story = set(client.data.unlock_story_ids)
+        unlock_story = set(client.data.unlock_story_ids or [])
         open_hatsune_id = set(hatsune.event_id for hatsune in db.get_open_hatsune())
         for story in db.event_story_detail:
             if story.story_id not in read_story and story.story_id in unlock_story:
@@ -159,8 +164,9 @@ class hatsune_story_reading(Module):
                     story.visible_type == eStoryVisibleType.PRE_RELEASE_STORY or 
                     story.visible_type == eStoryVisibleType.PRE_STORYID_AND_LOVE_LEVEL) and \
                         story.pre_story_id in read_story:
-                    await client.read_story(story.story_id)
+                    resp = await client.read_story(story.story_id)
                     read_story.add(story.story_id)
+                    self.update_unlock_story(unlock_story, resp)
                     self._log(f"阅读了{story.title}")
 
                 elif story.visible_type == eStoryVisibleType.SEASONALY_DUMMY_STORY: 
@@ -172,14 +178,84 @@ class hatsune_story_reading(Module):
                     if story.story_id in additional_stories and \
                             additional_stories[story.story_id].is_unlocked and \
                             not additional_stories[story.story_id].is_readed:
-                        await client.read_story(story.story_id)
+                        resp = await client.read_story(story.story_id)
                         read_story.add(story.story_id)
+                        self.update_unlock_story(unlock_story, resp)
                         self._log(f"阅读了{story.title}")
                 # Refraction TODO
+
+        seven_story_list = client.data.seven_story_list if client.data.seven_story_list is not None else {}
+        for event in db.get_active_seven():
+            event_storys = seven_story_list.get(event.event_id, {})
+            for story_info in event_storys.values():
+                if story_info.status == eEventSubStoryStatus.READED:
+                    read_story.add(story_info.story_id)
+            for story in db.get_seven_event_stories(event.event_id):
+                story_info = event_storys.get(story.story_id)
+                if not story_info:
+                    continue
+                if story_info.status != eEventSubStoryStatus.UNREAD:
+                    continue
+
+                resp = await client.read_story(story.story_id)
+                read_story.add(story.story_id)
+                self.update_unlock_story(unlock_story, resp)
+                story_info.status = eEventSubStoryStatus.READED
+                title = f"{story.title}-{story.sub_title}" if story.sub_title else story.title
+                self._log(f"阅读了{title}")
 
         if not self.log:
             raise SkipError("不存在未阅读的活动剧情")
         client.data.read_story_ids = list(read_story)
+        client.data.unlock_story_ids = list(unlock_story)
+        client.data.seven_story_list = seven_story_list
+        self._log(f"共{len(self.log)}篇")
+
+@description('阅读新活动的额外剧情')
+@name('阅读新活动子剧情')
+@default(True)
+class seven_obtent_reading(Module):
+    def get_story_title(self, story_id: int) -> str:
+        story = db.seven_story_detail[story_id]
+        return f"{story.title}-{story.sub_title}" if story.sub_title else story.title
+
+    async def do_task(self, client: pcrclient):
+        read_story = set(client.data.read_story_ids or [])
+        read_story.add(0)
+        seven_story_list = client.data.seven_story_list if client.data.seven_story_list is not None else {}
+
+        for event in db.get_active_seven():
+            if not db.get_seven_obtent_stories(event.event_id):
+                continue
+
+            while True:
+                await client.get_seven_obtent_top(event.event_id)
+                event_storys = seven_story_list.get(event.event_id, {})
+                unread_story = None
+                for story in db.get_seven_obtent_stories(event.event_id):
+                    story_info = event_storys.get(story.story_id)
+                    if not story_info:
+                        continue
+                    if story_info.status == eEventSubStoryStatus.READED:
+                        read_story.add(story.story_id)
+                        continue
+                    if story_info.status != eEventSubStoryStatus.UNREAD:
+                        continue
+                    unread_story = story
+                    break
+
+                if not unread_story:
+                    break
+
+                await client.read_story(unread_story.story_id)
+                read_story.add(unread_story.story_id)
+                event_storys[unread_story.story_id].status = eEventSubStoryStatus.READED
+                self._log(f"阅读了{self.get_story_title(unread_story.story_id)}")
+
+        if not self.log:
+            raise SkipError("不存在未阅读的新活动子剧情")
+        client.data.read_story_ids = list(read_story)
+        client.data.seven_story_list = seven_story_list
         self._log(f"共{len(self.log)}篇")
 
 @name('阅读活动子剧情')

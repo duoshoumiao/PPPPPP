@@ -15,6 +15,19 @@ def handles(cls):
     cls.__base__.update = cls.update
     return None
 
+def _build_event_quest(quest_id: int, clear_flag: int, daily_clear_count: int) -> HatsuneUserEventQuest:
+    quest_info = db.quest_info.get(quest_id)
+    return HatsuneUserEventQuest(
+        quest_id=quest_id,
+        clear_flag=clear_flag,
+        result_type=1 if clear_flag > 0 else 0,
+        is_unlocked=1 if clear_flag > 0 else 0,
+        limit_time=quest_info.limit_time if quest_info else 0,
+        wave_pattern_ids=[],
+        daily_clear_count=daily_clear_count,
+        daily_recovery_count=0,
+    )
+
 @handles
 class SourceIniGetMaintenanceStatusResponse(sdkrequests.SourceIniGetMaintenanceStatusResponse):
     async def update(self, mgr: datamgr, request):
@@ -235,6 +248,37 @@ class StoryViewingResponse(responses.StoryViewingResponse):
         if self.reward_info:
             for item in self.reward_info:
                 mgr.update_inventory(item)
+        if self.unlock_story_ids:
+            mgr.unlock_story_ids = list(dict.fromkeys((mgr.unlock_story_ids or []) + self.unlock_story_ids))
+        event_id = self.event_id if self.event_id else None
+        if request.story_id in db.seven_story_detail:
+            event_id = db.seven_story_detail[request.story_id].event_id
+        if event_id:
+            mgr.seven_story_list = mgr.seven_story_list or {}
+            mgr.seven_story_list.setdefault(event_id, {})
+            if request.story_id in db.seven_story_detail and db.seven_story_detail[request.story_id].event_id == event_id:
+                mgr.seven_story_list[event_id][request.story_id] = SevenStoryInfo(
+                    story_id=request.story_id,
+                    status=eEventSubStoryStatus.READED,
+                )
+            for story_id in self.unlock_story_ids or []:
+                if story_id in db.seven_story_detail and db.seven_story_detail[story_id].event_id == event_id:
+                    mgr.seven_story_list[event_id].setdefault(
+                        story_id,
+                        SevenStoryInfo(
+                            story_id=story_id,
+                            status=eEventSubStoryStatus.UNREAD,
+                        )
+                    )
+            for story_id in self.unlocked_sub_story_list or []:
+                if story_id in db.seven_story_detail and db.seven_story_detail[story_id].event_id == event_id:
+                    mgr.seven_story_list[event_id].setdefault(
+                        story_id,
+                        SevenStoryInfo(
+                            story_id=story_id,
+                            status=eEventSubStoryStatus.UNREAD,
+                        )
+                    )
 
 
 @handles
@@ -470,6 +514,10 @@ class LoadIndexResponse(responses.LoadIndexResponse):
         mgr.recover_stamina_exec_count = self.shop.recover_stamina.exec_count
         mgr.read_story_ids = self.read_story_ids
         mgr.unlock_story_ids = self.unlock_story_ids
+        mgr.seven_story_list = {
+            story.event_id: {info.story_id: info for info in (story.story_info or [])}
+            for story in (self.seven_story_list or [])
+        }
         mgr.event_statuses = self.event_statuses
         mgr.tower_status = self.tower_status
         mgr.campaign_list = self.campaign_list
@@ -517,7 +565,7 @@ class HomeIndexResponse(responses.HomeIndexResponse):
 @handles
 class HatsuneQuestTopResponse(responses.HatsuneQuestTopResponse):
     async def update(self, mgr: datamgr, request):
-        mgr.hatsune_quest_dict[self.quest_list[0].quest_id // 1000] = {q.quest_id: q for q in self.quest_list}
+        mgr.hatsune_quest_dict[request.event_id] = {q.quest_id: q for q in (self.quest_list or [])}
 
 
 @handles
@@ -533,7 +581,9 @@ class HatsuneQuestSkipResponse(responses.HatsuneQuestSkipResponse):
         if self.item_list:
             for item in self.item_list:
                 mgr.update_inventory(item)
-        mgr.hatsune_quest_dict[request.event_id][request.quest_id].daily_clear_count = self.daily_clear_count
+        mgr.hatsune_quest_dict.setdefault(request.event_id, {})
+        if request.quest_id in mgr.hatsune_quest_dict[request.event_id]:
+            mgr.hatsune_quest_dict[request.event_id][request.quest_id].daily_clear_count = self.daily_clear_count
         mgr.stamina = self.user_info.user_stamina
         mgr.stamina_full_recovery_time = self.user_info.stamina_full_recovery_time
 
@@ -542,6 +592,33 @@ class HatsuneQuestSkipResponse(responses.HatsuneQuestSkipResponse):
         if self.level_info:
             mgr.team_level = self.level_info.team.start_level
 
+
+@handles
+class SevenTopResponse(responses.SevenTopResponse):
+    async def update(self, mgr: datamgr, request: SevenTopRequest):
+        event_id = db.seven_schedule_by_schedule_id[request.schedule_id].event_id
+        mgr.hatsune_quest_dict[event_id] = {
+            quest.quest_id: _build_event_quest(quest.quest_id, quest.clear_flg, quest.daily_clear_count)
+            for quest in (self.clear_quest_list or [])
+        }
+        if self.unlock_story_ids:
+            mgr.unlock_story_ids = list(dict.fromkeys((mgr.unlock_story_ids or []) + self.unlock_story_ids))
+        if self.missions:
+            mgr.missions = self.missions
+
+@handles
+class SevenStoryTopResponse(responses.SevenStoryTopResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.unlock_story_ids:
+            mgr.unlock_story_ids = list(dict.fromkeys((mgr.unlock_story_ids or []) + self.unlock_story_ids))
+
+@handles
+class SevenObtentTopResponse(responses.SevenObtentTopResponse):
+    async def update(self, mgr: datamgr, request):
+        mgr.seven_story_list = mgr.seven_story_list or {}
+        mgr.seven_story_list.setdefault(request.event_id, {})
+        for story in self.obtent_story_status_list or []:
+            mgr.seven_story_list[request.event_id][story.story_id] = story
 
 @handles
 class HatsuneMissionAcceptResponse(responses.HatsuneMissionAcceptResponse):
@@ -559,6 +636,13 @@ class HatsuneMissionAcceptResponse(responses.HatsuneMissionAcceptResponse):
 
 
 @handles
+class SevenMissionAcceptResponse(responses.SevenMissionAcceptResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.rewards:
+            for item in self.rewards:
+                mgr.update_inventory(item)
+
+@handles
 class HatsuneBossBattleSkipResponse(responses.HatsuneBossBattleSkipResponse):
     async def update(self, mgr: datamgr, request):
         if self.crush_reward_list:
@@ -574,6 +658,42 @@ class HatsuneBossBattleSkipResponse(responses.HatsuneBossBattleSkipResponse):
                     mgr.update_inventory(item)
         if self.user_gold:
             mgr.gold = self.user_gold
+
+
+@handles
+class SevenQuestSkipMultipleResponse(responses.SevenQuestSkipMultipleResponse):
+    async def update(self, mgr: datamgr, request: SevenQuestSkipMultipleRequest):
+        if self.quest_result_list:
+            for result in self.quest_result_list:
+                for quest_result in result.quest_result or []:
+                    for item in quest_result.reward_list:
+                        mgr.update_inventory(item)
+        if self.bonus_reward_list:
+            for item in self.bonus_reward_list:
+                mgr.update_inventory(item)
+        if self.item_list:
+            for item in self.item_list:
+                mgr.update_inventory(item)
+
+        event_id = db.seven_schedule_by_schedule_id[request.schedule_id].event_id
+        event_quests = mgr.hatsune_quest_dict.setdefault(event_id, {})
+        daily_clear_count = {quest.quest_id: quest.daily_clear_count for quest in (self.daily_clear_count_list or [])}
+        for quest in request.skip_list or []:
+            qinfo = event_quests.get(quest.quest_id)
+            if not qinfo:
+                qinfo = _build_event_quest(quest.quest_id, 3, daily_clear_count.get(quest.quest_id, 0))
+                event_quests[quest.quest_id] = qinfo
+            qinfo.daily_clear_count = daily_clear_count.get(quest.quest_id, qinfo.daily_clear_count)
+
+        if self.user_stamina_info:
+            mgr.stamina = self.user_stamina_info.user_stamina
+            mgr.stamina_full_recovery_time = self.user_stamina_info.stamina_full_recovery_time
+
+        if self.user_gold:
+            mgr.gold = self.user_gold
+        if self.level_info:
+            mgr.team_level = self.level_info.team.start_level
+
 
 
 @handles
@@ -607,6 +727,30 @@ class GachaExecResponse(responses.GachaExecResponse):
 
 @handles
 class EventGachaExecResponse(responses.EventGachaExecResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.reward_info_list:
+            for item in self.reward_info_list:
+                mgr.update_inventory(item)
+
+
+@handles
+class SevenGachaExecResponse(responses.SevenGachaExecResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.reward_info_list:
+            for item in self.reward_info_list:
+                mgr.update_inventory(item)
+
+
+@handles
+class SevenGachaExecMultipleResponse(responses.SevenGachaExecMultipleResponse):
+    async def update(self, mgr: datamgr, request):
+        if self.reward_info_list:
+            for item in self.reward_info_list:
+                mgr.update_inventory(item)
+
+
+@handles
+class SevenGachaExecMultipleAutoResponse(responses.SevenGachaExecMultipleAutoResponse):
     async def update(self, mgr: datamgr, request):
         if self.reward_info_list:
             for item in self.reward_info_list:

@@ -64,6 +64,7 @@ class CampaignSchedule(ISchedule):
         HATSUNE_NORMAL = "活动normal"
         HATSUNE_HARD = "活动hard"
         HATSUNE_BOTH = "活动"
+        SEVEN = "活动"
         HATSUNE_REVIVAL_NORMAL = "复刻活动normal"
         HATSUNE_REVIVAL_HARD = "复刻活动hard"
         HATSUNE_REVIVAL_BOTH = "复刻活动"
@@ -200,6 +201,7 @@ class half_schedule(Module):
         (db.campaign_schedule, lambda x: CampaignSchedule(x.id, x.campaign_category, x.value, x.start_time, x.end_time, "庆典")),
         (db.campaign_free_gacha, lambda x: CampaignFreegacha(x.campaign_id, x.start_time, x.end_time, "免费十连")),
         (db.hatsune_schedule, lambda x: HatsuneSchedule(x.event_id, x.start_time, x.end_time, "活动")),
+        (db.seven_schedule, lambda x: HatsuneSchedule(x.event_id, x.start_time, x.end_time, "活动")),
         (db.tower_schedule, lambda x: TowerSchedule(x.start_time, x.end_time, "露娜塔")),
         (db.tdf_schedule, lambda x: TdfSchedule(x.start_time, x.end_time, "次元断层")),
         (db.chara_fortune_schedule, lambda x: CharaFortuneSchedule(x.name, x.start_time, x.end_time, "赛马")),

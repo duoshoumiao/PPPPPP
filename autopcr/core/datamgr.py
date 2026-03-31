@@ -47,6 +47,7 @@ class datamgr(BaseModel, Component[apiclient]):
     inventory: Dict[ItemType, int] = {}
     read_story_ids: List[int] = None
     unlock_story_ids: List[int] = None
+    seven_story_list: Dict[int, Dict[int, SevenStoryInfo]] = {}
     event_statuses: List[EventStatus] = None
     tower_status: TowerStatus = None
     deck_list: Dict[ePartyType, LoadDeckData] = {}

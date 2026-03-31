@@ -781,6 +781,21 @@ class pcrclient(apiclient):
         req.gacha_id = gacha_id
         return await self.request(req)
 
+    async def exec_seven_gacha(self, event_id: int, gacha_times: int, current_cost_num: int):
+        req = SevenGachaExecMultipleRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        req.gacha_id = db.get_event_gacha_id(event_id)
+        req.gacha_times = gacha_times
+        req.current_cost_num = current_cost_num
+        return await self.request(req)
+
+    async def reset_seven_gacha(self, event_id: int, gacha_step: int):
+        req = SevenGachaResetRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        req.gacha_id = db.get_event_gacha_id(event_id)
+        req.gacha_step = gacha_step
+        return await self.request(req)
+
     async def story_check(self, story_id: int):
         req = StoryMaintenanceCheckRequest()
         req.story_id = story_id
@@ -1055,6 +1070,98 @@ class pcrclient(apiclient):
         req.buy_id = 0
         req.id = 0
         return await self.request(req)
+
+    async def seven_mission_index(self, event_id: int):
+        req = SevenMissionIndexRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        return await self.request(req)
+
+    async def seven_mission_receive(self, event_id: int, mission_type: int, mission_id: int = 0):
+        req = SevenMissionAcceptRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        req.mission_id = mission_id
+        req.mission_type = mission_type
+        return await self.request(req)
+
+    async def get_seven_gacha_index(self, event_id: int):
+        req = SevenGachaIndexRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        req.gacha_id = db.get_event_gacha_id(event_id)
+        return await self.request(req)
+
+    async def get_seven_top(self, event_id: int):
+        req = SevenTopRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        return await self.request(req)
+
+    async def get_seven_quest_top(self, event_id: int):
+        req = SevenQuestTopRequest()
+        req.schedule_id = db.get_event_schedule_id(event_id)
+        return await self.request(req)
+
+    async def get_seven_story_top(self, event_id: int):
+        req = SevenStoryTopRequest()
+        req.event_id = event_id
+        return await self.request(req)
+
+    async def get_seven_obtent_top(self, event_id: int):
+        req = SevenObtentTopRequest()
+        req.event_id = event_id
+        return await self.request(req)
+
+    async def get_event_top(self, event_id: int):
+        if db.is_seven_event(event_id):
+            return await self.get_seven_top(event_id)
+        return await self.get_hatsune_top(event_id)
+
+    async def get_event_quest_top(self, event_id: int):
+        if db.is_seven_event(event_id):
+            return await self.get_seven_quest_top(event_id)
+        return await self.get_hatsune_quest_top(event_id)
+
+    async def event_mission_index(self, event_id: int):
+        if db.is_seven_event(event_id):
+            return await self.seven_mission_index(event_id)
+        return await self.hatsune_mission_index(event_id)
+
+    async def event_mission_receive(self, event_id: int, mission: Union[int, UserMissionInfo]):
+        if db.is_seven_event(event_id):
+            if isinstance(mission, int):
+                return await self.seven_mission_receive(event_id, mission)
+            mission_type = db.get_seven_mission_type(event_id, mission)
+            return await self.seven_mission_receive(event_id, mission_type)
+        if not isinstance(mission, int):
+            raise AbortError("hatsune活动任务领取需要任务类型")
+        return await self.hatsune_mission_receive(event_id, mission)
+
+    async def get_event_gacha_index(self, event_id: int):
+        if db.is_seven_event(event_id):
+            return await self.get_seven_gacha_index(event_id)
+        return await self.get_hatsune_gacha_index(event_id, db.get_event_gacha_id(event_id))
+
+    async def exec_event_gacha(self, event_id: int, gacha_times: int, current_cost_num: int, loop_box_multi_gacha_flag: int = 0):
+        if db.is_seven_event(event_id):
+            return await self.exec_seven_gacha(event_id, gacha_times, current_cost_num)
+        return await self.exec_hatsune_gacha(event_id, db.get_event_gacha_id(event_id), gacha_times, current_cost_num, loop_box_multi_gacha_flag)
+
+    async def reset_event_gacha(self, event_id: int, gacha_step: int):
+        if db.is_seven_event(event_id):
+            return await self.reset_seven_gacha(event_id, gacha_step)
+        return await self.reset_hatsune_gacha(event_id, db.get_event_gacha_id(event_id))
+
+    async def seven_quest_skip(self, event: int, quest: int, times: int):
+        req = SevenQuestSkipMultipleRequest()
+        req.schedule_id = db.get_event_schedule_id(event)
+        req.skip_list = [QuestSkipInfo(quest_id=quest, skip_count=times)]
+        req.exec_type = 1
+        req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
+        return await self.request(req)
+
+    async def event_quest_skip(self, event: int, quest: int, times: int):
+        if db.is_seven_event(event):
+            return await self.seven_quest_skip(event, quest, times)
+        return await self.hatsune_quest_skip(event, quest, times)
+
 
     async def get_hatsune_dear_top(self, event_id: int):
         req = HatsuneDearTopRequest()
@@ -1534,14 +1641,15 @@ class pcrclient(apiclient):
 
     async def quest_skip_aware(self, quest: int, times: int, recover: bool = False, is_total: bool = False) -> Tuple[List[InventoryInfo], int, bool]:
         name = db.get_quest_name(quest)
-        if db.is_hatsune_quest(quest):
+        if db.is_event_quest(quest):
             if not quest in db.quest_to_event:
                 raise AbortError(f"任务{name}不存在")
             event = db.quest_to_event[quest].event_id
-            if not quest in self.data.hatsune_quest_dict[event]:
+            event_quests = self.data.hatsune_quest_dict.get(event, {})
+            if not quest in event_quests:
                 raise AbortError(f"任务{name}未通关或不存在")
 
-            qinfo = self.data.hatsune_quest_dict[event][quest]
+            qinfo = event_quests[quest]
 
             if qinfo.clear_flag != 3:
                 raise AbortError(f"任务{name}未三星")
@@ -1591,9 +1699,9 @@ class pcrclient(apiclient):
             if db.is_shiori_quest(quest):
                 event = db.quest_to_event[quest].event_id
                 resp = await self.shiori_quest_skip(event, quest, times)
-            elif db.is_hatsune_quest(quest):
+            elif db.is_event_quest(quest):
                 event = db.quest_to_event[quest].event_id
-                resp = await self.hatsune_quest_skip(event, quest, times)
+                resp = await self.event_quest_skip(event, quest, times)
             elif db.is_talent_quest(quest):
                 resp = await self.talent_quest_skip(quest, times)
             elif db.is_abyss_quest(quest):
