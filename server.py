@@ -1,14 +1,13 @@
 from collections import Counter, defaultdict
 from typing import Any, Callable, Coroutine, Dict, List, Tuple, Union
 from pathlib import Path
-from .autopcr.model.custom import UnitAttribute
-from .autopcr.util import aiorequests
+from .autopcr.model.custom import UnitAttribute 
+
 from .autopcr.module.accountmgr import BATCHINFO, AccountBatch, TaskResultInfo
 from .autopcr.module.modulebase import eResultStatus
 from .autopcr.util.draw_table import outp_b64
 from .autopcr.http_server.httpserver import HttpServer
 from .autopcr.db.database import db
-from .autopcr.util.unit_recognizer import instance as unit_recognizer
 from .autopcr.module.accountmgr import Account, AccountManager, instance as usermgr
 from .autopcr.db.dbstart import db_start
 from .autopcr.util.draw import instance as drawer
@@ -2158,7 +2157,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
         await botev.finish(f"已有正在运行的自动换防任务，请先发送 {prefix}终止换防")  
       
     duration = 1800  # 30 分钟  
-    interval = 15   # 15 秒  
+    interval = 10   # 10 秒  
     shuffle_count = 0  
       
     stop_event = asyncio.Event()  
