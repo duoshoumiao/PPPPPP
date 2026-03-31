@@ -1,1 +1,0 @@
-{"name": "\u8bbe\u7f6e\u7f16\u961f", "config": "\u521d\u59cb\u9762\u677f: 4\n\u521d\u59cb\u961f\u4f0d: 3\n\u961f\u4f0d\u9635\u5bb9: D3\n107101  XX  280  6\n106401  XX  280  6\n122201  XX  280  5\n106801  XX  280  5\n121301  XX  280  5", "log": "invalid literal for int() with base 10: '107101  XX  280  6'", "table": {"header": [], "data": []}, "status": "\u9519\u8bef"}
