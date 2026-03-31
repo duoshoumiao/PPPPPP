@@ -202,7 +202,7 @@ sv_help = f"""
 - {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
-- {prefix}拉角色练度 339 31 339 339 339 339  代表 等级 品级 ub s1 s2 ex 角色名（不输入则全选）
+- {prefix}拉角色练度 339 31 339 339 339 339 5 5 5 5 5 5 0 0 可可萝     #代表 等级 品级 ub s1 s2 ex 装备星级 专武1 专武2 角色名（不输入则全选）
 - {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
   示例：{prefix}大富翁 30 不止搬空商店 0 | {prefix}大富翁所有 0 搬空商店为止  0（需要去批量运行里保存账号）
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
@@ -1004,7 +1004,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc, export: b
             await upload_excel(botev, data, f"{tool.name}_{alias}_{timestamp}.xlsx", 'autopcr')
         else:
             # 仅对查公会深域进度工具生成图片
-            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest"]:
+            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest", "one_click_ex_equip"]:
                 # 生成深域进度图片
                 img = await drawer.draw_task_result(resp)
                 msg = f"{alias}"
