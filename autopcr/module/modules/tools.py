@@ -1924,20 +1924,25 @@ class one_click_ex_equip(Module):
                 self._log(f"\n【槽位{slot_id}】共{len(cands)}种穿法：")  
                 for idx, (ex_id, star, name, attr_str, power, serial_ids, on_others, sub_str) in enumerate(cands, start=1):  
                     owner_info = ""  
-                    if on_others:  
-                        # 给每个在他人身上的装备加字母标记  
-                        owner_parts = []  
-                        for letter_idx, ((oid, oslot), _sid) in enumerate(on_others):  
-                            letter = chr(ord('A') + letter_idx)  
-                            owner_parts.append(f"{letter}:{db.get_unit_name(oid)}槽{oslot}")  
-                        on_self_cnt = sum(1 for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] == unit_id)  
-                        free_cnt = len(serial_ids) - len(on_others) - on_self_cnt  
-                        owner_info = f" [共{len(serial_ids)}件"  
-                        if on_self_cnt > 0:  
-                            owner_info += f", {on_self_cnt}件已穿戴"  
-                        if free_cnt > 0:  
-                            owner_info += f", {free_cnt}件空闲"
-                        owner_info += f", {', '.join(owner_parts)}]"  
+                    if on_others:    
+                        # 给每个在他人身上的装备加字母标记    
+                        MAX_OWNER_DISPLAY = 7  
+                        owner_parts = []    
+                        for letter_idx, ((oid, oslot), _sid) in enumerate(on_others):    
+                            letter = chr(ord('A') + letter_idx)    
+                            owner_parts.append(f"{letter}:{db.get_unit_name(oid)}槽{oslot}")    
+                        on_self_cnt = sum(1 for sid in serial_ids if sid in equip_on_unit and equip_on_unit[sid][0] == unit_id)    
+                        free_cnt = len(serial_ids) - len(on_others) - on_self_cnt    
+                        owner_info = f" [共{len(serial_ids)}件"    
+                        if on_self_cnt > 0:    
+                            owner_info += f", {on_self_cnt}件已穿戴"    
+                        if free_cnt > 0:    
+                            owner_info += f", {free_cnt}件空闲"  
+                        if len(owner_parts) > MAX_OWNER_DISPLAY:  
+                            displayed = ', '.join(owner_parts[:MAX_OWNER_DISPLAY])  
+                            owner_info += f", {displayed}, ...等{len(owner_parts)}人穿戴]"  
+                        else:  
+                            owner_info += f", {', '.join(owner_parts)}]" 
                     sub_info = f" 词条:{sub_str}" if sub_str else ""  
                     self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){sub_info}{owner_info}")  
                 if not cands:  
