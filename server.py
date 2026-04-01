@@ -190,11 +190,7 @@ sv_help = f"""
 - {prefix}刷专二
 - {prefix}查深域
 - {prefix}强化ex装
-- {prefix}合成ex装 
-- {prefix}穿ex彩装 角色名 彩装ID  示例：#穿ex彩装 凯露 12345  #查ex装备 看ID
-- {prefix}穿ex粉装 角色名 粉装serial_id    #查ID 看ID
-- {prefix}穿ex金装 角色名 金装serial_id    #查ID 看ID
-- {prefix}查ID 泪          ← 模糊匹配，会匹配所有名称含"泪"的装备
+- {prefix}合成ex装
 - {prefix}领小屋体力
 - {prefix}公会点赞
 - {prefix}领每日体力
@@ -218,8 +214,12 @@ sv_help = f"""
 - {prefix}角色升星 5 忽略盈余 升至最高 佩可  #分别代表 星级 是否保留盈余如突破碎片 升到可升最高星 角色名
 - {prefix}角色突破 忽略盈余 凯露 佩可（忽略盈余：选这个，碎片不溢出就不突破）
 - {prefix}pjjc自动换防
-- {prefix}挂地下城/会战/好友支援 [星级]角色1 [[星级]角色2]  设置角色为支援，星级可选(3/4/5)，如：#挂好友支援 3水电
-- {prefix}一键穿ex +角色名 试穿/数字 1 2 3      数字0表示不改动    
+- {prefix}挂地下城/会战/好友支援 角色1 [角色2]  设置角色为会战支援并穿满会战EX装（最多2个）
+- {prefix}一键穿ex +角色名 试穿/数字 1 2 3      数字0表示不改动     
+- {prefix}穿ex彩装 角色名 彩装ID  示例：#穿ex彩装 凯露 12345  #查ex装备 看ID
+- {prefix}穿ex粉装 角色名 粉装serial_id    #查ID 看ID
+- {prefix}穿ex金装 角色名 金装serial_id    #查ID 看ID
+- {prefix}查ID 泪          ← 模糊匹配，会匹配所有名称含"泪"的装备
 """.strip()
 
 if address is None:
@@ -2303,139 +2303,100 @@ async def pjjc_stop_auto_def(botev: BotEvent):
     else:  
         await botev.send("当前没有正在运行的自动换防任务")
 
-@register_tool("挂会战支援", "set_cb_support")    
-async def set_cb_support(botev: BotEvent):    
-    msg = await botev.message()    
-    await botev.send("请稍等")    
+@register_tool("挂会战支援", "set_cb_support")  
+async def set_cb_support(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
   
-    units = []    
-    stars = []    
-    unknown_units = []    
-    for _ in range(2):    
-        try:    
-            unit_name = msg[0]    
-            unit = get_id_from_name(unit_name)    
-            if unit:    
-                units.append(unit * 100 + 1)    
-                stars.append(0)    
-            else:    
-                if unit_name[0].isdigit():    
-                    star = int(unit_name[0])    
-                    unit = get_id_from_name(unit_name[1:])    
-                    if unit:    
-                        units.append(unit * 100 + 1)    
-                        stars.append(star)    
-                    else:    
-                        unknown_units.append(unit_name)    
-                else:    
-                    unknown_units.append(unit_name)    
-            del msg[0]    
-        except:    
-            break    
+    units = []  
+    unknown_units = []  
+    for _ in range(2):  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                units.append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
   
-    if unknown_units:    
-        await botev.finish(f"未知昵称{', '.join(unknown_units)}")    
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
   
-    if not units:    
-        await botev.finish("请指定至少一个角色，如：#挂会战支援 角色1 角色2")    
+    if not units:  
+        await botev.finish("请指定至少一个角色，如：#挂会战支援 角色1 角色2")  
   
-    config = {    
-        "set_cb_support_unit_id_1": units[0],    
-        "set_cb_support_unit_id_2": units[1] if len(units) > 1 else units[0],    
-        "set_cb_support_star_1": stars[0],    
-        "set_cb_support_star_2": stars[1] if len(stars) > 1 else stars[0],    
-    }    
+    config = {  
+        "set_cb_support_unit_id_1": units[0],  
+        "set_cb_support_unit_id_2": units[1] if len(units) > 1 else units[0],  
+    }  
     return config
 
 
   
-@register_tool("挂地下城支援", "set_dungeon_support")    
-async def set_dungeon_support(botev: BotEvent):    
-    msg = await botev.message()    
-    await botev.send("请稍等")    
+@register_tool("挂地下城支援", "set_dungeon_support")  
+async def set_dungeon_support(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
   
-    units = []    
-    stars = []    
-    unknown_units = []    
-    for _ in range(2):    
-        try:    
-            unit_name = msg[0]    
-            unit = get_id_from_name(unit_name)    
-            if unit:    
-                units.append(unit * 100 + 1)    
-                stars.append(0)  # 0 means no change  
-            else:    
-                if unit_name[0].isdigit():    
-                    star = int(unit_name[0])    
-                    unit = get_id_from_name(unit_name[1:])    
-                    if unit:    
-                        units.append(unit * 100 + 1)    
-                        stars.append(star)    
-                    else:    
-                        unknown_units.append(unit_name)    
-                else:    
-                    unknown_units.append(unit_name)    
-            del msg[0]    
-        except:    
-            break    
+    units = []  
+    unknown_units = []  
+    for _ in range(2):  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                units.append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
   
-    if unknown_units:    
-        await botev.finish(f"未知昵称{', '.join(unknown_units)}")    
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
   
-    if not units:    
-        await botev.finish("请指定至少一个角色，如：#挂地下城支援 角色1 角色2")    
+    if not units:  
+        await botev.finish("请指定至少一个角色，如：#挂地下城支援 角色1 角色2")  
   
-    config = {    
-        "set_dungeon_support_unit_id_1": units[0],    
-        "set_dungeon_support_unit_id_2": units[1] if len(units) > 1 else units[0],    
-        "set_dungeon_support_star_1": stars[0],    
-        "set_dungeon_support_star_2": stars[1] if len(stars) > 1 else stars[0],    
-    }    
-    return config
+    config = {  
+        "set_dungeon_support_unit_id_1": units[0],  
+        "set_dungeon_support_unit_id_2": units[1] if len(units) > 1 else units[0],  
+    }  
+    return config  
   
   
-@register_tool("挂好友支援", "set_friend_support")    
-async def set_friend_support(botev: BotEvent):    
-    msg = await botev.message()    
-    await botev.send("请稍等")    
+@register_tool("挂好友支援", "set_friend_support")  
+async def set_friend_support(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
   
-    units = []    
-    stars = []    
-    unknown_units = []    
-    for _ in range(2):    
-        try:    
-            unit_name = msg[0]    
-            unit = get_id_from_name(unit_name)    
-            if unit:    
-                units.append(unit * 100 + 1)    
-                stars.append(0)    
-            else:    
-                if unit_name[0].isdigit():    
-                    star = int(unit_name[0])    
-                    unit = get_id_from_name(unit_name[1:])    
-                    if unit:    
-                        units.append(unit * 100 + 1)    
-                        stars.append(star)    
-                    else:    
-                        unknown_units.append(unit_name)    
-                else:    
-                    unknown_units.append(unit_name)    
-            del msg[0]    
-        except:    
-            break    
+    units = []  
+    unknown_units = []  
+    for _ in range(2):  
+        try:  
+            unit_name = msg[0]  
+            unit = get_id_from_name(unit_name)  
+            if unit:  
+                units.append(unit * 100 + 1)  
+            else:  
+                unknown_units.append(unit_name)  
+            del msg[0]  
+        except:  
+            break  
   
-    if unknown_units:    
-        await botev.finish(f"未知昵称{', '.join(unknown_units)}")    
+    if unknown_units:  
+        await botev.finish(f"未知昵称{', '.join(unknown_units)}")  
   
-    if not units:    
-        await botev.finish("请指定至少一个角色，如：#挂好友支援 角色1 角色2")    
+    if not units:  
+        await botev.finish("请指定至少一个角色，如：#挂好友支援 角色1 角色2")  
   
-    config = {    
-        "set_friend_support_unit_id_1": units[0],    
-        "set_friend_support_unit_id_2": units[1] if len(units) > 1 else units[0],    
-        "set_friend_support_star_1": stars[0],    
-        "set_friend_support_star_2": stars[1] if len(stars) > 1 else stars[0],    
-    }    
+    config = {  
+        "set_friend_support_unit_id_1": units[0],  
+        "set_friend_support_unit_id_2": units[1] if len(units) > 1 else units[0],  
+    }  
     return config
 
 @register_tool("穿ex彩装", "equip_rainbow_ex")  
