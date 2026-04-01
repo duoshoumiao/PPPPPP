@@ -1359,11 +1359,14 @@ async def _remove_unit_from_other_supports(client: pcrclient, support_info, unit
   
     return blocked_units
 
-@name('挂会战支援')  
-@default(True)  
-@unitchoice("set_cb_support_unit_id_2", "角色2（选填）")  
-@unitchoice("set_cb_support_unit_id_1", "角色1")  
-@description('设置指定角色为会战支援（最多2个），并自动穿满会战EX装备')  
+@name('挂会战支援')    
+@default(True)    
+@inttype("set_cb_support_star_2", "角色2星级", 0, [0, 3, 4, 5])  
+@inttype("set_cb_support_star_1", "角色1星级", 0, [0, 3, 4, 5])  
+@unitchoice("set_cb_support_unit_id_2", "角色2（选填）")    
+@unitchoice("set_cb_support_unit_id_1", "角色1")    
+@description('设置指定角色为会战支援（最多2个），并自动穿满会战EX装备，支持调星级')    
+class set_cb_support(Module): 
 class set_cb_support(Module):  
     async def do_task(self, client: pcrclient):  
         SUPPORT_COOLDOWN = 1800  
@@ -1525,14 +1528,46 @@ class set_cb_support(Module):
             except Exception as e:  
                 self._warn(f"{db.get_unit_name(uid)} EX装备失败: {e}")  
   
+        # 调整星级  
+        from ..models.custom import ChangeRarityUnit  # if not already imported at top  
+        star_map = {}  
+        if unit_id_1 and unit_id_1 in client.data.unit:  
+            star_map[unit_id_1] = int(self.get_config('set_cb_support_star_1'))  
+        if unit_id_2 and unit_id_2 in client.data.unit and unit_id_2 != unit_id_1:  
+            star_map[unit_id_2] = int(self.get_config('set_cb_support_star_2'))  
+          
+        change_rarity_list = []  
+        for uid in unit_ids:  
+            target_star = star_map.get(uid, 0)  
+            if target_star == 0:  
+                continue  
+            if uid not in client.data.unit:  
+                continue  
+            unit_data = client.data.unit[uid]  
+            if unit_data.unit_rarity != 5:  
+                self._warn(f"{db.get_unit_name(uid)}不是5星角色，无法调星")  
+                continue  
+            now_star = unit_data.battle_rarity if unit_data.battle_rarity else unit_data.unit_rarity  
+            if target_star == now_star:  
+                continue  
+            if 3 <= target_star <= 5 and 3 <= now_star <= 5:  
+                change_rarity_list.append(ChangeRarityUnit(unit_id=uid, battle_rarity=target_star))  
+                self._log(f"将{db.get_unit_name(uid)}星级从{now_star}调至{target_star}")  
+            else:  
+                self._warn(f"{db.get_unit_name(uid)}星级无法从{now_star}调至{target_star}")  
+        if change_rarity_list:  
+            await client.unit_change_rarity(change_rarity_list)
+            
         if not self.log:  
             raise SkipError("无操作")
        
-@name('挂地下城支援')  
-@default(True)  
-@unitchoice("set_dungeon_support_unit_id_2", "角色2（选填）")  
-@unitchoice("set_dungeon_support_unit_id_1", "角色1")  
-@description('设置指定角色为地下城支援（最多2个）')  
+@name('挂地下城支援')    
+@default(True)    
+@inttype("set_dungeon_support_star_2", "角色2星级", 0, [0, 3, 4, 5])  
+@inttype("set_dungeon_support_star_1", "角色1星级", 0, [0, 3, 4, 5])  
+@unitchoice("set_dungeon_support_unit_id_2", "角色2（选填）")    
+@unitchoice("set_dungeon_support_unit_id_1", "角色1")    
+@description('设置指定角色为地下城支援（最多2个），支持调星级') 
 class set_dungeon_support(Module):  
     async def do_task(self, client: pcrclient):  
         SUPPORT_COOLDOWN = 1800  
@@ -1632,17 +1667,46 @@ class set_dungeon_support(Module):
             await client.support_unit_change_setting(1, target_pos, 1, uid)  
             already_set[uid] = target_pos  
             occupied_positions.add(target_pos)  
-            self._log(f"已设置{unit_name}为地下城支援位{target_pos}")  
+            self._log(f"已设置{unit_name}为地下城支援位{target_pos}")             
   
+        # 调整星级  
+        star_configs = {  
+            unit_id_1: int(self.get_config('set_dungeon_support_star_1')),  
+            unit_id_2: int(self.get_config('set_dungeon_support_star_2')),  
+        }  
+        change_rarity_list = []  
+        for uid in unit_ids:  
+            target_star = star_configs.get(uid, 0)  
+            if target_star == 0:  
+                continue  
+            if uid not in client.data.unit:  
+                continue  
+            unit_data = client.data.unit[uid]  
+            if unit_data.unit_rarity != 5:  
+                self._warn(f"{db.get_unit_name(uid)}不是5星角色，无法调星")  
+                continue  
+            now_star = unit_data.battle_rarity if unit_data.battle_rarity else unit_data.unit_rarity  
+            if target_star == now_star:  
+                continue  
+            if 3 <= target_star <= 5 and 3 <= now_star <= 5:  
+                change_rarity_list.append(ChangeRarityUnit(unit_id=uid, battle_rarity=target_star))  
+                self._log(f"将{db.get_unit_name(uid)}星级从{now_star}调至{target_star}")  
+            else:  
+                self._warn(f"{db.get_unit_name(uid)}星级无法从{now_star}调至{target_star}")  
+        if change_rarity_list:  
+            await client.unit_change_rarity(change_rarity_list)
+            
         if not self.log:  
             raise SkipError("无操作")
             
             
-@name('挂好友支援')  
-@default(True)  
-@unitchoice("set_friend_support_unit_id_2", "角色2（选填）")  
-@unitchoice("set_friend_support_unit_id_1", "角色1")  
-@description('设置指定角色为好友支援（最多2个），好友可在关卡中借用')  
+@name('挂好友支援')    
+@default(True)    
+@inttype("set_friend_support_star_2", "角色2星级", 0, [0, 3, 4, 5])  
+@inttype("set_friend_support_star_1", "角色1星级", 0, [0, 3, 4, 5])  
+@unitchoice("set_friend_support_unit_id_2", "角色2（选填）")    
+@unitchoice("set_friend_support_unit_id_1", "角色1")    
+@description('设置指定角色为好友支援（最多2个），好友可在关卡中借用，支持调星级')
 class set_friend_support(Module):  
     async def do_task(self, client: pcrclient):  
         SUPPORT_COOLDOWN = 1800  
@@ -1743,6 +1807,33 @@ class set_friend_support(Module):
             occupied_positions.add(target_pos)  
             self._log(f"已设置{unit_name}为好友支援位{target_pos}")  
   
+        # 调整星级  
+        star_configs = {  
+            unit_id_1: int(self.get_config('set_friend_support_star_1')),  
+            unit_id_2: int(self.get_config('set_friend_support_star_2')),  
+        }  
+        change_rarity_list = []  
+        for uid in unit_ids:  
+            target_star = star_configs.get(uid, 0)  
+            if target_star == 0:  
+                continue  
+            if uid not in client.data.unit:  
+                continue  
+            unit_data = client.data.unit[uid]  
+            if unit_data.unit_rarity != 5:  
+                self._warn(f"{db.get_unit_name(uid)}不是5星角色，无法调星")  
+                continue  
+            now_star = unit_data.battle_rarity if unit_data.battle_rarity else unit_data.unit_rarity  
+            if target_star == now_star:  
+                continue  
+            if 3 <= target_star <= 5 and 3 <= now_star <= 5:  
+                change_rarity_list.append(ChangeRarityUnit(unit_id=uid, battle_rarity=target_star))  
+                self._log(f"将{db.get_unit_name(uid)}星级从{now_star}调至{target_star}")  
+            else:  
+                self._warn(f"{db.get_unit_name(uid)}星级无法从{now_star}调至{target_star}")  
+        if change_rarity_list:  
+            await client.unit_change_rarity(change_rarity_list)
+            
         if not self.log:  
             raise SkipError("无操作")          
        
