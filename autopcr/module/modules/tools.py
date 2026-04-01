@@ -1,5 +1,5 @@
 from typing import List, Set
-
+ 
 from ...util.ilp_solver import memory_use_average
 import time
 from ...model.common import ChangeRarityUnit, DeckListData, ExtraEquipChangeSlot, ExtraEquipChangeUnit, GachaPointInfo, GrandArenaHistoryDetailInfo, GrandArenaHistoryInfo, GrandArenaSearchOpponent, ProfileUserInfo, RankingSearchOpponent, RedeemUnitInfo, RedeemUnitSlotInfo, UnitData, UnitDataLight, VersusResult, VersusResultDetail
@@ -1528,7 +1528,6 @@ class set_cb_support(Module):
                 self._warn(f"{db.get_unit_name(uid)} EX装备失败: {e}")  
   
         # 调整星级  
-        from ..models.custom import ChangeRarityUnit  # if not already imported at top  
         star_map = {}  
         if unit_id_1 and unit_id_1 in client.data.unit:  
             star_map[unit_id_1] = int(self.get_config('set_cb_support_star_1'))  
