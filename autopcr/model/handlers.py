@@ -605,6 +605,9 @@ class SevenTopResponse(responses.SevenTopResponse):
             mgr.unlock_story_ids = list(dict.fromkeys((mgr.unlock_story_ids or []) + self.unlock_story_ids))
         if self.missions:
             mgr.missions = self.missions
+        if self.login_bonus:
+            for item in self.login_bonus.rewards or []:
+                mgr.update_inventory(item)
 
 @handles
 class SevenStoryTopResponse(responses.SevenStoryTopResponse):
