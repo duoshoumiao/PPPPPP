@@ -1366,7 +1366,6 @@ async def _remove_unit_from_other_supports(client: pcrclient, support_info, unit
 @unitchoice("set_cb_support_unit_id_2", "角色2（选填）")    
 @unitchoice("set_cb_support_unit_id_1", "角色1")    
 @description('设置指定角色为会战支援（最多2个），并自动穿满会战EX装备，支持调星级')    
-class set_cb_support(Module): 
 class set_cb_support(Module):  
     async def do_task(self, client: pcrclient):  
         SUPPORT_COOLDOWN = 1800  
