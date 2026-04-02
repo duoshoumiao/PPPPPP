@@ -4,7 +4,7 @@ from PIL import Image, ImageFont, ImageDraw
 from ..constants import DATA_DIR, CACHE_DIR  
 from .draw_table import grid2img, json2img  
 from pathlib import Path  
-  
+from ..db.imagemgr import instance as imgmgr    
 class Drawer():  
   
     font_path = os.path.join(DATA_DIR, "微软雅黑.ttf")  
@@ -88,7 +88,6 @@ class Drawer():
   
     async def draw_ex_equip_result(self, data: "ModuleResult") -> Image.Image:  
         """渲染带EX装备图标的预览图"""  
-        from ..db.imagemgr import instance as imgmgr  
   
         colors = self.color()  
         font = self.font  
