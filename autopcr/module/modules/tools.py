@@ -2004,9 +2004,9 @@ class one_click_ex_equip(Module):
                     # 彩装额外显示词条  
                     if db.ex_equipment_data[ex.ex_equipment_id].rarity == 5:  
                         sub_str = db.get_ex_equip_sub_status_str(ex.ex_equipment_id, ex.sub_status or [])  
-                        self._log(f"  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str}) 词条:{sub_str}")  
+                        self._log(f"[ex:{ex.ex_equipment_id}]  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str}) 词条:{sub_str}") 
                     else:  
-                        self._log(f"  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str})")  
+                        self._log(f"[ex:{ex.ex_equipment_id}]  槽位{slot_id}: {name}★{star} 战力+{cur_power} ({cur_attr_str})") 
   
             for slot_id in [1, 2, 3]:  
                 cands = slot_candidates[slot_id]  
@@ -2033,7 +2033,7 @@ class one_click_ex_equip(Module):
                         else:  
                             owner_info += f", {', '.join(owner_parts)}]" 
                     sub_info = f" 词条:{sub_str}" if sub_str else ""  
-                    self._log(f"  {idx}. {name}★{star} 战力+{power} ({attr_str}){sub_info}{owner_info}")  
+                    self._log(f"[ex:{ex_id}]  {idx}. {name}★{star} 战力+{power} ({attr_str}){sub_info}{owner_info}") 
                 if not cands:  
                     self._log(f"  无可用装备")  
         else:  

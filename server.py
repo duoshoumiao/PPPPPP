@@ -2157,7 +2157,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
         await botev.finish(f"已有正在运行的自动换防任务，请先发送 {prefix}终止换防")  
       
     duration = 1800  # 30分钟  
-    interval = 5   # 5秒  
+    interval = 3   # 3秒  
     shuffle_count = 0  
       
     stop_event = asyncio.Event()  
@@ -2179,7 +2179,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
             for h in history_resp.grand_arena_history_list:  
                 known_log_ids.add(h.log_id)  
           
-        await botev.send(f"{alias} pjjc自动换防已开启，持续30分钟，每5秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
+        await botev.send(f"{alias} pjjc自动换防已开启，持续30分钟，每3秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
           
         start_time = _time.time()  
           

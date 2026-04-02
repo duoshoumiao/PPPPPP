@@ -73,7 +73,7 @@ class unit_story_reading(Module):
         read_story.add(0) # no pre story
         now = apiclient.datetime
         for story in db.unit_story:
-            if story.story_group_id == 1255:  # 忽略魔姬剧情
+            if story.story_group_id in [1295, 1255]:  #忽略剧情
                 continue
             if (
                 story.read_process_flag and
