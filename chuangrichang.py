@@ -131,6 +131,28 @@ def update_secret_status(user_dirs, enable: bool):
     
     return result
 
+def reset_secret_password(secret_file):
+    """重置secret文件中的password字段为123456789，default_account字段为空字符串，保留其他字段不变"""
+    try:
+        # 读取原始内容
+        with open(secret_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # 解析JSON（保留原有结构）
+        secret_data = json.loads(content)
+        # 重置密码
+        secret_data['password'] = '123456789'
+        # 新增：重置default_account为空字符串
+        secret_data['default_account'] = ""
+        
+        # 单行紧凑格式写入（保持原有格式）
+        with open(secret_file, 'w', encoding='utf-8') as f:
+            json.dump(secret_data, f, ensure_ascii=False, separators=(',', ':'))
+        
+        return True
+    except Exception as e:
+        raise Exception(f"重置secret密码和default_account失败: {str(e)}")
+
 async def create_daily_config(user_id, username=None, password=None, filename=None):
     try:
         hoshino_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -165,10 +187,10 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
         file_msg = ""
         # 检查secret文件是否存在
         if not os.path.exists(secret_file):
-            # 文件不存在时才创建默认配置（单行格式）
+            # 文件不存在时创建默认配置（单行格式）
             default_config = {
                 "password": "123456789",
-                "default_account": "",
+                "default_account": "",  # 确保初始值为空字符串
                 "clan": False,
                 "admin": False,
                 "disabled": False
@@ -176,10 +198,14 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
             # 单行紧凑格式输出
             with open(secret_file, 'w', encoding='utf-8') as f:
                 json.dump(default_config, f, ensure_ascii=False, separators=(',', ':'))
-            file_msg = "✅ 初始secret配置已创建（单行格式）"
+            file_msg = "✅ 初始secret配置已创建（单行格式），密码已重置为123456789，default_account已置空"
         else:
-            # 文件存在时不修改secret，仅提示
-            file_msg = "✅ secret文件已存在，未修改原有配置"
+            # 文件存在时重置密码和default_account，保留其他配置
+            try:
+                reset_secret_password(secret_file)
+                file_msg = "✅ secret文件已存在，密码已重置为123456789，default_account已置空（其他配置保留）"
+            except Exception as e:
+                file_msg = f"✅ secret文件已存在，⚠️ 密码和default_account重置失败: {str(e)}"
         
         # ========== 修复3：移除错误的文件夹创建判断，直接处理文件复制 ==========
         # 1. 检查桌面是否有账号文件
@@ -225,9 +251,9 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
         return f'''【清日常配置创建完成】
 {file_msg}
 🔧🔧 使用说明：
-1. 登录网站的账号为QQ号，初始密码为123456789，请及时修改
-2. 上去按指示点击圆点[CQ:image,file=https://docimg6.docs.qq.com/image/AgAACIUgb5osrIDjZllIBJ-ZIlyD7UtV.png?w=301&h=327]再点击配置填账号密码，再进入【日常】页面修改需求
-3. 平时可使用【#配置日常】召唤网站
+1. 登录网站的账号为QQ号，初始密码为123456789，请及时修改[CQ:image,file=https://docimg7.docs.qq.com/image/AgAACIUgb5q_Vr3vGG5NIJHWpiWpcnHA.png?w=596&h=704]
+2. 上去按指示点击圆点[CQ:image,file=https://docimg5.docs.qq.com/image/AgAACIUgb5qsbLYUQOpJ2aZ8RMoZceuJ.png?w=759&h=814]再点击配置填账号密码，[CQ:image,file=https://docimg5.docs.qq.com/image/AgAACIUgb5rXOV9adwdE6ai5YP1EccG_.png?w=667&h=554]再进入【日常】页面修改需求
+3. [CQ:image,file=https://docimg3.docs.qq.com/image/AgAACIUgb5q18BAEbbFKL72SgBXRIu_R.png?w=452&h=174]平时可使用【#配置日常】召唤网站
 
 🌐🌐 访问地址: {login_url}
 '''
@@ -237,6 +263,7 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
         sv.logger.error(error_msg)
         return f'❌❌ 创建失败：{str(e)}'
 
+# 群聊 - 清日常创建
 @sv.on_prefix('清日常创建')
 async def create_daily_file(bot, ev: CQEvent):
     user_id = str(ev.user_id)
@@ -253,7 +280,7 @@ async def create_daily_file(bot, ev: CQEvent):
     result = await create_daily_config(user_id, username=None, password=None, filename=filename)
     await bot.send(ev, result)
 
-# 禁用功能
+# 群聊 - 清日常禁用
 @sv.on_prefix('清日常禁用')
 async def disable_daily(bot, ev: CQEvent):
     args = ev.message.extract_plain_text().strip().split()
@@ -273,7 +300,7 @@ async def disable_daily(bot, ev: CQEvent):
     
     await bot.send(ev, msg)
 
-# 解禁功能
+# 群聊 - 清日常解禁
 @sv.on_prefix('清日常解禁')
 async def enable_daily(bot, ev: CQEvent):
     args = ev.message.extract_plain_text().strip().split()
@@ -293,6 +320,7 @@ async def enable_daily(bot, ev: CQEvent):
     
     await bot.send(ev, msg)
 
+# 私聊 - 清日常创建
 # @on_command('清日常创建', aliases=('创建清日常', '初始化清日常'), permission=priv.NORMAL)
 async def private_create_daily(session: CommandSession):
     user_id = str(session.event.user_id)
@@ -315,3 +343,43 @@ async def private_create_daily(session: CommandSession):
     
     result = await create_daily_config(user_id, username, password, filename)
     await session.send(result)
+
+# 私聊 - 清日常禁用
+@on_command('清日常禁用', aliases=('禁用清日常',), permission=priv.NORMAL)
+async def private_disable_daily(session: CommandSession):
+    args = session.current_arg_text.strip().split()
+    if not args:
+        await session.send("❌ 请指定要禁用的文件夹名，支持批量：\n格式：清日常禁用 文件夹名1 [文件夹名2...]")
+        return
+    
+    # 执行禁用操作
+    result = update_secret_status(args, enable=False)
+    
+    # 构造回复消息
+    msg = "【清日常禁用结果】\n"
+    if result["success"]:
+        msg += f"✅ 成功禁用：{', '.join(result['success'])}\n"
+    if result["failed"]:
+        msg += f"❌ 禁用失败：\n" + "\n".join([f"  - {item}" for item in result["failed"]])
+    
+    await session.send(msg)
+
+# 私聊 - 清日常解禁
+@on_command('清日常解禁', aliases=('解禁清日常',), permission=priv.NORMAL)
+async def private_enable_daily(session: CommandSession):
+    args = session.current_arg_text.strip().split()
+    if not args:
+        await session.send("❌ 请指定要解禁的文件夹名，支持批量：\n格式：清日常解禁 文件夹名1 [文件夹名2...]")
+        return
+    
+    # 执行解禁操作
+    result = update_secret_status(args, enable=True)
+    
+    # 构造回复消息
+    msg = "【清日常解禁结果】\n"
+    if result["success"]:
+        msg += f"✅ 成功解禁：{', '.join(result['success'])}\n"
+    if result["failed"]:
+        msg += f"❌ 解禁失败：\n" + "\n".join([f"  - {item}" for item in result["failed"]])
+    
+    await session.send(msg)
