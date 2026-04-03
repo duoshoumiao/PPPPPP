@@ -151,7 +151,7 @@ def reset_secret_password(secret_file):
         
         return True
     except Exception as e:
-        raise Exception(f"重置secret密码和default_account失败: {str(e)}")
+        raise Exception(f"重置secret密码和默认账号清空失败: {str(e)}")
 
 async def create_daily_config(user_id, username=None, password=None, filename=None):
     try:
@@ -198,14 +198,14 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
             # 单行紧凑格式输出
             with open(secret_file, 'w', encoding='utf-8') as f:
                 json.dump(default_config, f, ensure_ascii=False, separators=(',', ':'))
-            file_msg = "✅ 初始secret配置已创建（单行格式），密码已重置为123456789，default_account已置空"
+            file_msg = "✅ 初始secret配置已创建（单行格式），密码已重置为123456789，默认账号已置空"
         else:
             # 文件存在时重置密码和default_account，保留其他配置
             try:
                 reset_secret_password(secret_file)
-                file_msg = "✅ secret文件已存在，密码已重置为123456789，default_account已置空（其他配置保留）"
+                file_msg = "✅ secret文件已存在，密码已重置为123456789，默认账号已置空（其他配置保留）"
             except Exception as e:
-                file_msg = f"✅ secret文件已存在，⚠️ 密码和default_account重置失败: {str(e)}"
+                file_msg = f"✅ secret文件已存在，⚠️ 密码和默认账号重置失败: {str(e)}"
         
         # ========== 修复3：移除错误的文件夹创建判断，直接处理文件复制 ==========
         # 1. 检查桌面是否有账号文件
