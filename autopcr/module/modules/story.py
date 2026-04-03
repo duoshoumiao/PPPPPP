@@ -73,7 +73,7 @@ class unit_story_reading(Module):
         read_story.add(0) # no pre story
         now = apiclient.datetime
         for story in db.unit_story:
-            if story.story_group_id in [1295, 1255]:  #忽略剧情
+            if story.story_group_id == 1255:  # 忽略魔姬剧情
                 continue
             if (
                 story.read_process_flag and
@@ -190,7 +190,7 @@ class hatsune_story_reading(Module):
             for story_info in event_storys.values():
                 if story_info.status == eEventSubStoryStatus.READED:
                     read_story.add(story_info.story_id)
-            for story in db.get_seven_event_stories(event.event_id):
+            for story in db.seven_event_story_data.get(event.event_id, []):
                 story_info = event_storys.get(story.story_id)
                 if not story_info:
                     continue
@@ -225,14 +225,23 @@ class seven_obtent_reading(Module):
         seven_story_list = client.data.seven_story_list if client.data.seven_story_list is not None else {}
 
         for event in db.get_active_seven():
-            if not db.get_seven_obtent_stories(event.event_id):
+            if not db.seven_obtent_story_data.get(event.event_id):
+                continue
+            top = await client.get_seven_top(event.event_id)
+            killed_boss = [info.quest_id for info in top.boss_info or [] if info.appear_num > 1]
+
+            condition = db.seven_contents_condition.get((event.event_id, 4))
+            if condition and \
+                (not condition.condition_story or condition.condition_story not in read_story) and \
+                (not condition.condition_boss or condition.condition_boss in killed_boss):
+                self._log(f"{db.event_name.get(event.event_id, event.event_id)}未解锁活动子剧情")
                 continue
 
             while True:
                 await client.get_seven_obtent_top(event.event_id)
                 event_storys = seven_story_list.get(event.event_id, {})
                 unread_story = None
-                for story in db.get_seven_obtent_stories(event.event_id):
+                for story in db.seven_obtent_story_data.get(event.event_id, []):
                     story_info = event_storys.get(story.story_id)
                     if not story_info:
                         continue

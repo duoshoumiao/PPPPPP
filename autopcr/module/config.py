@@ -353,7 +353,7 @@ class ConditionalExecution1Config(ConditionalExecutionClient, MultiChoiceConfig)
 
 class ConditionalExecution2Config(ConditionalExecutionDB, MultiChoiceConfig):
     def __init__(self, key: str, desc: str = "执行条件", default=[], check: bool = True):
-        super().__init__(key, desc, default, ['n3以上前夕', 'n3以上首日午前', 'h3以上前夕', '会战前夕', '会战期间', '总是执行'], check)
+        super().__init__(key, desc, default, ['n3以上前夕', 'n3以上首日午前', 'h3以上前夕', '会战前夕午后', '会战前夕', '会战期间午后', '会战期间', '总是执行'], check)
 
 class ConditionalExecution3Config(ConditionalExecutionClient, MultiChoiceConfig):
     def __init__(self, key: str, desc: str = "执行条件", default=[], check: bool = True):

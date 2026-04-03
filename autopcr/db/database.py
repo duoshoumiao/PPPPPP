@@ -1,4 +1,3 @@
-
 from typing import List, Dict, Set, Tuple, Union, Optional
 import typing
 import asyncio
@@ -445,22 +444,6 @@ class database():
         )
 
     @lazy_property
-    def seven_schedule(self) -> Dict[int, SevenSchedule]:
-        with self.dbmgr.session() as db:
-            return (
-                SevenSchedule.query(db)
-                .to_dict(lambda x: x.event_id, lambda x: x)
-            )
-
-    @lazy_property
-    def seven_schedule_by_schedule_id(self) -> Dict[int, SevenSchedule]:
-        with self.dbmgr.session() as db:
-            return (
-                SevenSchedule.query(db)
-                .to_dict(lambda x: x.schedule_id, lambda x: x)
-            )
-
-    @lazy_property
     def equip_max_rank_equip_slot(self) -> List[bool]:
         return [ # 简洁
                 [False, True, False, True, False, True],
@@ -488,6 +471,22 @@ class database():
             return (
                 HatsuneSchedule.query(db)
                 .to_dict(lambda x: x.event_id, lambda x: x)
+            )
+
+    @lazy_property
+    def seven_schedule(self) -> Dict[int, SevenSchedule]:
+        with self.dbmgr.session() as db:
+            return (
+                SevenSchedule.query(db)
+                .to_dict(lambda x: x.event_id, lambda x: x)
+            )
+
+    @lazy_property
+    def seven_schedule_by_schedule_id(self) -> Dict[int, SevenSchedule]:
+        with self.dbmgr.session() as db:
+            return (
+                SevenSchedule.query(db)
+                .to_dict(lambda x: x.schedule_id, lambda x: x)
             )
 
     @lazy_property
@@ -894,14 +893,6 @@ class database():
             )
 
     @lazy_property
-    def event_story_detail(self) -> List[EventStoryDetail]:
-        with self.dbmgr.session() as db:
-            return (
-                EventStoryDetail.query(db)
-                .to_list()
-            )
-
-    @lazy_property
     def seven_event_story_data(self) -> Dict[int, List[SevenStoryDatum]]:
         with self.dbmgr.session() as db:
             return (
@@ -919,6 +910,14 @@ class database():
                 .where(lambda x: x.contents_type == 4 and x.story_type == 5)
                 .group_by(lambda x: x.event_id)
                 .to_dict(lambda x: x.key, lambda x: sorted(x.to_list(), key=lambda y: y.story_id))
+            )
+
+    @lazy_property
+    def seven_contents_condition(self) -> Dict[Tuple[int, int], SevenContentsCondition]:
+        with self.dbmgr.session() as db:
+            return (
+                SevenContentsCondition.query(db)
+                .to_dict(lambda x: (x.event_id, x.contents_type), lambda x: x)
             )
 
     @lazy_property
@@ -1219,14 +1218,6 @@ class database():
                 .to_dict(lambda x: x.login_bonus_id, lambda x: x)
             )
 
-    @lazy_property  
-    def music_list(self) -> Dict[int, MusicList]:  
-        with self.dbmgr.session() as db:  
-            return (  
-                MusicList.query(db)  
-                .to_dict(lambda x: x.music_id, lambda x: x)  
-            )
-            
     @lazy_property
     def colosseum_schedule_data(self) -> Dict[int, ColosseumScheduleDatum]:
         with self.dbmgr.session() as db:
@@ -1437,6 +1428,14 @@ class database():
                 quests.sort(key=self.get_event_quest_order)
             return dict(ret)
 
+    @lazy_property  
+    def music_list(self) -> Dict[int, MusicList]:  
+        with self.dbmgr.session() as db:  
+            return (  
+                MusicList.query(db)  
+                .to_dict(lambda x: x.music_id, lambda x: x)  
+            )
+    
     @lazy_property
     def abd_story_data(self) -> Dict[int, AbdStoryDatum]:
         with self.dbmgr.session() as db:
@@ -2122,12 +2121,6 @@ class database():
 
         raise KeyError(f"无法确定seven活动任务类型: {event_id}:{mission.mission_id}")
 
-    def get_seven_event_stories(self, event_id: int) -> List[SevenStoryDatum]:
-        return self.seven_event_story_data.get(event_id, [])
-
-    def get_seven_obtent_stories(self, event_id: int) -> List[SevenStoryDatum]:
-        return self.seven_obtent_story_data.get(event_id, [])
-
     def is_daily_mission(self, mission_id: int) -> bool:
         return mission_id in self.daily_mission_data or mission_id in self.season_pack
 
@@ -2380,12 +2373,15 @@ class database():
                 .select(lambda x: (db.parse_time(x.start_time), db.parse_time(x.end_time)))
                 .to_list()
              )
+        is_afternoon = now >= self.get_start_time(now) + half_day
         campaign_list = {
             "n3以上前夕": lambda: not self.is_target_time(n3, now) and self.is_target_time(n3, tomorrow),
             "n3以上首日午前": lambda: self.is_target_time(n3, now) and not self.is_target_time(n3, now - half_day),
             "h3以上前夕": lambda: not self.is_target_time(h3, now) and self.is_target_time(h3, tomorrow),
             "会战前夕": lambda: not self.is_clan_battle_time(now) and self.is_clan_battle_time(tomorrow),
+            "会战前夕午后": lambda: not self.is_clan_battle_time(now) and self.is_clan_battle_time(tomorrow) and is_afternoon,
             "会战期间": lambda: self.is_clan_battle_time(now),
+            "会战期间午后": lambda: self.is_clan_battle_time(now) and is_afternoon,
             "总是执行": lambda: True,
         }
         if campaign not in campaign_list:
