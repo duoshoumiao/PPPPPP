@@ -971,6 +971,66 @@ async def send_llonebot_forward(botev, alias: str, content: str):
         except Exception as fallback_error:
             logger.error(f"降级发送也失败: {str(fallback_error)}")
 
+def _get_daily_modules(acc: Account):  
+    """获取已实现的日常模块列表（带序号），返回 [(idx, module), ...]"""  
+    modules = acc.modules_list.get_modules_list('daily')  
+    return [(i + 1, m) for i, m in enumerate(m for m in modules if m.implmented)]  
+  
+def _match_modules(targets: list, indexed_modules: list):  
+    """  
+    根据用户输入匹配模块，支持序号、精确name、精确key、模糊name。  
+    返回 (success_list, failed_list)  
+    """  
+    # 建立索引  
+    idx_map = {idx: m for idx, m in indexed_modules}  
+    name_map = {}  
+    key_map = {}  
+    for idx, m in indexed_modules:  
+        if m.name:  
+            name_map[m.name] = (idx, m)  
+        key_map[m.key] = (idx, m)  
+  
+    success = []  
+    failed = []  
+  
+    for target in targets:  
+        target = target.strip()  
+        if not target:  
+            continue  
+  
+        matched = None  
+  
+        # 1. 纯数字 -> 按序号  
+        if target.isdigit():  
+            num = int(target)  
+            if num in idx_map:  
+                matched = (num, idx_map[num])  
+            else:  
+                failed.append(f"{target}(序号不存在)")  
+                continue  
+        # 2. 精确匹配 key  
+        elif target in key_map:  
+            matched = key_map[target]  
+        # 3. 精确匹配 name  
+        elif target in name_map:  
+            matched = name_map[target]  
+        else:  
+            # 4. 模糊匹配 name  
+            fuzzy = [(idx, m) for idx, m in indexed_modules if m.name and target in m.name]  
+            if len(fuzzy) == 1:  
+                matched = fuzzy[0]  
+            elif len(fuzzy) > 1:  
+                names = ', '.join(f"{idx}.{m.name}" for idx, m in fuzzy)  
+                failed.append(f"{target}(匹配多个: {names})")  
+                continue  
+            else:  
+                failed.append(f"{target}(未找到)")  
+                continue  
+  
+        success.append(matched)  
+  
+    return success, failed  
+
 @sv.on_prefix(f"{prefix}")
 @wrap_hoshino_event
 @wrap_export  # 确保该装饰器会注入export参数
@@ -2622,61 +2682,6 @@ async def add_friend_tool(botev: BotEvent):
         "add_friend_viewer_id": viewer_id,  
     }  
     return config  
-
-
-  
-@sv.on_prefix(f"{prefix}日常面板")  
-@wrap_hoshino_event  
-@wrap_accountmgr  
-@wrap_account  
-async def daily_panel(botev: BotEvent, acc: Account):  
-    alias = escape(acc.alias)  
-    modules = acc.modules_list.get_modules_list('daily')  
-  
-    # 过滤未实现的模块  
-    items = []  
-    for m in modules:  
-        if not m.implmented:  
-            continue  
-        enabled = acc.data.config.get(m.key, m.default)  
-        status = "#成功" if enabled else "#跳过"  
-        items.append([m.name or m.key, status])  
-  
-    if not items:  
-        await botev.finish("未找到日常模块")  
-  
-    # 分成 3 列（可根据总数调整）  
-    num_cols = 3  
-    rows_per_col = math.ceil(len(items) / num_cols)  
-  
-    columns = []  
-    for i in range(num_cols):  
-        chunk = items[i * rows_per_col : (i + 1) * rows_per_col]  
-        if chunk:  
-            columns.append(chunk)  
-  
-    # 每列生成一张表格图片  
-    header = ["功能", "状态"]  
-    images = []  
-    for chunk in columns:  
-        img = await drawer.draw(header, chunk)  
-        images.append(img)  
-  
-    # 水平拼接  
-    if len(images) == 1:  
-        final_img = images[0]  
-    else:  
-        widths, heights = zip(*(img.size for img in images))  
-        max_height = max(heights)  
-        total_width = sum(widths)  
-        bg_color = drawer.color()['bg']  
-        final_img = Image.new('RGB', (total_width, max_height), bg_color)  
-        x_offset = 0  
-        for img in images:  
-            final_img.paste(img, (x_offset, 0))  
-            x_offset += img.size[0]  
-  
-    await botev.send(f"【{alias}】日常面板\n" + outp_b64(final_img))
     
 @sv.on_prefix(f"{prefix}日常设置")  
 @wrap_hoshino_event  
@@ -2845,7 +2850,57 @@ async def daily_detail(botev: BotEvent, acc: Account):
         msg_out += f"说明: {target_module.description}\n"  
     msg_out += outp_b64(img)  
     await botev.send(msg_out)    
+  
 
+  
+  
+@sv.on_prefix(f"{prefix}日常面板")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def daily_panel(botev: BotEvent, acc: Account):  
+    alias = escape(acc.alias)  
+    indexed_modules = _get_daily_modules(acc)  
+  
+    if not indexed_modules:  
+        await botev.finish("未找到日常模块")  
+  
+    # 构建每行数据: [序号, 功能名, 状态]  
+    items = []  
+    for idx, m in indexed_modules:  
+        enabled = acc.data.config.get(m.key, m.default)  
+        status = "#成功" if enabled else "#跳过"  
+        items.append([str(idx), m.name or m.key, status])  
+  
+    # 分成 3 列  
+    num_cols = 3  
+    rows_per_col = math.ceil(len(items) / num_cols)  
+  
+    header = ["序号", "功能", "状态"]  
+    images = []  
+    for i in range(num_cols):  
+        chunk = items[i * rows_per_col : (i + 1) * rows_per_col]  
+        if chunk:  
+            img = await drawer.draw(header, chunk)  
+            images.append(img)  
+  
+    # 水平拼接  
+    if len(images) == 1:  
+        final_img = images[0]  
+    else:  
+        widths, heights = zip(*(img.size for img in images))  
+        max_height = max(heights)  
+        total_width = sum(widths)  
+        bg = drawer.color().get('bg', '#222529')  
+        final_img = Image.new('RGB', (total_width, max_height), bg)  
+        x_offset = 0  
+        for img in images:  
+            final_img.paste(img, (x_offset, 0))  
+            x_offset += img.size[0]  
+  
+    await botev.send(f"【{alias}】日常面板\n" + outp_b64(final_img))  
+  
+  
 @sv.on_prefix(f"{prefix}日常开启")  
 @wrap_hoshino_event  
 @wrap_accountmgr  
@@ -2856,71 +2911,32 @@ async def daily_enable(botev: BotEvent, acc: Account):
   
     if not msg:  
         await botev.finish(  
-            f"请指定要开启的功能名称或key，多个用空格分隔\n"  
+            f"请指定序号或功能名，多个用空格分隔\n"  
+            f"示例：{prefix}日常开启 1 3 5\n"  
             f"示例：{prefix}日常开启 免费扭蛋 普通扭蛋\n"  
-            f"或：{prefix}日常开启 free_gacha normal_gacha\n"  
-            f"发送 {prefix}日常面板 查看所有功能"  
+            f"发送 {prefix}日常面板 查看序号"  
         )  
   
-    modules = acc.modules_list.get_modules_list('daily')  
+    indexed_modules = _get_daily_modules(acc)  
+    success, failed = _match_modules(msg, indexed_modules)  
   
-    name_map = {}  
-    key_map = {}  
-    for m in modules:  
-        if m.name:  
-            name_map[m.name] = m  
-        key_map[m.key] = m  
-  
-    success = []  
-    failed = []  
-  
-    for target in msg:  
-        target = target.strip()  
-        if not target:  
-            continue  
-  
-        matched_module = None  
-  
-        if target in key_map:  
-            matched_module = key_map[target]  
-        elif target in name_map:  
-            matched_module = name_map[target]  
-        else:  
-            fuzzy = [m for m in modules if m.name and target in m.name]  
-            if len(fuzzy) == 1:  
-                matched_module = fuzzy[0]  
-            elif len(fuzzy) > 1:  
-                names = ', '.join(f"{m.name}({m.key})" for m in fuzzy)  
-                failed.append(f"{target}(匹配到多个: {names})")  
-                continue  
-            else:  
-                fuzzy_key = [m for m in modules if target in m.key]  
-                if len(fuzzy_key) == 1:  
-                    matched_module = fuzzy_key[0]  
-                elif len(fuzzy_key) > 1:  
-                    names = ', '.join(f"{m.name}({m.key})" for m in fuzzy_key)  
-                    failed.append(f"{target}(匹配到多个: {names})")  
-                    continue  
-                else:  
-                    failed.append(f"{target}(未找到)")  
-                    continue  
-  
-        current = acc.data.config.get(matched_module.key, matched_module.default)  
+    toggled = []  
+    for idx, m in success:  
+        current = acc.data.config.get(m.key, m.default)  
         if current:  
-            failed.append(f"{matched_module.name}({matched_module.key}) 已是开启状态")  
-            continue  
+            failed.append(f"{idx}.{m.name}(已开启)")  
+        else:  
+            acc.data.config[m.key] = True  
+            toggled.append(f"{idx}.{m.name}")  
   
-        acc.data.config[matched_module.key] = True  
-        success.append(f"{matched_module.name}({matched_module.key})")  
-  
-    result_lines = []  
-    if success:  
-        result_lines.append("已开启: " + ", ".join(success))  
+    lines = []  
+    if toggled:  
+        lines.append("已开启: " + ", ".join(toggled))  
     if failed:  
-        result_lines.append("失败: " + ", ".join(failed))  
+        lines.append("跳过: " + ", ".join(failed))  
+    await botev.send(f"【{alias}】\n" + "\n".join(lines))  
   
-    await botev.send(f"【{alias}】\n" + "\n".join(result_lines))
-
+  
 @sv.on_prefix(f"{prefix}日常关闭")  
 @wrap_hoshino_event  
 @wrap_accountmgr  
@@ -2931,76 +2947,30 @@ async def daily_disable(botev: BotEvent, acc: Account):
   
     if not msg:  
         await botev.finish(  
-            f"请指定要关闭的功能名称或key，多个用空格分隔\n"  
+            f"请指定序号或功能名，多个用空格分隔\n"  
+            f"示例：{prefix}日常关闭 2 4 6\n"  
             f"示例：{prefix}日常关闭 免费扭蛋 普通扭蛋\n"  
-            f"或：{prefix}日常关闭 free_gacha normal_gacha\n"  
-            f"发送 {prefix}日常面板 查看所有功能"  
+            f"发送 {prefix}日常面板 查看序号"  
         )  
   
-    modules = acc.modules_list.get_modules_list('daily')  
+    indexed_modules = _get_daily_modules(acc)  
+    success, failed = _match_modules(msg, indexed_modules)  
   
-    # 建立 name->module 和 key->module 的映射  
-    name_map = {}  # name -> Module  
-    key_map = {}   # key -> Module  
-    for m in modules:  
-        if m.name:  
-            name_map[m.name] = m  
-        key_map[m.key] = m  
-  
-    success = []  
-    failed = []  
-  
-    for target in msg:  
-        target = target.strip()  
-        if not target:  
-            continue  
-  
-        matched_module = None  
-  
-        # 1. 精确匹配 key  
-        if target in key_map:  
-            matched_module = key_map[target]  
-        # 2. 精确匹配 name  
-        elif target in name_map:  
-            matched_module = name_map[target]  
-        else:  
-            # 3. 模糊匹配 name（名称包含 target）  
-            fuzzy = [m for m in modules if m.name and target in m.name]  
-            if len(fuzzy) == 1:  
-                matched_module = fuzzy[0]  
-            elif len(fuzzy) > 1:  
-                names = ', '.join(f"{m.name}({m.key})" for m in fuzzy)  
-                failed.append(f"{target}(匹配到多个: {names})")  
-                continue  
-            else:  
-                # 4. 模糊匹配 key  
-                fuzzy_key = [m for m in modules if target in m.key]  
-                if len(fuzzy_key) == 1:  
-                    matched_module = fuzzy_key[0]  
-                elif len(fuzzy_key) > 1:  
-                    names = ', '.join(f"{m.name}({m.key})" for m in fuzzy_key)  
-                    failed.append(f"{target}(匹配到多个: {names})")  
-                    continue  
-                else:  
-                    failed.append(f"{target}(未找到)")  
-                    continue  
-  
-        # 检查当前状态  
-        current = acc.data.config.get(matched_module.key, matched_module.default)  
+    toggled = []  
+    for idx, m in success:  
+        current = acc.data.config.get(m.key, m.default)  
         if not current:  
-            failed.append(f"{matched_module.name}({matched_module.key}) 已是关闭状态")  
-            continue  
+            failed.append(f"{idx}.{m.name}(已关闭)")  
+        else:  
+            acc.data.config[m.key] = False  
+            toggled.append(f"{idx}.{m.name}")  
   
-        acc.data.config[matched_module.key] = False  
-        success.append(f"{matched_module.name}({matched_module.key})")  
-  
-    result_lines = []  
-    if success:  
-        result_lines.append("已关闭: " + ", ".join(success))  
+    lines = []  
+    if toggled:  
+        lines.append("已关闭: " + ", ".join(toggled))  
     if failed:  
-        result_lines.append("失败: " + ", ".join(failed))  
-  
-    await botev.send(f"【{alias}】\n" + "\n".join(result_lines))  
+        lines.append("跳过: " + ", ".join(failed))  
+    await botev.send(f"【{alias}】\n" + "\n".join(lines))
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
