@@ -220,6 +220,7 @@ sv_help = f"""
 - {prefix}pjjc自动换防
 - {prefix}挂地下城/会战/好友支援 [星级]角色1 [[星级]角色2]  设置角色为支援，星级可选(3/4/5)，如：#挂好友支援 3水电
 - {prefix}一键穿ex +角色名 试穿/数字 1 2 3      数字0表示不改动    
+- {prefix}添加好友
 """.strip()
 
 if address is None:
@@ -2157,7 +2158,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
         await botev.finish(f"已有正在运行的自动换防任务，请先发送 {prefix}终止换防")  
       
     duration = 1800  # 30分钟  
-    interval = 3   # 3秒  
+    interval = 2   # 2秒  
     shuffle_count = 0  
       
     stop_event = asyncio.Event()  
@@ -2179,7 +2180,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
             for h in history_resp.grand_arena_history_list:  
                 known_log_ids.add(h.log_id)  
           
-        await botev.send(f"{alias} pjjc自动换防已开启，持续30分钟，每3秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
+        await botev.send(f"{alias} pjjc自动换防已开启，持续30分钟，每2秒检查一次被刺记录\n发送 {prefix}终止换防 可提前停止")  
           
         start_time = _time.time()  
           
@@ -2592,6 +2593,30 @@ async def search_ex_equip_id(botev: BotEvent):
     return {  
         "search_ex_equip_name": equip_name,  
     }
+  
+@register_tool("添加好友", "add_friend")  
+async def add_friend_tool(botev: BotEvent):  
+    msg = await botev.message()  
+    await botev.send("请稍等")  
+      
+    viewer_id = ""  
+    try:  
+        viewer_id = msg[0]  
+        del msg[0]  
+    except:  
+        pass  
+      
+    if not viewer_id:  
+        await botev.finish("请输入玩家UID，如：#添加好友 123456789")  
+      
+    if not viewer_id.isdigit():  
+        await botev.finish(f"玩家UID必须是数字: {viewer_id}")  
+      
+    config = {  
+        "add_friend_viewer_id": viewer_id,  
+    }  
+    return config  
+    
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}

@@ -222,6 +222,7 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        add_friend,
         search_ex_equip_id,
         ex_equip_rainbow_enchance,
         ex_equip_power_maximun,

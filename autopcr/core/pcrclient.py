@@ -30,6 +30,11 @@ class pcrclient(apiclient):
         self._base_keys = config
         self._keys = {}
  
+    async def send_friend_request(self, target_viewer_id: int):  
+        req = FriendRequestRequest()  
+        req.target_viewer_id = target_viewer_id  
+        return await self.request(req)
+
     @property
     def id(self) -> str:
         return self.session.id
