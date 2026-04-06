@@ -2844,6 +2844,37 @@ async def daily_set_config(botev: BotEvent, acc: Account):
     # ---- 设置值 ----  
     value_str = ' '.join(msg[2:])  
   
+    # 特殊关键词：清空  
+    if value_str in ('清空', '空', 'clear', 'none', '无'):  
+        if ctype == 'multi' or ctype == 'multi_search':  
+            final_value = []  
+        elif ctype == 'text':  
+            final_value = ""  
+        elif ctype == 'bool':  
+            final_value = False  
+        elif ctype in ('int', 'single'):  
+            # int/single 通常不能为空，恢复默认值  
+            final_value = target_config.default  
+        elif ctype == 'time':  
+            final_value = target_config.default  
+        else:  
+            final_value = target_config.default  
+  
+        acc.data.config[target_config.key] = final_value  
+  
+        if isinstance(final_value, list):  
+            display_val = '(空)' if not final_value else ', '.join(  
+                str(target_config.candidate_display(v)) for v in final_value  
+            )  
+        else:  
+            display_val = str(target_config.candidate_display(final_value)) if final_value is not None else '(空)'  
+  
+        await botev.send(  
+            f"【{alias}】{target_module.name}\n"  
+            f"{target_config.desc}: {display_val}"  
+        )  
+        return  
+  
     try:  
         candidates = target_config.candidates  
     except Exception:  
@@ -3143,6 +3174,36 @@ async def daily_disable(botev: BotEvent, acc: Account):
     if failed:  
         lines.append("跳过: " + ", ".join(failed))  
     await botev.send(f"【{alias}】\n" + "\n".join(lines))
+
+@register_tool("清除编队", "clear_my_party")  
+async def clear_my_party_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    msg = await botev.message()  
+    clear_tab_start_num = 1  
+    clear_party_start_num = 1  
+    clear_team_num = 1  
+    try:  
+        clear_tab_start_num = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        clear_party_start_num = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    try:  
+        clear_team_num = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+    config = {  
+        "clear_tab_start_num": clear_tab_start_num,  
+        "clear_party_start_num": clear_party_start_num,  
+        "clear_team_num": clear_team_num,  
+    }  
+    return config
+    
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
