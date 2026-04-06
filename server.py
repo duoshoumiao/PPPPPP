@@ -1736,15 +1736,21 @@ async def get_box_table(botev: BotEvent):
 async def free_gacha(botev: BotEvent):
     await botev.send("请稍等")
     msg = await botev.message()
-    gacha_id = 0
-    try:
-        gacha_id = int(msg[0])
-        del msg[0]
-    except:
-        pass
-    config = {
-        "free_gacha_select_ids": [gacha_id],
-        "today_end_gacha_no_do": False,
+    gacha_id_input = 0  
+    try:  
+        gacha_id_input = int(msg[0])  
+        del msg[0]  
+    except:  
+        pass  
+      
+    # 匹配带名字的候选项  
+    candidates = db.free_gacha_ids_candidate()  
+    matched = [c for c in candidates if int(str(c).split(':')[0]) == gacha_id_input]  
+    gacha_id = matched[0] if matched else str(gacha_id_input)  
+      
+    config = {  
+        "free_gacha_select_ids": [gacha_id],  
+        "today_end_gacha_no_do": False,  
     }
     return config
 

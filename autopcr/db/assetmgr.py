@@ -1,10 +1,13 @@
 #type: ignore
 from typing import List
 from ..util import aiorequests
+from ..util.logger import instance as logger
 from ..constants import CACHE_DIR
 import os, pydantic
 import UnityPy
+from UnityPy.enums import ClassIDType
 from ..util.logger import instance as logger
+UnityPy.config.FALLBACK_UNITY_VERSION = "2021.3.20f1"
 
 class content(pydantic.BaseModel):
     url: str = None
@@ -90,16 +93,33 @@ class assetmgr:
         self.root.register_to(self)
 
     async def download(self, url: str) -> bytes:
+        logger.info(f"resolving {url}...")
+        
         content = self.registries[url]
         def genHash(hash):
             return f'{self.pool}/{content.category}/{hash[:2]}/{hash}'
         return await content.download(genHash)
  
     async def db(self) -> bytes:
-        UnityPy.config.FALLBACK_UNITY_VERSION = "2021.3.20f1"
         ab = UnityPy.load(await self.download('a/masterdata_master.unity3d'))
         asset = ab.objects[0].read()
         return asset.script
+
+    async def unit_icon(self, unit_id: int) -> bytes:
+        ab = UnityPy.load(await self.download(f'a/unit_icon_unit_{unit_id}.unity3d'))
+        for object in ab.objects:
+            if object.type == ClassIDType.Texture2D:
+                asset = object.read()
+                return asset.image
+        return None
+
+    async def ex_equip_icon(self, equip_id: int) -> bytes:
+        ab = UnityPy.load(await self.download(f'a/icon_icon_extra_equip_{equip_id}.unity3d'))
+        for object in ab.objects:
+            if object.type == ClassIDType.Texture2D:
+                asset = object.read()
+                return asset.image
+        return None
 
 
 # should lock before use

@@ -2863,7 +2863,7 @@ class database():
         if not free_gacha_campaigns:
             return []
         free_gacha_campaign = min(free_gacha_campaigns)
-        return [gacha.gacha_id for gacha in self.campaign_free_gacha_data[free_gacha_campaign]]
+        return [f"{gacha.gacha_id}: {self.gacha_data[gacha.gacha_id].gacha_name}-{self.gacha_data[gacha.gacha_id].pick_up_chara_text}" for gacha in self.campaign_free_gacha_data[free_gacha_campaign] if gacha.gacha_id in self.gacha_data]
 
     def ex_equip_sub_status_candidate(self) -> List[int]:
         ids = list(set(j.status for i in self.ex_equipment_sub_status.values() for j in i.values()))

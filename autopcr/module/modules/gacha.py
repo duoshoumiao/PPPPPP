@@ -107,7 +107,7 @@ class free_gacha(Module):
             msg += "不自动抽取\n请自行决定是否抽取"
             raise SkipError(msg)
 
-        select_open_free_gacha_ids = open_free_gacha_ids & set(int(i) for i in free_gacha_select_ids)
+        select_open_free_gacha_ids = open_free_gacha_ids & set(int(str(i).split(':')[0]) for i in free_gacha_select_ids)
         if not select_open_free_gacha_ids:
             raise AbortError(f"没有可抽取的卡池，请重新配置")
         target_gacha_id = max(select_open_free_gacha_ids)
