@@ -686,3 +686,145 @@ class equip_pink_ex(Module):
 class equip_gold_ex(Module):  
     async def do_task(self, client: pcrclient):  
         await _equip_ex_by_serial(self, client, 'equip_gold_unit_id', 'equip_gold_serial_id', 3, '金')   
+        
+# ---- 保存/恢复EX装备状态 ----  
+  
+@name('保存ex状态')  
+@default(True)  
+@description('保存所有角色当前穿戴的普通EX装备状态，供恢复ex状态使用。数据保存在cache/modules/目录下，不影响账号配置。')  
+class save_ex_state(Module):  
+    async def do_task(self, client: pcrclient):  
+        state = {}  
+        total_ex = 0  
+        for unit_id in client.data.unit:  
+            unit = client.data.unit[unit_id]  
+            slots = []  
+            for ex_slot in unit.ex_equip_slot:  
+                slots.append(ex_slot.serial_id)  
+            if any(s != 0 for s in slots):  
+                state[str(unit_id)] = slots  
+                # 记录日志  
+                unit_name = db.get_unit_name(unit_id)  
+                slot_info = []  
+                for i, sid in enumerate(slots):  
+                    if sid != 0:  
+                        total_ex += 1  
+                        if sid in client.data.ex_equips:  
+                            ex = client.data.ex_equips[sid]  
+                            slot_info.append(f"槽{i+1}: {db.get_ex_equip_name(ex.ex_equipment_id)}(id:{sid})")  
+                        else:  
+                            slot_info.append(f"槽{i+1}: 未知装备(id:{sid})")  
+                self._log(f"{unit_name}: {', '.join(slot_info)}")  
+  
+        if not state:  
+            raise SkipError("没有角色穿戴普通EX装备，无需保存")  
+  
+        self.save_cache("ex_state", state)  
+        self._log(f"共保存了{len(state)}个角色的{total_ex}件普通EX装备状态")  
+  
+  
+@name('恢复ex状态')  
+@default(True)  
+@description('恢复之前保存的普通EX装备穿戴状态，需先执行保存ex状态。只处理有差异的部分，不会全部卸载。')  
+class restore_ex_state(Module):  
+    async def do_task(self, client: pcrclient):  
+        from os.path import join, exists  
+        import json  
+        save_cache_path = join(CACHE_DIR, "modules", "save_ex_state", self._parent.id + ".json")  
+        if not exists(save_cache_path):  
+            raise AbortError("未找到保存的EX状态，请先执行「保存ex状态」")  
+        with open(save_cache_path, "r") as f:  
+            cache = json.load(f)  
+        state = cache.get("ex_state", None)  
+        if not state:  
+            raise AbortError("保存的EX状态数据为空，请重新执行「保存ex状态」")  
+  
+        # 1. 构建当前 serial_id -> (unit_id, slot) 映射  
+        current_owner = {}  
+        for unit_id in client.data.unit:  
+            unit = client.data.unit[unit_id]  
+            for ex_slot in unit.ex_equip_slot:  
+                if ex_slot.serial_id != 0:  
+                    current_owner[ex_slot.serial_id] = (unit_id, ex_slot.slot)  
+  
+        # 2. 找出所有需要变更的 (unit_id, slot_num, target_serial_id)  
+        changes = []  
+        skip_cnt = 0  
+        for unit_id_str, slots in state.items():  
+            unit_id = int(unit_id_str)  
+            if unit_id not in client.data.unit:  
+                self._warn(f"角色{unit_id}已不存在，跳过")  
+                skip_cnt += 1  
+                continue  
+            unit = client.data.unit[unit_id]  
+            for i, saved_serial_id in enumerate(slots):  
+                if i >= len(unit.ex_equip_slot):  
+                    continue  
+                current_serial = unit.ex_equip_slot[i].serial_id  
+                if current_serial == saved_serial_id:  
+                    continue  # 已经一致，跳过  
+                # 检查目标装备是否还存在  
+                if saved_serial_id != 0 and saved_serial_id not in client.data.ex_equips:  
+                    unit_name = db.get_unit_name(unit_id)  
+                    self._warn(f"{unit_name} 槽{i+1}: 装备(id:{saved_serial_id})已不存在，跳过")  
+                    skip_cnt += 1  
+                    continue  
+                slot_num = unit.ex_equip_slot[i].slot  
+                changes.append((unit_id, slot_num, saved_serial_id))  
+  
+        if not changes:  
+            if skip_cnt:  
+                self._warn(f"所有保存的装备均无法恢复（{skip_cnt}项跳过）")  
+                return  
+            raise SkipError("当前EX装备状态与保存的一致，无需恢复")  
+  
+        # 3. 找出需要先释放的 serial_id（目标装备当前在别的角色身上）  
+        need_free = {}  # serial_id -> (owner_uid, owner_slot)  
+        for (unit_id, slot_num, target_serial) in changes:  
+            if target_serial != 0 and target_serial in current_owner:  
+                owner_uid, owner_slot = current_owner[target_serial]  
+                if owner_uid != unit_id or owner_slot != slot_num:  
+                    need_free[target_serial] = (owner_uid, owner_slot)  
+  
+        # 4. 按角色分组，卸载需要释放的槽位（合并同角色多槽位到一次请求）  
+        unequip_by_unit = {}  
+        for serial_id, (owner_uid, owner_slot) in need_free.items():  
+            unequip_by_unit.setdefault(owner_uid, []).append(  
+                ExtraEquipChangeSlot(slot=owner_slot, serial_id=0))  
+          
+        unequip_cnt = 0  
+        for uid, exchange_list in unequip_by_unit.items():  
+            await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                unit_id=uid, ex_equip_slot=exchange_list, cb_ex_equip_slot=None)])  
+            unequip_cnt += len(exchange_list)  
+        if unequip_cnt:  
+            self._log(f"释放了{len(unequip_by_unit)}个角色的{unequip_cnt}件装备")  
+  
+        # 5. 按角色分组，穿戴有差异的槽位（合并同角色多槽位到一次请求）  
+        equip_by_unit = {}  
+        for (unit_id, slot_num, target_serial) in changes:  
+            equip_by_unit.setdefault(unit_id, []).append(  
+                ExtraEquipChangeSlot(slot=slot_num, serial_id=target_serial))  
+  
+        equip_unit_cnt = 0  
+        equip_ex_cnt = 0  
+        for uid, exchange_list in equip_by_unit.items():  
+            await client.unit_equip_ex([ExtraEquipChangeUnit(  
+                unit_id=uid, ex_equip_slot=exchange_list, cb_ex_equip_slot=None)])  
+            unit_name = db.get_unit_name(uid)  
+            slot_info = []  
+            for slot_change in exchange_list:  
+                if slot_change.serial_id != 0:  
+                    ex = client.data.ex_equips[slot_change.serial_id]  
+                    slot_info.append(f"槽{slot_change.slot}: {db.get_ex_equip_name(ex.ex_equipment_id)}")  
+                    equip_ex_cnt += 1  
+                else:  
+                    slot_info.append(f"槽{slot_change.slot}: 卸下")  
+            equip_unit_cnt += 1  
+            self._log(f"{unit_name}: {', '.join(slot_info)}")  
+  
+        msg = f"共变更了{equip_unit_cnt}个角色的装备"  
+        if skip_cnt:  
+            msg += f"（{skip_cnt}项因角色或装备不存在而跳过）"  
+        self._log(msg)       
+       

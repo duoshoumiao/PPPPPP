@@ -227,6 +227,8 @@ sv_help = f"""
 - {prefix}日常开启 [昵称] 模块名/序号 开启指定日常功能  
 - {prefix}日常关闭 [昵称] 模块名/序号 关闭指定日常功能  
 - {prefix}日常设置 [昵称] 模块序号 选项序号 值       设置模块子选项
+- {prefix}保存ex状态 保存当前所有角色的普通EX装备穿戴状态
+- {prefix}恢复ex状态 恢复之前保存的普通EX装备穿戴状态
 """.strip()
 
 if address is None:
@@ -3203,7 +3205,16 @@ async def clear_my_party_tool(botev: BotEvent):
         "clear_team_num": clear_team_num,  
     }  
     return config
-    
+  
+@register_tool("保存ex状态", "save_ex_state")  
+async def save_ex_state_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    return {}  
+  
+@register_tool("恢复ex状态", "restore_ex_state")  
+async def restore_ex_state_tool(botev: BotEvent):  
+    await botev.send("请稍等")  
+    return {}  
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}

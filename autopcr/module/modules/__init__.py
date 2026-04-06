@@ -250,6 +250,8 @@ tool_modules = ModuleList(
         get_clan_support_unit,
         clear_my_party,
         remove_cb_ex_equip,
+        save_ex_state,        # 新增  
+        restore_ex_state,     # 新增  
         remove_cb_support,
         redeem_unit_swap,
         jjc_back,
