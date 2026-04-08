@@ -871,6 +871,22 @@ class DeckUpdateResponse(responses.DeckUpdateResponse):
         deck.unit_id_4 = request.unit_id_4
         deck.unit_id_5 = request.unit_id_5
 
+@handles  
+class DeckUpdateListResponse(responses.DeckUpdateListResponse):  
+    async def update(self, mgr: datamgr, request: DeckUpdateListRequest):  
+        if request.deck_list:  
+            for deck_data in request.deck_list:  
+                deck_number = ePartyType(deck_data.deck_number)  
+                if deck_number in mgr.deck_list:  
+                    deck = mgr.deck_list[deck_number]  
+                else:  
+                    deck = LoadDeckData()  
+                    deck.deck_number = deck_number  
+                    mgr.deck_list[deck_number] = deck  
+                for i in range(5):  
+                    unit_id = deck_data.unit_list[i] if i < len(deck_data.unit_list) else 0  
+                    setattr(deck, f"unit_id_{i + 1}", unit_id)
+
 @handles
 class SeasonPassRewardAcceptResponse(responses.SeasonPassRewardAcceptResponse):
     async def update(self, mgr: datamgr, request):
