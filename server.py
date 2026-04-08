@@ -3079,7 +3079,6 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
   
     shuffle_count = 0  
     check_interval = 2        # 每2秒检查一次被刺  
-    fast_interval = 240       # 被刺后换防间隔4分  
   
     stop_event = asyncio.Event()  
     _auto_def_stop_events[sender_qq] = stop_event  
@@ -3149,111 +3148,80 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
   
         await botev.send(  
             f"{alias} pjjc自动换防已开启\n"  
-            f"每2秒检测被刺记录，未被刺不换防\n"  
-            f"检测到被刺立即换防，之后每4分换防一次\n"  
+            f"每2秒检测被刺记录，被刺立即换防\n"  
+            f"未被刺不换防\n"  
             f"发送 {prefix}终止换防 可停止"  
         )  
   
-        been_attacked = False  # 是否曾被刺过  
-  
         while True:  
-            if been_attacked:  
-                # 已被刺换防过，不再检测，等待4分后换防  
-                try:  
-                    await asyncio.wait_for(stop_event.wait(), timeout=fast_interval)  
-                    await botev.send(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")  
-                    client.deactivate()  
-                    return  
-                except asyncio.TimeoutError:  
-                    pass  
+            # 每2秒检查一次  
+            try:  
+                await asyncio.wait_for(stop_event.wait(), timeout=check_interval)  
+                await botev.send(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")  
+                client.deactivate()  
+                return  
+            except asyncio.TimeoutError:  
+                pass  
   
-                # 定时换防  
-                try:  
-                    result = await do_shuffle()  
-                    if result[0] is None:  
-                        await botev.send(f"{alias} {result[1]}")  
-                        break  
+            # 检查被刺记录  
+            try:  
+                history_resp = await client.get_grand_arena_history()  
+                if history_resp.grand_arena_history_list:  
+                    new_attacks = []  
+                    for h in history_resp.grand_arena_history_list:  
+                        if h.log_id not in known_log_ids:  
+                            known_log_ids.add(h.log_id)  
+                            if not h.is_challenge:  
+                                opponent = h.opponent_user  
+                                attack_time = dt.fromtimestamp(h.versus_time)  
+                                new_attacks.append(f"{opponent.user_name}({opponent.viewer_id}) {attack_time} 被刺")  
   
-                    shuffle_count += 1  
-                    await botev.send(  
-                        f"{alias} 第{shuffle_count}次换防完成！\n"  
-                        f"{result[1]}\n"  
-                        f"下次换防将在4分后执行"  
-                    )  
-                except Exception as e:  
-                    logger.error(f"pjjc自动换防执行出错: {str(e)}")  
-                    await botev.send(f"{alias} 换防出错: {str(e)[:200]}")  
-                    try:  
-                        if client.logged == eLoginStatus.NOT_LOGGED:  
-                            await client.login()  
-                    except:  
-                        await botev.send(f"{alias} 重新登录失败，自动换防终止")  
-                        break  
+                    if new_attacks:  
+                        # 被刺了，立即换防  
+                        attack_msg = "\n".join(new_attacks)  
+                        try:  
+                            result = await do_shuffle()  
+                            if result[0] is None:  
+                                await botev.send(  
+                                    f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
+                                    f"尝试立即换防但{result[1]}"  
+                                )  
+                                break  
+                            shuffle_count += 1  
   
-            else:  
-                # 未被刺，每2秒检查一次  
-                try:  
-                    await asyncio.wait_for(stop_event.wait(), timeout=check_interval)  
-                    await botev.send(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")  
-                    client.deactivate()  
-                    return  
-                except asyncio.TimeoutError:  
-                    pass  
+                            # 换防后刷新历史记录基线，避免对比旧数据  
+                            history_resp2 = await client.get_grand_arena_history()  
+                            if history_resp2.grand_arena_history_list:  
+                                for h2 in history_resp2.grand_arena_history_list:  
+                                    known_log_ids.add(h2.log_id)  
   
-                # 检查被刺记录  
-                try:  
-                    history_resp = await client.get_grand_arena_history()  
-                    if history_resp.grand_arena_history_list:  
-                        new_attacks = []  
-                        for h in history_resp.grand_arena_history_list:  
-                            if h.log_id not in known_log_ids:  
-                                known_log_ids.add(h.log_id)  
-                                if not h.is_challenge:  
-                                    opponent = h.opponent_user  
-                                    attack_time = dt.fromtimestamp(h.versus_time)  
-                                    new_attacks.append(f"{opponent.user_name}({opponent.viewer_id}) {attack_time} 被刺")  
-  
-                        if new_attacks:  
-                            # 被刺了，立即换防，换防完再通知  
-                            attack_msg = "\n".join(new_attacks)  
+                            await botev.send(  
+                                f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
+                                f"已立即执行第{shuffle_count}次换防！\n"  
+                                f"{result[1]}\n"  
+                                f"继续每2秒检测被刺"  
+                            )  
+                        except Exception as e:  
+                            logger.error(f"pjjc自动换防被刺立即换防出错: {str(e)}")  
+                            await botev.send(  
+                                f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
+                                f"立即换防出错: {str(e)[:200]}"  
+                            )  
                             try:  
-                                result = await do_shuffle()  
-                                if result[0] is None:  
-                                    await botev.send(  
-                                        f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
-                                        f"尝试立即换防但{result[1]}"  
-                                    )  
-                                    break  
-                                shuffle_count += 1  
-                                been_attacked = True  
-                                await botev.send(  
-                                    f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
-                                    f"已立即执行第{shuffle_count}次换防！\n"  
-                                    f"{result[1]}\n"  
-                                    f"下次换防将在4分后执行"  
-                                )  
-                            except Exception as e:  
-                                logger.error(f"pjjc自动换防被刺立即换防出错: {str(e)}")  
-                                await botev.send(  
-                                    f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
-                                    f"立即换防出错: {str(e)[:200]}"  
-                                )  
-                                try:  
-                                    if client.logged == eLoginStatus.NOT_LOGGED:  
-                                        await client.login()  
-                                except:  
-                                    await botev.send(f"{alias} 重新登录失败，自动换防终止")  
-                                    break  
-                                been_attacked = True  
+                                if client.logged == eLoginStatus.NOT_LOGGED:  
+                                    await client.login()  
+                            except:  
+                                await botev.send(f"{alias} 重新登录失败，自动换防终止")  
+                                break  
   
-                except Exception as e:  
-                    logger.error(f"pjjc自动换防检查被刺出错: {str(e)}")  
-                    try:  
-                        if client.logged == eLoginStatus.NOT_LOGGED:  
-                            await client.login()  
-                    except:  
-                        await botev.send(f"{alias} 重新登录失败，自动换防终止")  
-                        break  
+            except Exception as e:  
+                logger.error(f"pjjc自动换防检查被刺出错: {str(e)}")  
+                try:  
+                    if client.logged == eLoginStatus.NOT_LOGGED:  
+                        await client.login()  
+                except:  
+                    await botev.send(f"{alias} 重新登录失败，自动换防终止")  
+                    break  
   
         client.deactivate()  
         await botev.send(f"{alias} pjjc自动换防已结束，共执行换防{shuffle_count}次")  
