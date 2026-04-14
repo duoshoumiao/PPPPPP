@@ -2755,24 +2755,31 @@ async def daily_set_config(botev: BotEvent, acc: Account):
         else:  
             await botev.finish("请输入: 开启 或 关闭")  
   
-    elif ctype in ('multi', 'multi_search'):  
-        parts = [p.strip() for p in value_str.replace('，', ',').split(',')]  
-        final_value = []  
-        for p in parts:  
-            matched_c = None  
-            for c in candidates:  
-                if str(target_config.candidate_display(c)) == p:  
-                    matched_c = c  
-                    break  
+    elif ctype in ('multi', 'multi_search'):    
+        parts = [p.strip() for p in value_str.replace('，', ',').split(',')]    
+        final_value = []    
+        for p in parts:    
+            matched_c = None    
+            for c in candidates:    
+                if str(target_config.candidate_display(c)) == p:    
+                    matched_c = c    
+                    break    
+            if matched_c is None:    
+                for c in candidates:    
+                    if str(c) == p:    
+                        matched_c = c    
+                        break    
+            # NEW: fallback — match by ID prefix (part before ':')  
             if matched_c is None:  
                 for c in candidates:  
-                    if str(c) == p:  
+                    c_str = str(c)  
+                    if ':' in c_str and c_str.split(':')[0].strip() == p.strip():  
                         matched_c = c  
                         break  
-            if matched_c is not None:  
-                final_value.append(matched_c)  
-            else:  
-                displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
+            if matched_c is not None:    
+                final_value.append(matched_c)    
+            else:    
+                displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]    
                 await botev.finish(f"值【{p}】不在候选范围\n可选: {', '.join(displays)}")  
   
     elif ctype == 'int':  
