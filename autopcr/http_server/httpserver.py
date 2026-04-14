@@ -1414,7 +1414,7 @@ data: {ret}\n\n'''
                 return "图片不存在", 404  
             return await send_file(filepath) 
         
-        @self.api.route('/daily/api/ex_equip_icon/<int:equip_id>', methods=['GET'])  
+        @self.api.route('/ex_equip_icon/<int:equip_id>', methods=['GET'])  
         @login_required  
         async def get_ex_equip_icon(equip_id: int):  
             from ..db.imagemgr import instance as imgmgr  
