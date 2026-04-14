@@ -753,13 +753,26 @@ class HttpServer:
                 status_str = ""  
                 if hasattr(result, 'status'):  
                     status_str = result.status.value if hasattr(result.status, 'value') else str(result.status)  
-  
+                  
+                image_b64 = None  
+                log_text = getattr(result, 'log', '') or ""  
+                if '[ex:' in log_text:  
+                    try:  
+                        import base64, io  
+                        img = await drawer.draw_task_result(result)  
+                        buf = io.BytesIO()  
+                        img.save(buf, format='PNG')  
+                        image_b64 = base64.b64encode(buf.getvalue()).decode()  
+                    except Exception as e:  
+                        logger.error(f"渲染EX装备图片失败: {e}")  
+                  
                 return {  
                     "status": "ok",  
                     "result": {  
                         "name": getattr(result, 'name', '') or matched_tool.name,  
-                        "log": getattr(result, 'log', '') or "",  
-                        "status": status_str  
+                        "log": log_text,  
+                        "status": status_str,  
+                        "image": image_b64  
                     }  
                 }, 200  
   
@@ -1263,12 +1276,26 @@ data: {ret}\n\n'''
                 if hasattr(result, 'status'):  
                     status_str = result.status.value if hasattr(result.status, 'value') else str(result.status)  
   
+                # 检测 [ex:] 标记，渲染为图片  
+                image_b64 = None  
+                log_text = getattr(result, 'log', '') or ""  
+                if '[ex:' in log_text:  
+                    try:  
+                        import base64, io  
+                        img = await drawer.draw_task_result(result)  
+                        buf = io.BytesIO()  
+                        img.save(buf, format='PNG')  
+                        image_b64 = base64.b64encode(buf.getvalue()).decode()  
+                    except Exception as e:  
+                        logger.error(f"渲染EX装备图片失败: {e}")  
+  
                 return {  
                     "status": "ok",  
                     "result": {  
                         "name": getattr(result, 'name', '') or matched_tool.name,  
-                        "log": getattr(result, 'log', '') or "",  
-                        "status": status_str  
+                        "log": log_text,  
+                        "status": status_str,  
+                        "image": image_b64  
                     }  
                 }, 200  
   
