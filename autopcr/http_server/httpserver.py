@@ -1412,23 +1412,6 @@ data: {ret}\n\n'''
             filepath = os.path.join(IMG_DIR, filename)  
             if not os.path.exists(filepath):  
                 return "图片不存在", 404  
-            return await send_file(filepath) 
-        
-        @self.api.route('/ex_equip_icon/<int:equip_id>', methods=['GET'])  
-        @login_required  
-        async def get_ex_equip_icon(equip_id: int):  
-            from ..db.imagemgr import instance as imgmgr  
-            import io  
-            try:  
-                icon = await imgmgr.ex_equip_icon(equip_id)  
-                if icon is None:  
-                    return "图标不存在", 404  
-                buf = io.BytesIO()  
-                icon.save(buf, format='PNG')  
-                buf.seek(0)  
-                return await send_file(buf, mimetype='image/png')  
-            except Exception as e:  
-                return f"获取图标失败: {e}", 500
-                        
+            return await send_file(filepath)       
 
                     
