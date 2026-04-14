@@ -18,6 +18,7 @@ from ..module.accountmgr import Account, AccountManager, instance as usermgr, Ac
     PermissionLimitedException, UserDisabledException, UserException
 from ..util.draw import instance as drawer
 from ..util.logger import instance as logger
+from .command_relay import FinishSignal, RelayBotEvent, SPECIAL_HANDLERS   # ← 新增
 
 APP_VERSION_MAJOR = 1
 APP_VERSION_MINOR = 7
@@ -422,6 +423,7 @@ class HttpServer:
         self.validate_server = {}
         self.configure_routes()
         self.qq_mod = qq_mod
+        self._auto_def_tasks = {}  # ← 新增：管理自动换防任务，key=qq
 
         self.app.after_request(self.log_request_info)
 
@@ -678,6 +680,96 @@ class HttpServer:
             else:
                 return "", 404
 
+        # ==================== 指令中继 ====================  
+        @self.api.route('/account/<string:acc>/command', methods=['POST'])  
+        @HttpServer.login_required()  
+        @HttpServer.wrapaccountmgr(readonly=True)  
+        @HttpServer.wrapaccount()  
+        async def command_relay(mgr: Account):  
+            from ...server import tool_info  # 延迟导入避免循环依赖  
+  
+            data = await request.get_json()  
+            command = data.get("command", "").strip()  
+            if not command:  
+                return {"status": "error", "message": "指令为空"}, 200  
+  
+            # 去掉前缀 #  
+            if command.startswith("#"):  
+                command = command[1:]  
+  
+            qq = current_user.auth_id  
+            accmgr = mgr._parent  # AccountManager  
+  
+            # ① 先匹配特殊指令（不在 register_tool 中的）  
+            for prefix_name, handler in SPECIAL_HANDLERS.items():  
+                if command.startswith(prefix_name):  
+                    remaining = command[len(prefix_name):].strip()  
+                    parts = remaining.split() if remaining else []  
+                    try:  
+                        result_text = await handler(mgr, parts)  
+                        return {"status": "finish", "message": result_text}, 200  
+                    except Exception as e:  
+                        return {"status": "error", "message": f"执行失败: {e}"}, 200  
+  
+            # ② 再匹配 register_tool 注册的指令  
+            matched_tool = None  
+            remaining = ""  
+            for tool_name, tool in tool_info.items():  
+                if command.startswith(tool_name):  
+                    matched_tool = tool  
+                    remaining = command[len(tool_name):].strip()  
+                    break  
+  
+            if not matched_tool:  
+                return {"status": "error", "message": f"未找到指令: {command.split()[0]}"}, 200  
+  
+            # 构造伪 BotEvent，解析参数  
+            parts = remaining.split() if remaining else []  
+            raw_remaining = " ".join(parts)  
+            relay_event = RelayBotEvent(qq, parts, raw_remaining)  
+  
+            try:  
+                config = await matched_tool.config_parser(relay_event)  
+                if config is None:  
+                    config = {}  
+            except FinishSignal as e:  
+                return {"status": "finish", "message": str(e.msg)}, 200  
+            except Exception as e:  
+                return {"status": "error", "message": f"参数解析失败: {e}"}, 200  
+  
+            # 执行指令  
+            try:  
+                merged = deepcopy(mgr.config)  
+                if isinstance(config, dict):  
+                    merged.update(config)  
+                clan = mgr._parent.secret.clan  
+  
+                resp = await asyncio.wait_for(  
+                    mgr.do_from_key(merged, matched_tool.key, clan),  
+                    timeout=300  
+                )  
+  
+                result = resp.get_result()  
+                status_str = ""  
+                if hasattr(result, 'status'):  
+                    status_str = result.status.value if hasattr(result.status, 'value') else str(result.status)  
+  
+                return {  
+                    "status": "ok",  
+                    "result": {  
+                        "name": getattr(result, 'name', '') or matched_tool.name,  
+                        "log": getattr(result, 'log', '') or "",  
+                        "status": status_str  
+                    }  
+                }, 200  
+  
+            except FinishSignal as e:  
+                return {"status": "finish", "message": str(e.msg)}, 200  
+            except asyncio.TimeoutError:  
+                return {"status": "error", "message": "执行超时（5分钟）"}, 200  
+            except Exception as e:  
+                return {"status": "error", "message": f"执行失败: {e}"}, 200
+        
         @self.api.route('/account/<string:acc>/<string:modules_key>', methods = ['GET'])
         @HttpServer.login_required()
         @HttpServer.wrapaccountmgr(readonly = True)
@@ -923,6 +1015,86 @@ data: {ret}\n\n'''
             logout_user()
             return "再见, " + accountmgr.qid, 200
 
+        # ===== 指令中继 =====  
+        @self.api.route('/account/<string:acc>/command', methods=['POST'])  
+        @HttpServer.login_required()  
+        @HttpServer.wrapaccountmgr(readonly=True)  
+        @HttpServer.wrapaccount()  
+        async def relay_command(mgr: Account):  
+            from ...server import tool_info  # 延迟导入避免循环依赖  
+  
+            data = await request.get_json()  
+            command: str = (data.get("command", "") or "").strip()  
+            if not command:  
+                return {"status": "error", "message": "请输入指令"}, 200  
+            if command.startswith("#"):  
+                command = command[1:]  
+  
+            qq = current_user.auth_id  
+            parts = command.split()  
+            if not parts:  
+                return {"status": "error", "message": "指令为空"}, 200  
+  
+            first = parts[0]  
+            matched_tool = None  
+            for tool_name in sorted(tool_info.keys(), key=len, reverse=True):  
+                if first.startswith(tool_name):  
+                    matched_tool = tool_info[tool_name]  
+                    remainder = first[len(tool_name):]  
+                    if remainder:  
+                        parts[0] = remainder  
+                    else:  
+                        parts.pop(0)  
+                    break  
+  
+            if not matched_tool:  
+                return {"status": "error", "message": f"未找到指令「{first}」"}, 200  
+  
+            raw_remaining = ' '.join(parts)  
+            relay_event = RelayBotEvent(qq, parts, raw_remaining)  
+  
+            try:  
+                config = await matched_tool.config_parser(relay_event)  
+                if config is None:  
+                    config = {}  
+            except FinishSignal as e:  
+                return {"status": "finish", "message": str(e.msg)}, 200  
+            except Exception as e:  
+                return {"status": "error", "message": f"参数解析失败: {e}"}, 200  
+  
+            try:  
+                merged = deepcopy(mgr.config)  
+                if isinstance(config, dict):  
+                    merged.update(config)  
+                clan = mgr._parent.secret.clan  
+  
+                resp = await asyncio.wait_for(  
+                    mgr.do_from_key(merged, matched_tool.key, clan),  
+                    timeout=300  
+                )  
+  
+                result = resp.get_result()  
+                status_str = ""  
+                if hasattr(result, 'status'):  
+                    status_str = result.status.value if hasattr(result.status, 'value') else str(result.status)  
+  
+                return {  
+                    "status": "ok",  
+                    "result": {  
+                        "name": getattr(result, 'name', '') or matched_tool.name,  
+                        "log": getattr(result, 'log', '') or "",  
+                        "status": status_str  
+                    }  
+                }, 200  
+  
+            except FinishSignal as e:  
+                return {"status": "finish", "message": str(e.msg)}, 200  
+            except asyncio.TimeoutError:  
+                return {"status": "error", "message": "执行超时（5分钟）"}, 200  
+            except Exception as e:  
+                return {"status": "error", "message": f"执行失败: {e}"}, 200  
+  
+        
         # frontend  
         @self.web.route("/", defaults={"path": ""})  
         @self.web.route("/<path:path>")  
