@@ -797,6 +797,191 @@ class HttpServer:
                 return "清日常超时，请稍后重试", 504  
             return mgr.generate_result_info(), 200
 
+        @self.api.route('/account/<string:acc>/pjjc_auto_def/start', methods=['POST'])  
+        @HttpServer.login_required()  
+        async def pjjc_auto_def_start(acc: str):  
+            import random  
+            import itertools  
+            from datetime import datetime as dt  
+  
+            qq = current_user.auth_id  
+  
+            if qq in self._auto_def_tasks:  
+                return {"status": "error", "message": "已有正在运行的自动换防任务，请先终止"}, 409  
+  
+            messages = []  
+            stop_event = asyncio.Event()  
+  
+            self._auto_def_tasks[qq] = {  
+                "stop_event": stop_event,  
+                "acc": acc,  
+                "task": None,  
+                "messages": messages,  
+                "shuffle_count": 0  
+            }  
+  
+            async def auto_def_loop():  
+                shuffle_count = 0  
+                check_interval = 2  
+                try:  
+                    from ..core.pcrclient import eLoginStatus  
+                    from ..model.common import DeckListData  
+                    from ..model.enums import ePartyType  
+  
+                    # 在后台任务内部自行加载账号，保持上下文在整个循环期间打开  
+                    async with usermgr.load(qq, readonly=True) as accountmgr:  
+                        async with accountmgr.load(acc) as mgr:  
+                            alias = mgr.alias  
+                            client = mgr.client  
+  
+                            # 更新 acc 字段为实际别名  
+                            if qq in self._auto_def_tasks:  
+                                self._auto_def_tasks[qq]["acc"] = alias  
+  
+                            await client.activate()  
+                            if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+                                await client.login()  
+  
+                            history_resp = await client.get_grand_arena_history()  
+                            known_log_ids = set()  
+                            if history_resp.grand_arena_history_list:  
+                                for h in history_resp.grand_arena_history_list:  
+                                    known_log_ids.add(h.log_id)  
+  
+                            messages.append(f"{alias} pjjc自动换防已开启，每{check_interval}秒检测被刺记录")  
+  
+                            async def do_shuffle():  
+                                info = await client.get_grand_arena_info()  
+                                limit_info = info.update_deck_times_limit  
+                                if limit_info.round_times == limit_info.round_max_limited_times:  
+                                    return None, f"已达到换防次数上限{limit_info.round_max_limited_times}，自动换防终止"  
+                                if limit_info.daily_times == limit_info.daily_max_limited_times:  
+                                    return None, f"已达到每日换防次数上限{limit_info.daily_max_limited_times}，自动换防终止"  
+  
+                                limit_msg = ""  
+                                team_cnt = 3  
+                                teams = [list(x) for x in itertools.permutations(range(team_cnt))]  
+                                teams = [x for x in teams if all(x[i] != i for i in range(team_cnt))]  
+                                ids = random.choice(teams)  
+  
+                                deck_list = []  
+                                for i in range(team_cnt):  
+                                    deck_number_src = getattr(ePartyType, f"GRAND_ARENA_DEF_{i + 1}")  
+                                    units = client.data.deck_list[deck_number_src]  
+                                    units_id = [getattr(units, f"unit_id_{j + 1}") for j in range(5)]  
+                                    deck = DeckListData()  
+                                    deck.deck_number = getattr(ePartyType, f"GRAND_ARENA_DEF_{ids[i] + 1}")  
+                                    deck.unit_list = units_id  
+                                    deck_list.append(deck)  
+  
+                                deck_list.sort(key=lambda x: x.deck_number)  
+                                await client.deck_update_list(deck_list)  
+  
+                                shuffle_msg = '\n'.join([f"队伍{i+1} -> 位置{ids[i]+1}" for i in range(team_cnt)])  
+                                result_msg = (  
+                                    f"{shuffle_msg}\n"  
+                                    f"本轮换防次数{limit_info.round_times + 1}/{limit_info.round_max_limited_times}\n"  
+                                    f"今日换防次数{limit_info.daily_times + 1}/{limit_info.daily_max_limited_times}"  
+                                )  
+                                return ids, result_msg  
+  
+                            while True:  
+                                try:  
+                                    await asyncio.wait_for(stop_event.wait(), timeout=check_interval)  
+                                    messages.append(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")  
+                                    client.deactivate()  
+                                    return  
+                                except asyncio.TimeoutError:  
+                                    pass  
+  
+                                try:  
+                                    history_resp = await client.get_grand_arena_history()  
+                                    if history_resp.grand_arena_history_list:  
+                                        new_attacks = []  
+                                        for h in history_resp.grand_arena_history_list:  
+                                            if h.log_id not in known_log_ids:  
+                                                known_log_ids.add(h.log_id)  
+                                                if not h.is_challenge:  
+                                                    opponent = h.opponent_user  
+                                                    attack_time = dt.fromtimestamp(h.versus_time)  
+                                                    new_attacks.append(f"{opponent.user_name}({opponent.viewer_id}) {attack_time}")  
+  
+                                        if new_attacks:  
+                                            attack_msg = "\n".join(new_attacks)  
+                                            try:  
+                                                result = await do_shuffle()  
+                                                if result[0] is None:  
+                                                    messages.append(f"检测到被刺：{attack_msg}\n{result[1]}")  
+                                                    break  
+                                                shuffle_count += 1  
+                                                if qq in self._auto_def_tasks:  
+                                                    self._auto_def_tasks[qq]["shuffle_count"] = shuffle_count  
+  
+                                                history_resp2 = await client.get_grand_arena_history()  
+                                                if history_resp2.grand_arena_history_list:  
+                                                    for h2 in history_resp2.grand_arena_history_list:  
+                                                        known_log_ids.add(h2.log_id)  
+  
+                                                messages.append(  
+                                                    f"检测到被刺：{attack_msg}\n"  
+                                                    f"已执行第{shuffle_count}次换防\n{result[1]}"  
+                                                )  
+                                            except Exception as e:  
+                                                messages.append(f"换防出错: {str(e)[:200]}")  
+                                                try:  
+                                                    if client.logged == eLoginStatus.NOT_LOGGED:  
+                                                        await client.login()  
+                                                except:  
+                                                    messages.append("重新登录失败，自动换防终止")  
+                                                    break  
+  
+                                except Exception as e:  
+                                    messages.append(f"检查被刺出错: {str(e)[:200]}")  
+                                    try:  
+                                        if client.logged == eLoginStatus.NOT_LOGGED:  
+                                            await client.login()  
+                                    except:  
+                                        messages.append("重新登录失败，自动换防终止")  
+                                        break  
+  
+                            client.deactivate()  
+                            messages.append(f"{alias} pjjc自动换防已结束，共执行换防{shuffle_count}次")  
+  
+                except Exception as e:  
+                    messages.append(f"自动换防异常终止: {str(e)[:300]}")  
+                finally:  
+                    self._auto_def_tasks.pop(qq, None)  
+  
+            task = asyncio.get_event_loop().create_task(auto_def_loop())  
+            self._auto_def_tasks[qq]["task"] = task  
+  
+            return {"status": "ok", "message": f"自动换防已启动，账号: {acc}"}, 200  
+  
+        @self.api.route('/pjjc_auto_def/stop', methods=['POST'])  
+        @HttpServer.login_required()  
+        async def pjjc_auto_def_stop():  
+            qq = current_user.auth_id  
+            if qq in self._auto_def_tasks:  
+                self._auto_def_tasks[qq]["stop_event"].set()  
+                return {"status": "ok", "message": "已发送终止信号"}, 200  
+            else:  
+                return {"status": "error", "message": "当前没有正在运行的自动换防任务"}, 404  
+  
+        @self.api.route('/pjjc_auto_def/status', methods=['GET'])  
+        @HttpServer.login_required()  
+        async def pjjc_auto_def_status():  
+            qq = current_user.auth_id  
+            if qq in self._auto_def_tasks:  
+                info = self._auto_def_tasks[qq]  
+                return {  
+                    "running": True,  
+                    "acc": info["acc"],  
+                    "shuffle_count": info.get("shuffle_count", 0),  
+                    "messages": info["messages"]  
+                }, 200  
+            else:  
+                return {"running": False, "messages": []}, 200 
+        
         @self.api.route('/account/<string:acc>/daily_result', methods = ['GET'])
         @HttpServer.login_required()
         @HttpServer.wrapaccountmgr(readonly = True)
@@ -1227,6 +1412,23 @@ data: {ret}\n\n'''
             filepath = os.path.join(IMG_DIR, filename)  
             if not os.path.exists(filepath):  
                 return "图片不存在", 404  
-            return await send_file(filepath)       
+            return await send_file(filepath) 
+        
+        @self.api.route('/daily/api/ex_equip_icon/<int:equip_id>', methods=['GET'])  
+        @login_required  
+        async def get_ex_equip_icon(equip_id: int):  
+            from ..db.imagemgr import instance as imgmgr  
+            import io  
+            try:  
+                icon = await imgmgr.ex_equip_icon(equip_id)  
+                if icon is None:  
+                    return "图标不存在", 404  
+                buf = io.BytesIO()  
+                icon.save(buf, format='PNG')  
+                buf.seek(0)  
+                return await send_file(buf, mimetype='image/png')  
+            except Exception as e:  
+                return f"获取图标失败: {e}", 500
+                        
 
                     
