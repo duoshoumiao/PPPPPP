@@ -1832,9 +1832,6 @@ async def clan_battle_knive(botev: BotEvent):
     
 
 @register_tool("拉角色练度", "unit_promote")
-async def unit_promote(botev: BotEvent):
-    await botev.send("请稍等")
-    msg = await botev.message()@register_tool("拉角色练度", "unit_promote")  
 async def unit_promote(botev: BotEvent):  
     await botev.send("请稍等")  
     msg = await botev.message()  
