@@ -1088,10 +1088,76 @@ class pcrclient(apiclient):
         req.mission_type = mission_type
         return await self.request(req)
 
+    async def get_hatsune_dear_top(self, event_id: int):
+        req = HatsuneDearTopRequest()
+        req.event_id = event_id
+        return await self.request(req)
+
+    async def get_hatsune_gacha_index(self, event_id: int, gacha_id: int):
+        req = EventGachaIndexRequest()
+        req.event_id = event_id
+        req.gacha_id = gacha_id
+        return await self.request(req)
+
     async def get_seven_gacha_index(self, event_id: int):
         req = SevenGachaIndexRequest()
         req.schedule_id = db.get_event_schedule_id(event_id)
         req.gacha_id = db.get_event_gacha_id(event_id)
+        return await self.request(req)
+
+    async def hatsune_boss_skip(self, event_id: int, boss_id: int, times: int, ticket: int):
+        req = HatsuneBossBattleSkipRequest()
+        req.event_id = event_id
+        req.boss_id = boss_id
+        req.exec_skip_num = times
+        req.current_boss_ticket_num = ticket
+        req.current_skip_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
+        return await self.request(req)
+
+    async def get_profile(self, user: int):
+        req = ProfileGetRequest()
+        req.target_viewer_id = user
+        return await self.request(req)
+
+    async def shiori_mission_receive(self, event_id: int, type: int):
+        req = ShioriMissionAcceptRequest()
+        req.event_id = event_id
+        req.type = type
+        req.id = 0
+        req.buy_id = 0
+        return await self.request(req)
+
+    async def get_shiori_top(self):
+        if not self.data.is_quest_cleared(11003002):
+            raise SkipError("未解锁外传")
+        req = ShioriTopRequest()
+        return await self.request(req)
+
+    async def get_shiori_event_top(self, event: int):
+        req = ShioriEventTopRequest()
+        req.event_id = event
+        return await self.request(req)
+
+    async def get_shiori_dear_top(self, event: int):
+        req = ShioriDearTopRequest()
+        req.event_id = event
+        return await self.request(req)
+
+    async def read_shiori_dear(self, event_id: int, story_id: int):
+        req = ShioriDearFinishRequest()
+        req.event_id = event_id
+        req.story_id = story_id
+        req.choice = 1
+        return await self.request(req)
+
+    async def get_hatsune_top(self, event: int):
+        req = HatsuneTopRequest()
+        req.event_id = event
+        return await self.request(req)
+
+    async def get_hatsune_quest_top(self, event: int):
+        req = HatsuneQuestTopRequest()
+        req.event_id = event
         return await self.request(req)
 
     async def get_seven_top(self, event_id: int):
@@ -1153,86 +1219,6 @@ class pcrclient(apiclient):
         if db.is_seven_event(event_id):
             return await self.reset_seven_gacha(event_id, gacha_step)
         return await self.reset_hatsune_gacha(event_id, db.get_event_gacha_id(event_id))
-
-    async def seven_quest_skip(self, event: int, quest: int, times: int):
-        req = SevenQuestSkipMultipleRequest()
-        req.schedule_id = db.get_event_schedule_id(event)
-        req.skip_list = [QuestSkipInfo(quest_id=quest, skip_count=times)]
-        req.exec_type = 1
-        req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
-        return await self.request(req)
-
-    async def event_quest_skip(self, event: int, quest: int, times: int):
-        if db.is_seven_event(event):
-            return await self.seven_quest_skip(event, quest, times)
-        return await self.hatsune_quest_skip(event, quest, times)
-
-
-    async def get_hatsune_dear_top(self, event_id: int):
-        req = HatsuneDearTopRequest()
-        req.event_id = event_id
-        return await self.request(req)
-
-    async def get_hatsune_gacha_index(self, event_id: int, gacha_id: int):
-        req = EventGachaIndexRequest()
-        req.event_id = event_id
-        req.gacha_id = gacha_id
-        return await self.request(req)
-
-    async def hatsune_boss_skip(self, event_id: int, boss_id: int, times: int, ticket: int):
-        req = HatsuneBossBattleSkipRequest()
-        req.event_id = event_id
-        req.boss_id = boss_id
-        req.exec_skip_num = times
-        req.current_boss_ticket_num = ticket
-        req.current_skip_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
-        return await self.request(req)
-
-    async def get_profile(self, user: int):
-        req = ProfileGetRequest()
-        req.target_viewer_id = user
-        return await self.request(req)
-
-    async def shiori_mission_receive(self, event_id: int, type: int):
-        req = ShioriMissionAcceptRequest()
-        req.event_id = event_id
-        req.type = type
-        req.id = 0
-        req.buy_id = 0
-        return await self.request(req)
-
-    async def get_shiori_top(self):
-        if not self.data.is_quest_cleared(11003002):
-            raise SkipError("未解锁外传")
-        req = ShioriTopRequest()
-        return await self.request(req)
-
-    async def get_shiori_event_top(self, event: int):
-        req = ShioriEventTopRequest()
-        req.event_id = event
-        return await self.request(req)
-
-    async def get_shiori_dear_top(self, event: int):
-        req = ShioriDearTopRequest()
-        req.event_id = event
-        return await self.request(req)
-
-    async def read_shiori_dear(self, event_id: int, story_id: int):
-        req = ShioriDearFinishRequest()
-        req.event_id = event_id
-        req.story_id = story_id
-        req.choice = 1
-        return await self.request(req)
-
-    async def get_hatsune_top(self, event: int):
-        req = HatsuneTopRequest()
-        req.event_id = event
-        return await self.request(req)
-
-    async def get_hatsune_quest_top(self, event: int):
-        req = HatsuneQuestTopRequest()
-        req.event_id = event
-        return await self.request(req)
 
     async def present_receive(self, present_id: int):
         req = PresentReceiveSingleRequest()
@@ -1336,6 +1322,19 @@ class pcrclient(apiclient):
         req.use_ticket_num = times
         req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
         return await self.request(req)
+
+    async def seven_quest_skip(self, event: int, quest: int, times: int):
+        req = SevenQuestSkipMultipleRequest()
+        req.schedule_id = db.get_event_schedule_id(event)
+        req.skip_list = [QuestSkipInfo(quest_id=quest, skip_count=times)]
+        req.exec_type = 1
+        req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
+        return await self.request(req)
+
+    async def event_quest_skip(self, event: int, quest: int, times: int):
+        if db.is_seven_event(event):
+            return await self.seven_quest_skip(event, quest, times)
+        return await self.hatsune_quest_skip(event, quest, times)
     
     async def training_quest_skip(self, quest: int, times: int):
         req = TrainingQuestSkipRequest()
@@ -1613,7 +1612,7 @@ class pcrclient(apiclient):
                 "EX装备": "/".join(normal_ex_info),  
                 "会战EX装备": "/".join(cb_ex_info),  
             })  
-  
+
         return unit_data
 
     async def recover_challenge(self, quest: int):
@@ -1824,16 +1823,6 @@ class pcrclient(apiclient):
         req.wac_auto_option_flag = 1
         return await self.request(req)
 
-    async def music_top(self) -> MusicTopResponse:  
-        req = MusicTopRequest()  
-        return await self.request(req)  
-      
-    async def music_buy(self, music_id: int) -> MusicBuyResponse:  
-        req = MusicBuyRequest()  
-        req.music_id = music_id  
-        req.room_coin = self.data.get_shop_gold(eSystemId.GOLD_SHOP)  
-        return await self.request(req)
-
     async def borrow_dungeon_member(self, viewer_id):
         if not self.data.dungeon_avaliable: return
         if self.data.dungeon_area_id != 0:
@@ -1938,7 +1927,7 @@ class pcrclient(apiclient):
 
     def set_cron_run(self):
         self._keys['cron_run'] = True
-
+    
     async def bsm_top(self) -> BsmTopResponse:
         req = BsmTopRequest()
         req.from_system_id = 6001
@@ -1965,8 +1954,18 @@ class pcrclient(apiclient):
         req.from_system_id = 6001
         return await self.request(req)
 
+    async def music_top(self) -> MusicTopResponse:  
+        req = MusicTopRequest()  
+        return await self.request(req)  
+      
+    async def music_buy(self, music_id: int) -> MusicBuyResponse:  
+        req = MusicBuyRequest()  
+        req.music_id = music_id  
+        req.room_coin = self.data.get_shop_gold(eSystemId.GOLD_SHOP)  
+        return await self.request(req)
+    
     async def bsm_mission_accept(self, mission_id: int) -> BsmMissionAcceptResponse:
         req = BsmMissionAcceptRequest()
         req.mission_id = mission_id
         req.from_system_id = 6001
-        return await self.request(req)
+        return await self.request(req)    

@@ -248,6 +248,9 @@ class StoryViewingResponse(responses.StoryViewingResponse):
         if self.reward_info:
             for item in self.reward_info:
                 mgr.update_inventory(item)
+        mgr.read_story_ids = mgr.read_story_ids or []
+        if request.story_id not in mgr.read_story_ids:
+            mgr.read_story_ids.append(request.story_id)
         if self.unlock_story_ids:
             mgr.unlock_story_ids = list(dict.fromkeys((mgr.unlock_story_ids or []) + self.unlock_story_ids))
         event_id = self.event_id if self.event_id else None
@@ -518,6 +521,15 @@ class LoadIndexResponse(responses.LoadIndexResponse):
             story.event_id: {info.story_id: info for info in (story.story_info or [])}
             for story in (self.seven_story_list or [])
         }
+        mgr.read_story_ids = list(dict.fromkeys(
+            (self.read_story_ids or []) + [
+                info.story_id
+                for story in mgr.seven_story_list.values()
+                for info in story.values()
+                if info.status == eEventSubStoryStatus.READED
+            ]
+        ))
+        mgr.unlock_story_ids = self.unlock_story_ids
         mgr.event_statuses = self.event_statuses
         mgr.tower_status = self.tower_status
         mgr.campaign_list = self.campaign_list
@@ -698,6 +710,12 @@ class SevenQuestSkipMultipleResponse(responses.SevenQuestSkipMultipleResponse):
             mgr.team_level = self.level_info.team.start_level
 
 
+@handles  
+class MusicBuyResponse(responses.MusicBuyResponse):  
+    async def update(self, mgr: datamgr, request):  
+        if self.item_data:  
+            for item in self.item_data:  
+                mgr.update_inventory(item)
 
 @handles
 class GrandArenaTimeRewardAcceptResponse(responses.GrandArenaTimeRewardAcceptResponse):
@@ -782,13 +800,6 @@ class DungeonSkipResponse(responses.DungeonSkipResponse):
         if self.user_gold:
             mgr.gold = self.user_gold
 
-@handles  
-class MusicBuyResponse(responses.MusicBuyResponse):  
-    async def update(self, mgr: datamgr, request):  
-        if self.item_data:  
-            for item in self.item_data:  
-                mgr.update_inventory(item)
-                
 @handles
 class SpecialDungeonEnterAreaResponse(responses.SpecialDungeonEnterAreaResponse):
     async def update(self, mgr: datamgr, request):
