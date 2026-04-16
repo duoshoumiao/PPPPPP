@@ -395,11 +395,14 @@ unique_equip_2_pure_memory_id = [
         113701, # 天妹
         114401, # 圣哈
         114501, # 圣电
+        111801, # 春吃
+        112001, # 春黑
+        111901, # 春妈
         116701, # 工菜
         116901, # 电子龙
 ]
 @conditional_execution1("very_hard_sweep_run_time", ["vh庆典"])
-@description('储备专二需求的150碎片（目标角色见模块内 `unique_equip_2_pure_memory_id`）')
+@description('储备专二需求的150碎片' + ','.join(db.get_unit_name(unit_id) for unit_id in unique_equip_2_pure_memory_id))
 @name('专二纯净碎片储备')
 @default(False)
 @tag_stamina_consume
@@ -428,6 +431,96 @@ class mirai_very_hard_sweep(simple_demand_sweep_base):
 
     def get_max_times(self, client: pcrclient, quest_id: int) -> int:
         return 5 if db.is_shiori_quest(quest_id) else 3
+
+unique_equip_1_sp_memory_id = [
+    # 103201, # 哈哈剑 送515
+    # 102801, # 充电宝 送515
+    # 100101, # 猫拳 送515
+    # 101001, # 真步 送515
+    # 100401, # 炸弹人 商店换
+    # 106101, # 611 商店换
+    # 103601, # xcw 送515
+    # 106401, # 雪菲 送515
+    # 107701, # 水女仆 商店换
+    # 107901, # 水猫剑 商店换
+    104801, # 子龙
+    108001, # 水子龙
+    # 102301, # 熊锤 商店换
+    106301, # yls
+    102101, # 铃铛
+    # 105901, # 普白 送515
+    # 103701, # 智 送515
+    102001, # 兔子
+    # 101401, # 驴 送515
+    105701, # 姬塔
+    # 101601, # 暴击弓 商店换
+    # 101201, # 星法 送515
+    # 105801, # 吃货 送515
+    # 103401, # 黄骑 商店换
+    # 100601, # 妹法 商店换
+    104401, # yly
+    # 106001, # 黑猫 送515
+    # 105101, # 深月 商店换
+    # 100701, # 布丁 商店换
+    # 102201, # 姐法 商店换
+    109301, # 露
+    109401, # 古蕾雅
+    109201, # 安
+    
+]
+@conditional_not_execution("mirai_sp1_h_sweep_not_run_time", [])
+@conditional_execution1("mirai_sp1_h_sweep_run_time", ["h庆典"])
+@description('储备专一SP需求的300碎片' + ','.join(db.get_unit_name(unit_id) for unit_id in unique_equip_1_sp_memory_id))
+@name('专一SP碎片储备(H本)')
+@default(False)
+@tag_stamina_consume
+class mirai_sp1_h_sweep(simple_demand_sweep_base):
+
+    async def get_need_list(self, client: pcrclient) -> List[Tuple[ItemType, int]]:
+        memory_gap = client.data.get_memory_demand_gap()
+        target = Counter()
+        need_list = []
+        for unit in unique_equip_1_sp_memory_id:
+            token = (eInventoryType.Item, db.unit_to_memory[unit])
+            target[unit] += 300
+            if -memory_gap[token] < target[unit]:
+                need_list.append((token, target[unit] - memory_gap[token]))
+        if not need_list:
+            raise SkipError("所有角色碎片均已盈余")
+        return need_list
+
+    def get_need_quest(self, token: ItemType) -> List[QuestDatum]:
+        return db.memory_hard_quest.get(token, [])
+
+    def get_max_times(self, client: pcrclient, quest_id: int) -> int:
+        return 3
+
+@conditional_not_execution("mirai_sp1_shiori_sweep_not_run_time", ["n3", 'n4及以上'])
+@conditional_execution1("mirai_sp1_shiori_sweep_run_time", ["无庆典"])
+@description('储备专一SP需求的300碎片' + ','.join(db.get_unit_name(unit_id) for unit_id in unique_equip_1_sp_memory_id))
+@name('专一SP碎片储备(外传)')
+@default(False)
+@tag_stamina_consume
+class mirai_sp1_shiori_sweep(simple_demand_sweep_base):
+
+    async def get_need_list(self, client: pcrclient) -> List[Tuple[ItemType, int]]:
+        memory_gap = client.data.get_memory_demand_gap()
+        target = Counter()
+        need_list = []
+        for unit in unique_equip_1_sp_memory_id:
+            token = (eInventoryType.Item, db.unit_to_memory[unit])
+            target[unit] += 300
+            if -memory_gap[token] < target[unit]:
+                need_list.append((token, target[unit] - memory_gap[token]))
+        if not need_list:
+            raise SkipError("所有角色碎片均已盈余")
+        return need_list
+
+    def get_need_quest(self, token: ItemType) -> List[QuestDatum]:
+        return db.memory_shiori_quest.get(token, [])
+
+    def get_max_times(self, client: pcrclient, quest_id: int) -> int:
+        return 5
 
 @singlechoice("vh_sweep_campaign_times", "庆典次数", 3, [0, 3, 6])
 @singlechoice("vh_sweep_times", "非庆典次数", 3, [0, 3, 6])
@@ -615,50 +708,3 @@ class talent_sweep2(TalentSweep):
         return self._parent.get_config('talent_sweep_target_recovery_areas', [])
     def get_no_max_no_sweep_areas(self) -> List[int]: 
         return self._parent.get_config('talent_sweep_no_max_no_sweep', list(db.talents.keys()))
-
-@singlechoice('combined_sweep_gap_limit', "备战数量", 0, [0, 100, 150, 300])  
-@conditional_not_execution("combined_sweep_not_run_time", [])  
-@conditional_execution1("combined_sweep_run_time", ["h庆典"])  
-@singlechoice('combined_sweep_consider_unit_order', "刷取顺序", "缺口少优先", ["缺口少优先", "缺口大优先"])  
-@booltype('combined_sweep_consider_high_rarity_first', "三星角色优先", False)  
-@UnitListConfig('combined_sweep_consider_units', "指定刷取角色")  # 新增  
-@description('合并刷hard图和外传图，根据记忆碎片缺口刷取，可指定角色')  
-@name('自定义刷sp专武')  
-@default(False)  
-@tag_stamina_consume  
-class smart_combined_sweep(simple_demand_sweep_base):  
-  
-    async def get_need_list(self, client: pcrclient) -> List[Tuple[ItemType, int]]:  
-        gap_limit = self.get_config('combined_sweep_gap_limit')  
-        consider_units: List[int] = self.get_config('combined_sweep_consider_units')  # 拉取角色  
-          
-        need_list = client.data.get_memory_demand_gap()  
-          
-        # 如果指定了角色，只保留这些角色的碎片  
-        if not consider_units:  
-            raise SkipError("未指定刷取角色")  
-        need_list = {  
-            token: need for token, need in need_list.items()  
-            if db.memory_to_unit.get(token[1]) in consider_units  
-        }
-          
-        need_list = [(token, need) for token, need in need_list.items() if need > -gap_limit]  
-        if not need_list:  
-            raise SkipError("所有记忆碎片均已盈余")  
-          
-        reverse = -1 if self.get_config('combined_sweep_consider_unit_order') == '缺口大优先' else 1  
-        high_rarity_first = self.get_config('combined_sweep_consider_high_rarity_first')  
-        need_list = sorted(need_list, key=lambda x: (  
-            - db.unit_data[db.memory_to_unit[x[0][1]]].rarity * high_rarity_first,  
-            x[1] * reverse))  
-        return need_list  
-  
-    def get_need_quest(self, token: ItemType) -> List[QuestDatum]:  
-        # 合并 hard 和 shiori 两个图库  
-        hard = db.memory_hard_quest.get(token, [])  
-        shiori = db.memory_shiori_quest.get(token, [])  
-        return hard + shiori  
-  
-    def get_max_times(self, client: pcrclient, quest_id: int) -> int:  
-        # shiori图5次，hard图3次  
-        return 5 if db.is_shiori_quest(quest_id) else 3
