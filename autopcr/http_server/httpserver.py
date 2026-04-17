@@ -700,32 +700,33 @@ class HttpServer:
             qq = current_user.auth_id  
             accmgr = mgr._parent  # AccountManager  
   
-            # ① 先匹配特殊指令（不在 register_tool 中的）  
-            for prefix_name, handler in SPECIAL_HANDLERS.items():  
-                if command.startswith(prefix_name):  
-                    remaining = command[len(prefix_name):].strip()  
-                    parts = remaining.split() if remaining else []  
-                    try:  
-                        result_text = await handler(mgr, parts)  
-                        return {"status": "finish", "message": result_text}, 200  
-                    except Exception as e:  
-                        return {"status": "error", "message": f"执行失败: {e}"}, 200  
-  
-            # ② 再匹配 register_tool 注册的指令  
-            matched_tool = None  
-            remaining = ""  
-            for tool_name, tool in tool_info.items():  
-                if command.startswith(tool_name):  
-                    matched_tool = tool  
-                    remaining = command[len(tool_name):].strip()  
-                    break  
-  
-            if not matched_tool:  
-                return {"status": "error", "message": f"未找到指令: {command.split()[0]}"}, 200  
-  
-            # 构造伪 BotEvent，解析参数  
-            parts = remaining.split() if remaining else []  
-            raw_remaining = " ".join(parts)  
+            # ① 先匹配特殊指令（不在 register_tool 中的）
+            for prefix_name, handler in SPECIAL_HANDLERS.items():
+                if command.startswith(prefix_name):
+                    remaining = command[len(prefix_name):].strip()
+                    parts = remaining.split() if remaining else []
+                    try:
+                        result_text = await handler(mgr, parts)
+                        return {"status": "finish", "message": result_text}, 200
+                    except Exception as e:
+                        return {"status": "error", "message": f"执行失败: {e}"}, 200
+
+            # ② 再匹配 register_tool 注册的指令
+            matched_tool = None
+            remaining = ""
+            for tool_name, tool in tool_info.items():
+                if command.startswith(tool_name):
+                    matched_tool = tool
+                    remaining = command[len(tool_name):].strip()
+                    break
+
+            if not matched_tool:
+                return {"status": "error", "message": f"未找到指令: {command.split()[0]}"}, 200
+
+            # 构造伪 BotEvent，解析参数
+            parts = remaining.split() if remaining else []
+            # 保留原始remaining内容（包括换行符），不要用空格重新连接
+            raw_remaining = remaining
             relay_event = RelayBotEvent(qq, parts, raw_remaining)  
   
             try:  
@@ -1228,27 +1229,30 @@ data: {ret}\n\n'''
             if command.startswith("#"):  
                 command = command[1:]  
   
-            qq = current_user.auth_id  
-            parts = command.split()  
-            if not parts:  
-                return {"status": "error", "message": "指令为空"}, 200  
-  
-            first = parts[0]  
-            matched_tool = None  
-            for tool_name in sorted(tool_info.keys(), key=len, reverse=True):  
-                if first.startswith(tool_name):  
-                    matched_tool = tool_info[tool_name]  
-                    remainder = first[len(tool_name):]  
-                    if remainder:  
-                        parts[0] = remainder  
-                    else:  
-                        parts.pop(0)  
-                    break  
-  
-            if not matched_tool:  
-                return {"status": "error", "message": f"未找到指令「{first}」"}, 200  
-  
-            raw_remaining = ' '.join(parts)  
+            qq = current_user.auth_id
+            parts = command.split()
+            if not parts:
+                return {"status": "error", "message": "指令为空"}, 200
+
+            first = parts[0]
+            matched_tool = None
+            matched_tool_name = None  # 记录匹配的指令名
+            for tool_name in sorted(tool_info.keys(), key=len, reverse=True):
+                if first.startswith(tool_name):
+                    matched_tool = tool_info[tool_name]
+                    matched_tool_name = tool_name  # 记录匹配的指令名
+                    remainder = first[len(tool_name):]
+                    if remainder:
+                        parts[0] = remainder
+                    else:
+                        parts.pop(0)
+                    break
+
+            if not matched_tool:
+                return {"status": "error", "message": f"未找到指令「{first}」"}, 200
+
+            # 保留原始指令内容（包括换行符），不要用空格重新连接
+            raw_remaining = command[len(matched_tool_name):].strip()
             relay_event = RelayBotEvent(qq, parts, raw_remaining)  
   
             try:  
