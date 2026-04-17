@@ -78,7 +78,11 @@ class ArenaQuery:
         return exists(self.result_path(key))  
 
     def load_result(self, key: str) -> List[ArenaQueryResult]:
-        with open(self.result_path(key), 'r', encoding="utf-8") as fp:
+        path = self.result_path(key)
+        if not exists(path):
+            logger.warning(f'缓存文件不存在: {path}')
+            return []
+        with open(path, 'r', encoding="utf-8") as fp:
             ret = json.load(fp)
         return [ArenaQueryResult.parse_obj(o) for o in ret]
 
