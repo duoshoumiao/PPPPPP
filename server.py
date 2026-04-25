@@ -786,7 +786,15 @@ async def clean_daily_time(botev: BotEvent, accmgr: AccountManager):
 async def cron_log(botev: BotEvent):
     from .autopcr.module.crons import CRONLOG_PATH, CronLog
     with open(CRONLOG_PATH, 'r') as f:
-        msg = [CronLog.from_json(line.strip()) for line in f.readlines()]
+        msg = []
+        for line in f.readlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                msg.append(CronLog.from_json(line))
+            except Exception:
+                continue
     args = await botev.message()
     cur = datetime.datetime.now()
     if is_args_exist(args, '错误'):
@@ -1619,9 +1627,9 @@ async def gacha_exchange_chara(botev: BotEvent):
     if not unit:
         await botev.finish(f"未知角色名{unit_name}")
 
-    config = {
-        "gacha_exchange_pool_id": current_gacha[gacha_id],
-        "gacha_exchange_unit_id": [unit * 100 + 1]
+    config = {  
+        "gacha_exchange_pool_id": current_gacha[gacha_id],  
+        "gacha_exchange_unit_id": unit * 100 + 1
     }
     return config
 
