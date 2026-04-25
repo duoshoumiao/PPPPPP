@@ -2850,7 +2850,7 @@ class database():
         )
 
     def unlock_unit_condition_candidate(self) -> List[int]:
-        return self.unlock_unit_condition
+        return list(self.unlock_unit_condition)
 
     def limit_unit_condition_candidate(self) -> List[int]:
         return [x for x in self.unlock_unit_condition if self.unit_data[x].is_limited]
