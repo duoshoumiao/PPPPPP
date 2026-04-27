@@ -1243,7 +1243,10 @@ data: {ret}\n\n'''
             password = data.get('password', "")  
             if not qq or not password:  
                 return "请输入QQ和密码", 400  
-            usermgr.create(str(qq), str(password))  
+            try:  
+                usermgr.create(str(qq), str(password))  
+            except Exception as e:  
+                return str(e), 400
             login_user(AuthUser(qq))  
             return "欢迎回来，" + qq, 200
         
