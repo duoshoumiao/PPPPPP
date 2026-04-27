@@ -930,33 +930,61 @@ class HttpServer:
                                                 shuffle_count += 1  
                                                 if qq in self._auto_def_tasks:  
                                                     self._auto_def_tasks[qq]["shuffle_count"] = shuffle_count  
-  
+                                                  
+                                                messages.append(  
+                                                    f"检测到被刺：{attack_msg}\n"  
+                                                    f"已执行第{shuffle_count}次换防\n{result[1]}\n"  
+                                                    f"正在下线并重新上线..."  
+                                                )  
+                                                  
+                                                # 换防后下线  
+                                                client.deactivate()  
+                                                  
+                                                # 重新上线  
+                                                await client.activate()  
+                                                if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+                                                    await client.login()  
+                                                  
+                                                # 重建历史记录基线  
+                                                known_log_ids.clear()  
                                                 history_resp2 = await client.get_grand_arena_history()  
                                                 if history_resp2.grand_arena_history_list:  
                                                     for h2 in history_resp2.grand_arena_history_list:  
                                                         known_log_ids.add(h2.log_id)  
-  
-                                                messages.append(  
-                                                    f"检测到被刺：{attack_msg}\n"  
-                                                    f"已执行第{shuffle_count}次换防\n{result[1]}"  
-                                                )  
+                                                  
+                                                messages.append(f"已重新上线，继续检测被刺")  
+                                                
                                             except Exception as e:  
-                                                messages.append(f"换防出错: {str(e)[:200]}")  
+                                                messages.append(f"换防出错: {str(e)[:200]}，尝试下线并重新上线...")  
                                                 try:  
-                                                    if client.logged == eLoginStatus.NOT_LOGGED:  
+                                                    client.deactivate()  
+                                                    await client.activate()  
+                                                    if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
                                                         await client.login()  
+                                                    known_log_ids.clear()  
+                                                    history_resp_err = await client.get_grand_arena_history()  
+                                                    if history_resp_err.grand_arena_history_list:  
+                                                        for h_err in history_resp_err.grand_arena_history_list:  
+                                                            known_log_ids.add(h_err.log_id)  
                                                 except:  
                                                     messages.append("重新登录失败，自动换防终止")  
-                                                    break  
+                                                    break
   
                                 except Exception as e:  
-                                    messages.append(f"检查被刺出错: {str(e)[:200]}")  
+                                    messages.append(f"检查被刺出错: {str(e)[:200]}，尝试下线并重新上线...")  
                                     try:  
-                                        if client.logged == eLoginStatus.NOT_LOGGED:  
+                                        client.deactivate()  
+                                        await client.activate()  
+                                        if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
                                             await client.login()  
+                                        known_log_ids.clear()  
+                                        history_resp_err = await client.get_grand_arena_history()  
+                                        if history_resp_err.grand_arena_history_list:  
+                                            for h_err in history_resp_err.grand_arena_history_list:  
+                                                known_log_ids.add(h_err.log_id)  
                                     except:  
                                         messages.append("重新登录失败，自动换防终止")  
-                                        break  
+                                        break
   
                             client.deactivate()  
                             messages.append(f"{alias} pjjc自动换防已结束，共执行换防{shuffle_count}次")  
@@ -1205,7 +1233,20 @@ data: {ret}\n\n'''
             usermgr.create(str(qq), str(password))
             login_user(AuthUser(qq))
             return "欢迎回来，" + qq, 200
+            
 
+        @self.api_limit.route('/create_daily', methods = ['POST'])  
+        @rate_limit(1, timedelta(minutes=1))  
+        async def create_daily():  
+            data = await request.get_json()  
+            qq = data.get('qq', "")  
+            password = data.get('password', "")  
+            if not qq or not password:  
+                return "请输入QQ和密码", 400  
+            usermgr.create(str(qq), str(password))  
+            login_user(AuthUser(qq))  
+            return "欢迎回来，" + qq, 200
+        
         @self.api.route('/logout', methods = ['POST'])
         @login_required
         @HttpServer.wrapaccountmgr(readonly = True)

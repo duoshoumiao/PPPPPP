@@ -3201,31 +3201,53 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
                                 break  
                             shuffle_count += 1  
   
-                            # 换防后刷新历史记录基线，避免对比旧数据  
-                            history_resp2 = await client.get_grand_arena_history()  
-                            if history_resp2.grand_arena_history_list:  
-                                for h2 in history_resp2.grand_arena_history_list:  
-                                    known_log_ids.add(h2.log_id)  
-  
                             await botev.send(  
                                 f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
                                 f"已立即执行第{shuffle_count}次换防！\n"  
                                 f"{result[1]}\n"  
-                                f"继续每2秒检测被刺"  
+                                f"正在下线并重新上线..."  
                             )  
+                              
+                            # 换防后下线  
+                            client.deactivate()  
+                              
+                            # 重新上线  
+                            await client.activate()  
+                            if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+                                await client.login()  
+                              
+                            # 重建历史记录基线（清空旧数据，从服务器重新获取）  
+                            known_log_ids.clear()  
+                            history_resp2 = await client.get_grand_arena_history()  
+                            if history_resp2.grand_arena_history_list:  
+                                for h2 in history_resp2.grand_arena_history_list:  
+                                    known_log_ids.add(h2.log_id)  
+                              
+                            await botev.send(  
+                                f"{alias} 已重新上线，继续每2秒检测被刺"  
+                            ) 
+                            
                         except Exception as e:  
                             logger.error(f"pjjc自动换防被刺立即换防出错: {str(e)}")  
                             await botev.send(  
                                 f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
-                                f"立即换防出错: {str(e)[:200]}"  
+                                f"立即换防出错: {str(e)[:200]}\n"  
+                                f"尝试下线并重新上线..."  
                             )  
                             try:  
-                                if client.logged == eLoginStatus.NOT_LOGGED:  
+                                client.deactivate()  
+                                await client.activate()  
+                                if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
                                     await client.login()  
+                                known_log_ids.clear()  
+                                history_resp_err = await client.get_grand_arena_history()  
+                                if history_resp_err.grand_arena_history_list:  
+                                    for h_err in history_resp_err.grand_arena_history_list:  
+                                        known_log_ids.add(h_err.log_id)  
                             except:  
                                 await botev.send(f"{alias} 重新登录失败，自动换防终止")  
-                                break  
-  
+                                break
+                                
             except Exception as e:  
                 logger.error(f"pjjc自动换防检查被刺出错: {str(e)}")  
                 try:  
