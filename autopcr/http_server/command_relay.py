@@ -562,7 +562,7 @@ async def handle_daily_set_config(mgr, parts: List[str]) -> str:
     return f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}"  
   
   
-async def handle_daily_report(mgr, parts: List[str]) -> str:  
+async def handle_daily_report(mgr, parts: List[str]) -> dict:  
     """日常报告 [0|1|2|3] — 查看最近清日常报告"""  
     result_id = 0  
     if parts:  
@@ -575,18 +575,12 @@ async def handle_daily_report(mgr, parts: List[str]) -> str:
     if not resp:  
         return "未找到日常报告"  
   
-    lines = [f"【{mgr.alias}】日常报告 #{result_id}", ""]  
-    for key in resp.order:  
-        value = resp.result[key]  
-        if value.log == "功能未启用":  
-            continue  
-        status = value.status.value if hasattr(value.status, 'value') else str(value.status)  
-        lines.append(f"[{status}] {value.name}")  
-        if value.log.strip():  
-            for log_line in value.log.strip().split('\n'):  
-                lines.append(f"  {log_line}")  
-  
-    return "\n".join(lines)  
+    from ..util.draw import instance as drawer  
+    img = await drawer.draw_tasks_result(resp)  
+    buf = io.BytesIO()  
+    img.save(buf, format='PNG')  
+    image_b64 = base64.b64encode(buf.getvalue()).decode()  
+    return {"text": f"【{mgr.alias}】日常报告 #{result_id}", "image": image_b64} 
   
   
 async def handle_daily_record(mgr, parts: List[str]) -> str:  
