@@ -705,9 +705,20 @@ class HttpServer:
                 if command.startswith(prefix_name):
                     remaining = command[len(prefix_name):].strip()
                     parts = remaining.split() if remaining else []
-                    try:
-                        result_text = await handler(mgr, parts)
-                        return {"status": "finish", "message": result_text}, 200
+                    try:  
+                        result = await handler(mgr, parts)  
+                        if isinstance(result, dict):  
+                            return {  
+                                "status": "ok",  
+                                "result": {  
+                                    "name": result.get("text", ""),  
+                                    "log": result.get("text", ""),  
+                                    "status": "",  
+                                    "image": result.get("image")  
+                                }  
+                            }, 200  
+                        else:  
+                            return {"status": "finish", "message": result}, 200
                     except Exception as e:
                         return {"status": "error", "message": f"执行失败: {e}"}, 200
 

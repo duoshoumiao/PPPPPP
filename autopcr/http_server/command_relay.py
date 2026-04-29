@@ -644,7 +644,7 @@ async def handle_cron_log(mgr, parts: List[str]) -> str:
     return "\n".join(lines)  
   
   
-async def handle_clean_daily(mgr, parts: List[str]) -> str:  
+async def handle_clean_daily(mgr, parts: List[str]) -> dict:  
     """清日常 — 执行清日常"""  
     try:  
         clan = mgr._parent.secret.clan  
@@ -653,21 +653,17 @@ async def handle_clean_daily(mgr, parts: List[str]) -> str:
             timeout=600  
         )  
         resp = res.get_result()  
-        lines = [f"【{mgr.alias}】清日常完成", ""]  
-        for key in resp.order:  
-            value = resp.result[key]  
-            if value.log == "功能未启用":  
-                continue  
-            status = value.status.value if hasattr(value.status, 'value') else str(value.status)  
-            lines.append(f"[{status}] {value.name}")  
-            if value.log.strip():  
-                for log_line in value.log.strip().split('\n'):  
-                    lines.append(f"  {log_line}")  
-        return "\n".join(lines)  
+  
+        from ..util.draw import instance as drawer  
+        img = await drawer.draw_tasks_result(resp)  
+        buf = io.BytesIO()  
+        img.save(buf, format='PNG')  
+        image_b64 = base64.b64encode(buf.getvalue()).decode()  
+        return {"text": f"【{mgr.alias}】清日常完成", "image": image_b64}  
     except asyncio.TimeoutError:  
         return "清日常超时（10分钟），请稍后重试"  
     except Exception as e:  
-        return f"清日常失败: {e}"  
+        return f"清日常失败: {e}"
   
   
 async def handle_gacha_current(mgr, parts: List[str]) -> str:  
