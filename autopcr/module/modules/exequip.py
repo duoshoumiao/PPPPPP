@@ -732,12 +732,12 @@ class restore_ex_state(Module):
         import json  
         save_cache_path = join(CACHE_DIR, "modules", "save_ex_state", self._parent.id + ".json")  
         if not exists(save_cache_path):  
-            raise AbortError("未找到保存的EX状态，请先执行「保存ex状态」")  
+            raise AbortError("未找到保存的EX状态，请先执行「#保存ex状态」")  
         with open(save_cache_path, "r") as f:  
             cache = json.load(f)  
         state = cache.get("ex_state", None)  
         if not state:  
-            raise AbortError("保存的EX状态数据为空，请重新执行「保存ex状态」")  
+            raise AbortError("保存的EX状态数据为空，请重新执行「#保存ex状态」")  
   
         # 1. 构建当前 serial_id -> (unit_id, slot) 映射  
         current_owner = {}  

@@ -1428,6 +1428,14 @@ class database():
                 quests.sort(key=self.get_event_quest_order)
             return dict(ret)
 
+    @lazy_property
+    def rag_story_data(self) -> Dict[int, RagStoryDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                RagStoryDatum.query(db)
+                .to_dict(lambda x: x.sub_story_id, lambda x: x)
+            )
+
     @lazy_property  
     def music_list(self) -> Dict[int, MusicList]:  
         with self.dbmgr.session() as db:  
