@@ -21,7 +21,7 @@ from collections import Counter
 @ExEquipSubStatusConfig('ex_equip_rainbow_enchance_sub_status_2', '炼成属性2')
 @ExEquipSubStatusConfig('ex_equip_rainbow_enchance_sub_status_1', '炼成属性1')
 @singlechoice('ex_equip_rainbow_enchance_action', '做什么', '看属性', ['看属性', '炼成', '看概率'])
-@texttype('ex_equip_rainbow_enchance_id', '彩装id', 0)
+@texttype('ex_equip_rainbow_enchance_id', '彩装id（记得按回车顺便刷新）', 0)
 @description('看属性指获取彩装id和炼成属性,炼成则进行究极炼成,看概率指根据炼成记录统计各属性概率,非满属性指属性值不必最大,以便手动用光球强化.属性优先级指目标属性值一样时,比较其他属性决定保留或放弃,优先级是按顺序从高到低,目标属性的优先级最高,不受属性优先级影响.满强目标属性会自动锁住.')
 class ex_equip_rainbow_enchance(Module):
 
