@@ -515,8 +515,6 @@ class LoadIndexResponse(responses.LoadIndexResponse):
         mgr.stamina_full_recovery_time = self.user_info.stamina_full_recovery_time
         mgr.settings = self.ini_setting
         mgr.recover_stamina_exec_count = self.shop.recover_stamina.exec_count
-        mgr.read_story_ids = self.read_story_ids
-        mgr.unlock_story_ids = self.unlock_story_ids
         mgr.seven_story_list = {
             story.event_id: {info.story_id: info for info in (story.story_info or [])}
             for story in (self.seven_story_list or [])
@@ -535,6 +533,7 @@ class LoadIndexResponse(responses.LoadIndexResponse):
         mgr.campaign_list = self.campaign_list
         mgr.dispatch_units = self.dispatch_units
         mgr.princess_knight_info = self.princess_knight_info
+        mgr.unit_role_list = self.unit_role_list
 
 @handles
 class HomeIndexResponse(responses.HomeIndexResponse):
@@ -710,13 +709,6 @@ class SevenQuestSkipMultipleResponse(responses.SevenQuestSkipMultipleResponse):
             mgr.team_level = self.level_info.team.start_level
 
 
-@handles  
-class MusicBuyResponse(responses.MusicBuyResponse):  
-    async def update(self, mgr: datamgr, request):  
-        if self.item_data:  
-            for item in self.item_data:  
-                mgr.update_inventory(item)
-
 @handles
 class GrandArenaTimeRewardAcceptResponse(responses.GrandArenaTimeRewardAcceptResponse):
     async def update(self, mgr: datamgr, request):
@@ -881,22 +873,6 @@ class DeckUpdateResponse(responses.DeckUpdateResponse):
         deck.unit_id_3 = request.unit_id_3
         deck.unit_id_4 = request.unit_id_4
         deck.unit_id_5 = request.unit_id_5
-
-@handles  
-class DeckUpdateListResponse(responses.DeckUpdateListResponse):  
-    async def update(self, mgr: datamgr, request: DeckUpdateListRequest):  
-        if request.deck_list:  
-            for deck_data in request.deck_list:  
-                deck_number = ePartyType(deck_data.deck_number)  
-                if deck_number in mgr.deck_list:  
-                    deck = mgr.deck_list[deck_number]  
-                else:  
-                    deck = LoadDeckData()  
-                    deck.deck_number = deck_number  
-                    mgr.deck_list[deck_number] = deck  
-                for i in range(5):  
-                    unit_id = deck_data.unit_list[i] if i < len(deck_data.unit_list) else 0  
-                    setattr(deck, f"unit_id_{i + 1}", unit_id)
 
 @handles
 class SeasonPassRewardAcceptResponse(responses.SeasonPassRewardAcceptResponse):
