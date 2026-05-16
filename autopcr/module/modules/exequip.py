@@ -12,7 +12,7 @@ from collections import Counter
 
 @name('彩装究极炼成')
 @default(True)
-@inttype('ex_equip_rainbow_enhance_pt_hold', '保留pt数(w)', 10, list(range(0, 1001)))
+@inttype('ex_equip_rainbow_enhance_pt_hold', '保留pt数(w)', 10, list(range(0, 10001)))
 @ExEquipSubStatusRankConfig('ex_equip_rainbow_enhance_rank', '属性优先级')
 @inttype('ex_equip_rainbow_enhance_no_max_num', '不需要满属性的词条个数', 1, [0, 1, 2, 3, 4])
 @inttype('ex_equip_rainbow_enchance_target_sum', '需求的属性总值', 0, range(0, 21))
