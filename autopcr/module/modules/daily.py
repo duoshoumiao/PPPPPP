@@ -394,7 +394,7 @@ class user_info(Module):
 
 
         if stamina >= max_stamina:
-            sself._warn("体力爆了！")
+            self._warn("体力爆了！")
 
         optional_info = self._collect_optional_info(client, display_items)
 
