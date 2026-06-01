@@ -1,5 +1,8 @@
 import os
-from distutils.util import strtobool
+try:
+    from distutils.util import strtobool
+except ImportError:
+    from setuptools._distutils.util import strtobool
 import uuid
 import logging
 
@@ -20,7 +23,7 @@ CHANNEL_OPTION = [BSDK, QSDK, BSDKNOLOGIN]
 
 DEBUG_LOG = strtobool(os.getenv("AUTOPCR_SERVER_DEBUG_LOG", "false"))
 
-ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'true'))
+ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'false'))
 SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", ""))
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), '..')

@@ -175,8 +175,6 @@ sv_help = f"""
 - {prefix}公会支援 查询公会支援角色配置
 - {prefix}卡池 查看当前卡池
 - {prefix}半月刊
-- {prefix}返钻
-- {prefix}查box 角色名（or所有）
 - {prefix}刷新box
 - {prefix}查缺称号 查看缺少的称号
 - {prefix}jjc透视 查前51名
@@ -202,7 +200,7 @@ sv_help = f"""
 - {prefix}领取礼物箱
 - {prefix}查公会深域进度
 - {prefix}收菜  探险续航哦
-- {prefix}一键编队 1 1 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 设置多队编队，队伍不足5人结尾
+- {prefix}一键编队 1 1 [拉满] 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 设置多队编队，一行一个队伍
 - {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
@@ -1159,6 +1157,7 @@ async def set_my_party_multi(botev: BotEvent):
     msg = await botev.message()
     party_start_num = 1
     tab_start_num = 1
+    is_to_max = False
     try:
         tab_start_num = int(msg[0])
         del msg[0]
@@ -1169,12 +1168,17 @@ async def set_my_party_multi(botev: BotEvent):
         del msg[0]
     except:
         pass
+    try:
+        is_to_max = is_args_exist(msg, '拉满')
+    except:
+        pass
 
     teams_text = recover_text_by_tokens(raw_msg, msg)
     config = {
         "tab_start_num2": tab_start_num,
         "party_start_num2": party_start_num,
         "set_my_party_text2": teams_text,
+        "set_my_party2_to_max": is_to_max,
     }
     del msg[:]
     return config
@@ -1329,6 +1333,10 @@ async def find_memory(botev: BotEvent):
 @register_tool("查纯净碎片", "get_need_pure_memory")
 async def find_pure_memory(botev: BotEvent):
     await botev.send("请稍等")
+    return {}
+
+@register_tool("查sp碎片", "get_need_sp_memory")
+async def find_sp_memory(botev: BotEvent):
     return {}
 
 @register_tool("返钻", "return_jewel")

@@ -167,7 +167,7 @@ class ex_equip_rainbow_enchance(Module):
                 accept = await self.decide_alces(client, resp.pending_alces_data, target_sub_status)
                 alces_exec_cnt += 1
 
-                self._log(f"{'A 接受' if accept else 'R 放弃'}炼成属性: {db.get_ex_equip_sub_status_str(client.data.ex_equips[serial_id].ex_equipment_id, resp.pending_alces_data.sub_status or [])}")
+                # self._log(f"{'A 接受' if accept else 'R 放弃'}炼成属性: {db.get_ex_equip_sub_status_str(client.data.ex_equips[serial_id].ex_equipment_id, resp.pending_alces_data.sub_status or [])}")
 
             if alces_exec_cnt:
                 self._log(f"共进行了{alces_exec_cnt}次究极炼成，消耗了：")
