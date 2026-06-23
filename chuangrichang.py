@@ -83,52 +83,117 @@ def update_json_file(file_path, username, password):
     except Exception as e:
         raise Exception(f"更新JSON文件失败: {str(e)}")
 
-def update_secret_status(user_dirs, enable: bool):
-    """
-    批量更新secret文件的clan和disabled状态（100%保留default_account及其他字段，仅改目标字段值）
-    :param user_dirs: 文件夹名列表（对应user_id）
-    :param enable: True=解禁（clan/disabled=False），False=禁用（clan/disabled=True）
-    :return: 操作结果字典
-    """
-    result = {"success": [], "failed": []}
-    # 确定目标值（转为小写字符串，匹配JSON格式）
-    target_clan = "false" if enable else "true"
-    target_disabled = "false" if enable else "true"
-    
-    # 定位secret文件根目录
-    hoshino_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    base_dir = os.path.join(hoshino_dir, 'modules', 'autopcr', 'cache', 'http_server')
-    
-    for user_dir in user_dirs:
-        try:
-            secret_file = os.path.join(base_dir, user_dir, 'secret')
-            if not os.path.exists(secret_file):
-                result["failed"].append(f"{user_dir}: secret文件不存在")
-                continue
-            
-            # 读取原始内容（一字不改，包括换行、空格、缩进）
-            with open(secret_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # ---------------- 核心逻辑：仅替换目标字段值，其他完全不动 ----------------
-            # 正则1：匹配 "clan": 任意值（支持空格/换行/缩进），仅替换值部分
-            # 匹配规则："clan" 后面跟冒号，再跟任意空白符，再跟true/false，最后跟逗号/右大括号/换行
-            clan_pattern = r'(\"clan\"\s*:\s*)(true|false)(?=\s*[,}\n])'
-            content = re.sub(clan_pattern, r'\1' + target_clan, content)
-            
-            # 正则2：匹配 "disabled": 任意值，仅替换值部分
-            disabled_pattern = r'(\"disabled\"\s*:\s*)(true|false)(?=\s*[,}\n])'
-            content = re.sub(disabled_pattern, r'\1' + target_disabled, content)
-            
-            # 写入修改后的内容（仅改了clan/disabled的值，其他全保留）
-            with open(secret_file, 'w', encoding='utf-8', newline='') as f:
-                f.write(content)
-            
-            result["success"].append(user_dir)
-            
-        except Exception as e:
-            result["failed"].append(f"{user_dir}: {str(e)}")
-    
+def update_secret_status(user_dirs, enable: bool):  
+    """  
+    批量更新secret文件的clan和disabled状态，并在禁用/解禁时备份或恢复 cron1~cron10 的开关状态。  
+    :param user_dirs: 文件夹名列表（对应user_id）  
+    :param enable: True=解禁（clan/disabled=False，并恢复cron备份），False=禁用（clan/disabled=True，并备份cron状态）  
+    :return: 操作结果字典  
+    """  
+    result = {"success": [], "failed": []}  
+  
+    target_clan = "false" if enable else "true"  
+    target_disabled = "false" if enable else "true"  
+  
+    hoshino_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  
+    base_dir = os.path.join(hoshino_dir, 'modules', 'autopcr', 'cache', 'http_server')  
+    cron_keys = [f'cron{i}' for i in range(1, 11)]  
+  
+    def replace_bool_field(content: str, key: str, value: str) -> str:  
+        pattern = r'(\"%s\"\s*:\s*)(true|false)(?=\s*[,}\n])' % re.escape(key)  
+        return re.sub(pattern, lambda m: m.group(1) + value, content)  
+  
+    for user_dir in user_dirs:  
+        try:  
+            secret_file = os.path.join(base_dir, user_dir, 'secret')  
+            if not os.path.exists(secret_file):  
+                result["failed"].append(f"{user_dir}: secret文件不存在")  
+                continue  
+  
+            # 先处理 secret 文件  
+            with open(secret_file, 'r', encoding='utf-8') as f:  
+                content = f.read()  
+  
+            content = replace_bool_field(content, 'clan', target_clan)  
+            content = replace_bool_field(content, 'disabled', target_disabled)  
+  
+            with open(secret_file, 'w', encoding='utf-8', newline='') as f:  
+                f.write(content)  
+  
+            # 再处理该目录下所有账号 .json  
+            user_path = os.path.join(base_dir, user_dir)  
+            if os.path.isdir(user_path):  
+                for fn in os.listdir(user_path):  
+                    if not fn.endswith('.json') or fn.endswith('.cron_backup.json'):  
+                        continue  
+  
+                    account_file = os.path.join(user_path, fn)  
+                    backup_file = account_file + '.cron_backup.json'  
+  
+                    try:  
+                        with open(account_file, 'r', encoding='utf-8') as af:  
+                            acontent = af.read()  
+  
+                        if not enable:  
+                            # 禁用：首次生成 cron 备份，保存真实布尔值  
+                            if not os.path.exists(backup_file):  
+                                cron_state = {}  
+                                for key in cron_keys:  
+                                    m = re.search(  
+                                        r'(\"%s\"\s*:\s*)(true|false)(?=\s*[,}\n])' % re.escape(key),  
+                                        acontent  
+                                    )  
+                                    if m:  
+                                        cron_state[key] = (m.group(2) == 'true')  
+  
+                                with open(backup_file, 'w', encoding='utf-8') as bf:  
+                                    json.dump(cron_state, bf, ensure_ascii=False, separators=(',', ':'))  
+  
+                            # 禁用时把 cron1~cron10 置为 false  
+                            for key in cron_keys:  
+                                acontent = re.sub(  
+                                    r'(\"%s\"\s*:\s*)(true|false)(?=\s*[,}\n])' % re.escape(key),  
+                                    lambda m: m.group(1) + 'false',  
+                                    acontent  
+                                )  
+  
+                        else:  
+                            # 解禁：必须有备份，恢复后删除备份文件  
+                            if not os.path.exists(backup_file):  
+                                raise FileNotFoundError(f"{backup_file} 不存在，无法恢复 cron 状态")  
+  
+                            try:  
+                                with open(backup_file, 'r', encoding='utf-8') as bf:  
+                                    cron_state = json.load(bf)  
+  
+                                for key in cron_keys:  
+                                    if key in cron_state:  
+                                        raw = cron_state[key]  
+                                        if isinstance(raw, str):  
+                                            value = 'true' if raw.lower() == 'true' else 'false'  
+                                        else:  
+                                            value = 'true' if raw else 'false'  
+  
+                                        acontent = re.sub(  
+                                            r'(\"%s\"\s*:\s*)(true|false)(?=\s*[,}\n])' % re.escape(key),  
+                                            lambda m, v=value: m.group(1) + v,  
+                                            acontent  
+                                        )  
+                            finally:  
+                                if os.path.exists(backup_file):  
+                                    os.remove(backup_file)  
+  
+                        with open(account_file, 'w', encoding='utf-8', newline='') as af:  
+                            af.write(acontent)  
+  
+                    except Exception as ce:  
+                        result["failed"].append(f"{user_dir}/{fn}: {str(ce)}")  
+  
+            result["success"].append(user_dir)  
+  
+        except Exception as e:  
+            result["failed"].append(f"{user_dir}: {str(e)}")  
+  
     return result
 
 def reset_secret_password(secret_file):
