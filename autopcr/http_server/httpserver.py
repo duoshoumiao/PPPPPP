@@ -876,6 +876,9 @@ class HttpServer:
                             messages.append(f"{alias} pjjc自动换防已开启，每{check_interval}秒检测被刺记录")  
   
                             async def do_shuffle():  
+                                await client.logout()  
+                                await client.login()  
+  
                                 info = await client.get_grand_arena_info()  
                                 limit_info = info.update_deck_times_limit  
                                 if limit_info.round_times == limit_info.round_max_limited_times:  
@@ -908,7 +911,7 @@ class HttpServer:
                                     f"本轮换防次数{limit_info.round_times + 1}/{limit_info.round_max_limited_times}\n"  
                                     f"今日换防次数{limit_info.daily_times + 1}/{limit_info.daily_max_limited_times}"  
                                 )  
-                                return ids, result_msg  
+                                return ids, result_msg 
   
                             while True:  
                                 try:  
