@@ -1065,7 +1065,8 @@ class get_need_sp_memory(Module):
                 header.append(token_name)
                 data[token_name] = target[token] + memory_gap[token]
 
-            msg = '\n'.join([f'{db.get_inventory_name_san(item[0])}: {"缺少" if item[1] > 0 else "盈余"}{abs(item[1])}片' for item in need_list])
+            shortage_list = [item for item in need_list if item[1] > 0]  
+            msg = '\n'.join([f'{db.get_inventory_name_san(item[0])}: 缺少{item[1]}片' for item in shortage_list])
             self._log(f"=={type_desc}==")
             self._log(msg)
 
