@@ -24,6 +24,7 @@ from .talent import *
 from .nbb import *  
 from .mirage import *
 from .bsm import *
+from .labyrinth import *
 
 @dataclass
 class ModuleList:
@@ -225,6 +226,8 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        labyrinth_reset,
+        labyrinth_retire,
         add_friend,
         search_ex_equip_id,
         ex_equip_rainbow_enchance,
