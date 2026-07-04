@@ -3294,23 +3294,24 @@ async def pjjc_stop_auto_def(botev: BotEvent):
     else:  
         await botev.send("当前没有正在运行的自动换防任务")
         
-@register_tool("黎明界刷开局", "labyrinth_reset")
-async def labyrinth_reset_tool(botev: BotEvent):
-    from .autopcr.module.modules.labyrinth import _load_guild_list
-    msg = await botev.message()
-    config = {}
-    if msg:
-        guild_name = msg[0]
-        guilds = _load_guild_list()
-        if guild_name.isdigit() and 1 <= int(guild_name) <= 5:
-            config["labyrinth_reset_guild"] = int(guild_name)
-        else:
-            guild_map = {name.lower(): gid for gid, name in guilds}
-            gid = guild_map.get(guild_name.lower())
-            if not gid:
-                available = ', '.join(f'{gid}-{name}' for gid, name in guilds)
-                await botev.finish(f"未找到公会【{guild_name}】。可用: {available}")
-            config["labyrinth_reset_guild"] = gid
+@register_tool("黎明界刷开局", "labyrinth_reset")  
+async def labyrinth_reset_tool(botev: BotEvent):  
+    from .autopcr.module.modules.labyrinth import _load_guild_list  
+    msg = await botev.message()  
+    config = {}  
+    if msg:  
+        guild_name = str(msg[0]).strip()  
+        guilds = _load_guild_list()  
+        if guild_name.isdigit() and 1 <= int(guild_name) <= 5:  
+            config["labyrinth_reset_guild"] = int(guild_name)  
+        else:  
+            guild_map = {name.lower(): gid for gid, name in guilds}  
+            gid = guild_map.get(guild_name.lower())  
+            if not gid:  
+                available = ', '.join(f'{gid}-{name}' for gid, name in guilds)  
+                await botev.finish(f"未找到公会【{guild_name}】。可用: {available}")  
+            config["labyrinth_reset_guild"] = gid  
+        del msg[0]   # 关键：消费掉已解析的公会参数  
     return config
 
 @register_tool("放弃黎明界", "labyrinth_retire")

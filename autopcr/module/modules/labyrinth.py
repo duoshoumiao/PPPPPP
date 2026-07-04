@@ -327,7 +327,14 @@ class labyrinth_reset(Module):
                         return False, a3_uid, a5_uid
             return True, a3_uid, a5_uid
 
-        top = await client.request(LabyrinthTopRequest())
+        # 若已有进行中的黎明界，先放弃  
+        top = await client.request(LabyrinthTopRequest())  
+        if top.enter_id:  
+            self._log(f"检测到进行中的黎明界 (enter_id={top.enter_id})，先放弃...")  
+            self._log(f"  公会: {top.guild_id}")  
+            self._log(f"  难度: {top.difficulty}")  
+            await client.request(LabyrinthRetireRequest(enter_id=top.enter_id))  
+            self._log("已放弃本次探索")
         if top.enter_id:
             # Resume to check if we're at the first block
             resume = await client.request(LabyrinthResumeRequest(enter_id=top.enter_id))
