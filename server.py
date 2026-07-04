@@ -3293,7 +3293,7 @@ async def pjjc_stop_auto_def(botev: BotEvent):
     else:  
         await botev.send("当前没有正在运行的自动换防任务")
         
-@register_tool("黎明界开局", "labyrinth_start_reroll")
+@register_tool("黎明界刷开局", "labyrinth_start_reroll")
 async def labyrinth_start_reroll(botev: BotEvent):
     guild_id = 0
     msg = await botev.message()
