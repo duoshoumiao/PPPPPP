@@ -24,7 +24,7 @@ from .talent import *
 from .nbb import *  
 from .mirage import *
 from .bsm import *
-from .labyrinth import *
+from .labyrint import *
 
 @dataclass
 class ModuleList:
@@ -125,6 +125,7 @@ daily_modules = ModuleList(
         mission_receive_last,
         seasonpass_accept,
         seasonpass_reward,
+        role_gacha,
 
         normal_shop,
         limit_shop,

@@ -228,7 +228,6 @@ sv_help = f"""
 - {prefix}保存ex状态 保存当前所有角色的普通EX装备穿戴状态
 - {prefix}恢复ex状态 恢复之前保存的普通EX装备穿戴状态
 - {prefix}黎明界刷开局 [公会名|1-5] 使用web端保存的配置自动刷取黎明界开局。公会: 1-美食殿堂 2-破晓之星 3-咲恋救济院 4-王宫骑士团 5-拉比林斯
-- {prefix}放弃黎明界 放弃当前进行中的黎明界探索，不进行结算
 """.strip()
 
 if address is None:
@@ -3294,29 +3293,23 @@ async def pjjc_stop_auto_def(botev: BotEvent):
     else:  
         await botev.send("当前没有正在运行的自动换防任务")
         
-@register_tool("黎明界刷开局", "labyrinth_reset")  
-async def labyrinth_reset_tool(botev: BotEvent):  
-    from .autopcr.module.modules.labyrinth import _load_guild_list  
-    msg = await botev.message()  
-    config = {}  
-    if msg:  
-        guild_name = str(msg[0]).strip()  
-        guilds = _load_guild_list()  
-        if guild_name.isdigit() and 1 <= int(guild_name) <= 5:  
-            config["labyrinth_reset_guild"] = int(guild_name)  
-        else:  
-            guild_map = {name.lower(): gid for gid, name in guilds}  
-            gid = guild_map.get(guild_name.lower())  
-            if not gid:  
-                available = ', '.join(f'{gid}-{name}' for gid, name in guilds)  
-                await botev.finish(f"未找到公会【{guild_name}】。可用: {available}")  
-            config["labyrinth_reset_guild"] = gid  
-        del msg[0]   # 关键：消费掉已解析的公会参数  
-    return config
-
-@register_tool("放弃黎明界", "labyrinth_retire")
-async def labyrinth_retire_tool(botev: BotEvent):
-    return {}
+@register_tool("黎明界开局", "labyrinth_start_reroll")
+async def labyrinth_start_reroll(botev: BotEvent):
+    guild_id = 0
+    msg = await botev.message()
+    try:
+        for guild in db.labyrinth_enter_guild.values():
+            if msg[0] in guild.guild_name.replace(r"\n", ""):
+                guild_id = guild.guild_id
+                del msg[0]
+                break
+    except:
+        pass
+    if guild_id == 0:
+        await botev.finish(f"未找到公会，请输入包含以下公会名字：" + "\n".join([guild.guild_name.replace(r"\n", "") for guild in db.labyrinth_enter_guild.values()]))
+    return {
+            "labyrinth_reroll_guild_id": guild_id,
+    }
 
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
