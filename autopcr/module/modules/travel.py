@@ -139,7 +139,7 @@ ManaTravelEventRemain = set({eEventReward.Coin, eEventReward.EquipStone, eEventR
 @TravelQuestConfig("travel_speed_up_target", "加速地图", [11002001, 11002004])
 @singlechoice('travel_quest_gold_event_strategy', "代币事件策略", '赌狗', ['保守','赌狗','随机'])
 @singlechoice('travel_quest_equip_event_strategy', "装备事件策略", '赌狗', ['保守','赌狗','随机'])
-@inttype('travel_quest_speed_up_paper_hold', "加速券保留", 12, list(range(3001)))
+@inttype('travel_quest_speed_up_paper_hold', "加速券保留", 12, list(range(30001)))
 @name("探险续航")
 @default(True)
 class travel_quest_sweep(Module):

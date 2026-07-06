@@ -3,6 +3,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Tuple, Union
 from pathlib import Path
 import math  
 from .autopcr.model.custom import UnitAttribute 
+from .autopcr.constants import DAILY_ORDER_KEY
 
 from .autopcr.module.accountmgr import BATCHINFO, AccountBatch, TaskResultInfo
 from .autopcr.module.modulebase import eResultStatus
@@ -155,7 +156,8 @@ _auto_def_stop_events = {}
 prefix = '#'
 
 sv_help = f"""
-- {prefix}配置日常 一切的开始
+- 清日常创建    一切的开始
+- {prefix}配置日常  查地址
 - {prefix}清日常 [昵称] 无昵称则默认账号
 - {prefix}清日常所有 清该qq号下所有号的日常
 指令格式： 命令 昵称 参数，下述省略昵称，<>表示必填，[]表示可选，|表示分割
@@ -227,7 +229,8 @@ sv_help = f"""
 - {prefix}日常设置 [昵称] 模块序号 选项序号 值       设置模块子选项
 - {prefix}保存ex状态 保存当前所有角色的普通EX装备穿戴状态
 - {prefix}恢复ex状态 恢复之前保存的普通EX装备穿戴状态
-- {prefix}黎明界刷开局 [公会名|1-5] 使用web端保存的配置自动刷取黎明界开局。公会: 1-美食殿堂 2-破晓之星 3-咲恋救济院 4-王宫骑士团 5-拉比林斯
+- {prefix}黎明界刷开局 公会名
+- {prefix}清日常排序 5 1 3  (把1、3挪到5后面)
 """.strip()
 
 if address is None:
@@ -3295,6 +3298,7 @@ async def pjjc_stop_auto_def(botev: BotEvent):
         
 @register_tool("黎明界刷开局", "labyrinth_start_reroll")
 async def labyrinth_start_reroll(botev: BotEvent):
+    await botev.send("请稍等")  
     guild_id = 0
     msg = await botev.message()
     try:
@@ -3311,6 +3315,67 @@ async def labyrinth_start_reroll(botev: BotEvent):
             "labyrinth_reroll_guild_id": guild_id,
     }
 
+@sv.on_prefix(f"{prefix}清日常排序")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def daily_reorder(botev: BotEvent, acc: Account):  
+    alias = escape(acc.alias)  
+    msg = await botev.message()  
+  
+    indexed_modules = _get_daily_modules(acc)  
+  
+    if not msg:  
+        await botev.finish(  
+            f"把指定功能挪到某个功能之后\n"  
+            f"第一个是锚点功能，其余是要挪到它后面的功能\n"  
+            f"示例：{prefix}清日常排序 5 1 3  (把1、3挪到5后面)\n"  
+            f"发送 {prefix}日常面板 查看当前序号\n"  
+            f"发送 {prefix}清日常排序 重置 可恢复默认顺序"  
+        )  
+  
+    # 重置：清掉自定义顺序，回到 __init__.py 默认顺序  
+    if len(msg) == 1 and msg[0] in ("重置", "reset", "默认"):  
+        acc.data.config.pop(DAILY_ORDER_KEY, None)  
+        await botev.finish(f"【{alias}】已恢复默认清日常顺序")  
+  
+    if len(msg) < 2:  
+        await botev.finish("至少需要两个参数：锚点功能 + 要挪到其后的功能")  
+  
+    # 第一个参数 = 锚点功能  
+    anchor_success, anchor_failed = _match_modules([msg[0]], indexed_modules)  
+    if not anchor_success:  
+        await botev.finish(f"锚点功能匹配失败: {anchor_failed[0] if anchor_failed else msg[0]}")  
+    anchor_module = anchor_success[0][1]  
+  
+    # 其余参数 = 要挪到锚点后面的功能  
+    move_success, move_failed = _match_modules(msg[1:], indexed_modules)  
+  
+    move_keys = []  
+    for idx, m in move_success:  
+        if m.key != anchor_module.key and m.key not in move_keys:  
+            move_keys.append(m.key)  
+  
+    if not move_keys:  
+        await botev.finish("要挪动的功能不能为空，且不能与锚点相同")  
+  
+    # 基于当前顺序重排：先剔除待挪动项，遍历到锚点后再把它们插进去  
+    order = []  
+    for idx, m in indexed_modules:  
+        if m.key in move_keys:  
+            continue  
+        order.append(m.key)  
+        if m.key == anchor_module.key:  
+            order.extend(move_keys)  
+  
+    acc.data.config[DAILY_ORDER_KEY] = order  
+  
+    moved_names = ", ".join(acc.modules_list.get_module_from_key(k).name for k in move_keys)  
+    lines = [f"已将 [{moved_names}] 挪到 [{anchor_module.name}] 之后"]  
+    if move_failed:  
+        lines.append("跳过: " + ", ".join(move_failed))  
+    await botev.send(f"【{alias}】清日常顺序已更新\n" + "\n".join(lines))
+    
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}

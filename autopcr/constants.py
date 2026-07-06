@@ -5,7 +5,8 @@ except ImportError:
     from setuptools._distutils.util import strtobool
 import uuid
 import logging
-
+# 每账号自定义「清日常」顺序在 config 中的保留 key  只加了这下面一行
+DAILY_ORDER_KEY = "__daily_order__"
 SERVER_PORT = int(os.getenv("AUTOPCR_SERVER_PORT", "13200"))
 
 CLIENT_POOL_SIZE_MAX = 100
