@@ -222,7 +222,7 @@ class labyrinth_start_reroll(Module):
         area5_bosses: Set[int] = set(self.get_config('labyrinth_reroll_area5_boss'))
         third_block_type: str = self.get_config('labyrinth_reroll_third_block_type')
         perfect_start: bool = self.get_config('labyrinth_reroll_perfect_start')
-        max_count: int = 1000
+        max_count: int = 9999
 
         top = await client.labyrinth_top()
         max_unlocked_difficulty = self._max_unlocked_difficulty(top)
