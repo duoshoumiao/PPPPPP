@@ -3315,41 +3315,27 @@ async def labyrinth_start_reroll(botev: BotEvent):
             "labyrinth_reroll_guild_id": guild_id,
     }
 
-@sv.on_prefix(f"{prefix}清日常排序")  
-@wrap_hoshino_event  
-@wrap_accountmgr  
-@wrap_account  
-async def daily_reorder(botev: BotEvent, acc: Account):  
+def _compute_daily_reorder(acc: Account, args: list):  
+    """对单个真实账号计算并写入清日常顺序，返回 (是否更新, 提示文本)。不做任何 botev 交互。"""  
     alias = escape(acc.alias)  
-    msg = await botev.message()  
-  
     indexed_modules = _get_daily_modules(acc)  
   
-    if not msg:  
-        await botev.finish(  
-            f"把指定功能挪到某个功能之后\n"  
-            f"第一个是锚点功能，其余是要挪到它后面的功能\n"  
-            f"示例：{prefix}清日常排序 5 1 3  (把1、3挪到5后面)\n"  
-            f"发送 {prefix}日常面板 查看当前序号\n"  
-            f"发送 {prefix}清日常排序 重置 可恢复默认顺序"  
-        )  
-  
-    # 重置：清掉自定义顺序，回到 __init__.py 默认顺序  
-    if len(msg) == 1 and msg[0] in ("重置", "reset", "默认"):  
+    # 重置：清掉自定义顺序，回到默认顺序  
+    if len(args) == 1 and args[0] in ("重置", "reset", "默认"):  
         acc.data.config.pop(DAILY_ORDER_KEY, None)  
-        await botev.finish(f"【{alias}】已恢复默认清日常顺序")  
+        return True, f"【{alias}】已恢复默认清日常顺序"  
   
-    if len(msg) < 2:  
-        await botev.finish("至少需要两个参数：锚点功能 + 要挪到其后的功能")  
+    if len(args) < 2:  
+        return False, f"【{alias}】至少需要两个参数：锚点功能 + 要挪到其后的功能"  
   
     # 第一个参数 = 锚点功能  
-    anchor_success, anchor_failed = _match_modules([msg[0]], indexed_modules)  
+    anchor_success, anchor_failed = _match_modules([args[0]], indexed_modules)  
     if not anchor_success:  
-        await botev.finish(f"锚点功能匹配失败: {anchor_failed[0] if anchor_failed else msg[0]}")  
+        return False, f"【{alias}】锚点功能匹配失败: {anchor_failed[0] if anchor_failed else args[0]}"  
     anchor_module = anchor_success[0][1]  
   
     # 其余参数 = 要挪到锚点后面的功能  
-    move_success, move_failed = _match_modules(msg[1:], indexed_modules)  
+    move_success, move_failed = _match_modules(args[1:], indexed_modules)  
   
     move_keys = []  
     for idx, m in move_success:  
@@ -3357,7 +3343,7 @@ async def daily_reorder(botev: BotEvent, acc: Account):
             move_keys.append(m.key)  
   
     if not move_keys:  
-        await botev.finish("要挪动的功能不能为空，且不能与锚点相同")  
+        return False, f"【{alias}】要挪动的功能不能为空，且不能与锚点相同"  
   
     # 基于当前顺序重排：先剔除待挪动项，遍历到锚点后再把它们插进去  
     order = []  
@@ -3374,7 +3360,63 @@ async def daily_reorder(botev: BotEvent, acc: Account):
     lines = [f"已将 [{moved_names}] 挪到 [{anchor_module.name}] 之后"]  
     if move_failed:  
         lines.append("跳过: " + ", ".join(move_failed))  
-    await botev.send(f"【{alias}】清日常顺序已更新\n" + "\n".join(lines))
+    return True, f"【{alias}】清日常顺序已更新\n" + "\n".join(lines)  
+  
+  
+@sv.on_prefix(f"{prefix}清日常排序")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+async def daily_reorder(botev: BotEvent, accmgr: AccountManager):  
+    msg = await botev.message()  
+  
+    # ===== 「所有」分支：逐个真实账号修改，不走 BATCH_RUNNER =====  
+    if msg and msg[0] == '所有':  
+        del msg[0]  
+        if not msg:  
+            await botev.finish(  
+                f"把指定功能挪到某个功能之后\n"  
+                f"第一个是锚点功能，其余是要挪到它后面的功能\n"  
+                f"示例：{prefix}清日常排序所有 5 1 3  (把1、3挪到5后面)\n"  
+                f"发送 {prefix}清日常排序 重置 可恢复默认顺序"  
+            )  
+        results = []  
+        for alias in accmgr.accounts():  
+            async with accmgr.load(alias) as acc:  
+                ok, text = _compute_daily_reorder(acc, list(msg))  
+                results.append(text)  
+        await botev.finish("\n".join(results) if results else "没有可修改的账号")  
+  
+    # ===== 其余情况：解析出单个账号（复刻原 wrap_account 行为）=====  
+    alias = msg[0] if msg else ""  
+    if alias == '批量':  
+        alias = BATCHINFO  
+        del msg[0]  
+    elif alias not in accmgr.accounts():  
+        alias = accmgr.default_account  
+    else:  
+        del msg[0]  
+  
+    if alias != BATCHINFO and len(list(accmgr.accounts())) == 1:  
+        alias = list(accmgr.accounts())[0]  
+  
+    if alias != BATCHINFO and alias not in accmgr.accounts():  
+        if alias:  
+            await botev.finish(f"未找到昵称为【{alias}】的账号")  
+        else:  
+            await botev.finish(f"存在多账号且未找到默认账号，请指定昵称")  
+  
+    if not msg:  
+        await botev.finish(  
+            f"把指定功能挪到某个功能之后\n"  
+            f"第一个是锚点功能，其余是要挪到它后面的功能\n"  
+            f"示例：{prefix}清日常排序 5 1 3  (把1、3挪到5后面)\n"  
+            f"发送 {prefix}日常面板 查看当前序号\n"  
+            f"发送 {prefix}清日常排序 重置 可恢复默认顺序"  
+        )  
+  
+    async with accmgr.load(alias, force_use_all=(alias == BATCHINFO)) as acc:  
+        ok, text = _compute_daily_reorder(acc, list(msg))  
+    await botev.finish(text)
     
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
