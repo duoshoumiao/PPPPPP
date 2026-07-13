@@ -14,7 +14,7 @@ import os
 from typing import Awaitable, Callable, Dict, List  
 import base64  
 import io
-  
+from ..constants import DAILY_ORDER_KEY 
   
 # ==================== 辅助类 ====================  
   
@@ -130,7 +130,61 @@ def _match_modules(targets: list, indexed_modules: list):
         success.append(matched)  
   
     return success, failed  
+
+async def handle_daily_reorder(mgr, parts: List[str]) -> str:  
+    """清日常排序 — 把指定功能挪到锚点功能之后"""  
+    alias = mgr.alias  
+    indexed_modules = _get_daily_modules(mgr)  
   
+    if not parts:  
+        return (  
+            "把指定功能挪到某个功能之后\n"  
+            "第一个是锚点功能，其余是要挪到它后面的功能\n"  
+            "示例：#清日常排序 5 1 3  (把1、3挪到5后面)\n"  
+            "发送 #日常面板 查看当前序号\n"  
+            "发送 #清日常排序 重置 可恢复默认顺序"  
+        )  
+  
+    # 重置  
+    if len(parts) == 1 and parts[0] in ("重置", "reset", "默认"):  
+        mgr.data.config.pop(DAILY_ORDER_KEY, None)  
+        return f"【{alias}】已恢复默认清日常顺序"  
+  
+    if len(parts) < 2:  
+        return "至少需要两个参数：锚点功能 + 要挪到其后的功能"  
+  
+    # 锚点  
+    anchor_success, anchor_failed = _match_modules([parts[0]], indexed_modules)  
+    if not anchor_success:  
+        return f"锚点功能匹配失败: {anchor_failed[0] if anchor_failed else parts[0]}"  
+    anchor_module = anchor_success[0][1]  
+  
+    # 要挪动的功能  
+    move_success, move_failed = _match_modules(parts[1:], indexed_modules)  
+    move_keys = []  
+    for idx, m in move_success:  
+        if m.key != anchor_module.key and m.key not in move_keys:  
+            move_keys.append(m.key)  
+  
+    if not move_keys:  
+        return "要挪动的功能不能为空，且不能与锚点相同"  
+  
+    # 重排  
+    order = []  
+    for idx, m in indexed_modules:  
+        if m.key in move_keys:  
+            continue  
+        order.append(m.key)  
+        if m.key == anchor_module.key:  
+            order.extend(move_keys)  
+  
+    mgr.data.config[DAILY_ORDER_KEY] = order  
+  
+    moved_names = ", ".join(mgr.modules_list.get_module_from_key(k).name for k in move_keys)  
+    lines = [f"已将 [{moved_names}] 挪到 [{anchor_module.name}] 之后"]  
+    if move_failed:  
+        lines.append("跳过: " + ", ".join(move_failed))  
+    return f"【{alias}】清日常顺序已更新\n" + "\n".join(lines)  
   
 # ==================== 特殊指令处理函数 ====================  
 # 签名统一为: async def handler(mgr: Account, parts: List[str]) -> str  
@@ -691,6 +745,7 @@ SPECIAL_HANDLERS: Dict[str, Callable[..., Awaitable[str]]] = {
     "日常报告": handle_daily_report,  
     "日常记录": handle_daily_record,  
     "定时日志": handle_cron_log,  
+    "清日常排序": handle_daily_reorder,  
     "清日常": handle_clean_daily,  
     "卡池": handle_gacha_current,  
 }
