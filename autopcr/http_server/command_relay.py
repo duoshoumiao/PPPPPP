@@ -74,6 +74,406 @@ class RelayBotEvent:
   
   
 # ==================== 辅助函数 ====================  
+def _get_cron_modules(acc):  
+    """获取定时(cron)模块列表（带序号），返回 [(idx, module), ...]"""  
+    modules = acc.modules_list.get_modules_list('cron')  
+    return [(i + 1, m) for i, m in enumerate(modules)]  
+  
+  
+async def handle_cron_panel(mgr, parts: List[str]) -> str:  
+    """定时面板 — 返回文本版定时任务列表"""  
+    indexed_modules = _get_cron_modules(mgr)  
+  
+    if not indexed_modules:  
+        return "未找到定时任务"  
+  
+    lines = [f"【{mgr.alias}】定时面板", ""]  
+    lines.append(f"{'序号':>4}  {'任务':<12}  {'时间':<7}  状态")  
+    lines.append("-" * 40)  
+    for idx, m in indexed_modules:  
+        enabled = mgr.data.config.get(m.key, m.default)  
+        status = "开启" if enabled else "关闭"  
+        name = m.name or m.key  
+        try:  
+            time_val = m.get_config_display(f"time_{m.key}")  
+        except Exception:  
+            time_val = "-"  
+        lines.append(f"{idx:>4}  {name:<12}  {time_val:<7}  {status}")  
+  
+    lines.append("")  
+    lines.append("详情: #定时详情 序号")  
+    lines.append("开关: #定时开关 序号")  
+    return "\n".join(lines)
+
+async def handle_cron_detail(mgr, parts: List[str]) -> str:  
+    """定时详情 序号/名称 — 返回定时任务详细配置"""  
+    if not parts:  
+        return (  
+            "请指定定时任务序号或名称\n"  
+            "示例：#定时详情 1\n"  
+            "发送 #定时面板 查看任务序号"  
+        )  
+  
+    indexed_modules = _get_cron_modules(mgr)  
+    module_target = parts[0]  
+    success, failed = _match_modules([module_target], indexed_modules)  
+    if failed:  
+        return f"任务匹配失败: {failed[0]}"  
+    mod_idx, target_module = success[0]  
+  
+    enabled = mgr.data.config.get(target_module.key, target_module.default)  
+    config_items = list(target_module.config.items())  
+  
+    desc = f"\n说明: {target_module.description}" if target_module.description else ""  
+    lines = [  
+        f"【{mgr.alias}】{mod_idx}.{target_module.name}({target_module.key}) "  
+        f"当前:{'开启' if enabled else '关闭'}{desc}",  
+        ""  
+    ]  
+  
+    for oidx, (key, cfg) in enumerate(config_items, 1):  
+        try:  
+            display = target_module.get_config_display(key)  
+            ctype = cfg.config_type  
+            type_label = {  
+                'bool': '布尔', 'int': '整数', 'single': '单选',  
+                'multi': '多选', 'multi_search': '多选搜索',  
+                'text': '文本', 'time': '时间',  
+            }.get(ctype, ctype)  
+  
+            if ctype == 'bool':  
+                candidates_str = "开启 / 关闭"  
+            elif ctype in ('text', 'time'):  
+                candidates_str = "自由输入"  
+            else:  
+                try:  
+                    cands = cfg.candidates  
+                    if cands:  
+                        displays = [str(cfg.candidate_display(c)) for c in cands]  
+                        if len(displays) <= 8:  
+                            candidates_str = ', '.join(displays)  
+                        else:  
+                            candidates_str = ', '.join(displays[:6]) + f'...共{len(cands)}项'  
+                    else:  
+                        candidates_str = "-"  
+                except Exception:  
+                    candidates_str = "-"  
+  
+            lines.append(f"  {oidx}. {cfg.desc}")  
+            lines.append(f"     当前: {display}  类型: {type_label}")  
+            lines.append(f"     可选: {candidates_str}")  
+        except Exception:  
+            lines.append(f"  {oidx}. {cfg.desc} (读取失败)")  
+  
+    lines.append("")  
+    lines.append(f"设置选项: #定时设置 {mod_idx} 选项序号 值")  
+    lines.append(f"开关任务: #定时开关 {mod_idx}")  
+  
+    return "\n".join(lines)    
+
+async def handle_cron_toggle(mgr, parts: List[str]) -> str:  
+    """定时开关 序号/名称 — 切换定时任务开启/关闭状态（可多个）"""  
+    if not parts:  
+        return (  
+            "请指定序号或任务名，多个用空格分隔\n"  
+            "示例：#定时开关 1 3\n"  
+            "发送 #定时面板 查看序号"  
+        )  
+  
+    indexed_modules = _get_cron_modules(mgr)  
+    success, failed = _match_modules(parts, indexed_modules)  
+  
+    enabled_list = []  
+    disabled_list = []  
+    for idx, m in success:  
+        current = mgr.data.config.get(m.key, m.default)  
+        new_val = not current  
+        mgr.data.config[m.key] = new_val  
+        if new_val:  
+            enabled_list.append(f"{idx}.{m.name}")  
+        else:  
+            disabled_list.append(f"{idx}.{m.name}")  
+  
+    lines = [f"【{mgr.alias}】"]  
+    if enabled_list:  
+        lines.append("已开启: " + ", ".join(enabled_list))  
+    if disabled_list:  
+        lines.append("已关闭: " + ", ".join(disabled_list))  
+    if failed:  
+        lines.append("跳过: " + ", ".join(failed))  
+    return "\n".join(lines)
+    
+async def handle_cron_set_config(mgr, parts: List[str]) -> str:  
+    """定时设置 任务序号 [选项序号] [值]"""  
+    alias = mgr.alias  
+  
+    if not parts:  
+        return (  
+            "格式：\n"  
+            "  #定时设置 任务序号          查看选项\n"  
+            "  #定时设置 任务序号 选项序号      查看可选值\n"  
+            "  #定时设置 任务序号 选项序号 值    设置\n"  
+            "发送 #定时面板 查看任务序号"  
+        )  
+  
+    indexed_modules = _get_cron_modules(mgr)  
+  
+    # 匹配任务  
+    module_target = parts[0]  
+    success, failed = _match_modules([module_target], indexed_modules)  
+    if failed:  
+        return f"任务匹配失败: {failed[0]}"  
+    mod_idx, target_module = success[0]  
+  
+    config_items = list(target_module.config.items())  
+  
+    # 只传任务：显示选项列表  
+    if len(parts) == 1:  
+        if not config_items:  
+            return (  
+                f"【{target_module.name}】没有子选项，仅支持开关\n"  
+                f"使用 #定时开关 {mod_idx}"  
+            )  
+  
+        enabled = mgr.data.config.get(target_module.key, target_module.default)  
+        status = "开启" if enabled else "关闭"  
+        lines = [  
+            f"【{alias}】{mod_idx}.{target_module.name} (当前:{status})",  
+            ""  
+        ]  
+        for oidx, (key, cfg) in enumerate(config_items, 1):  
+            try:  
+                display = target_module.get_config_display(key)  
+                type_label = {  
+                    'bool': '布尔', 'int': '整数', 'single': '单选',  
+                    'multi': '多选', 'multi_search': '多选搜索',  
+                    'text': '文本', 'time': '时间',  
+                }.get(cfg.config_type, cfg.config_type)  
+                lines.append(f"  {oidx}. {cfg.desc}: {display} ({type_label})")  
+            except Exception:  
+                lines.append(f"  {oidx}. {cfg.desc}: ? (?)")  
+  
+        lines.append("")  
+        lines.append(f"查看可选值: #定时设置 {mod_idx} 选项序号")  
+        lines.append(f"直接设置: #定时设置 {mod_idx} 选项序号 值")  
+        return "\n".join(lines)  
+  
+    # 匹配选项  
+    option_target = parts[1]  
+    target_config = None  
+    option_idx = None  
+  
+    if option_target.isdigit():  
+        oidx = int(option_target)  
+        if 1 <= oidx <= len(config_items):  
+            option_idx = oidx  
+            target_config = config_items[oidx - 1][1]  
+  
+    if not target_config:  
+        for oidx, (key, cfg) in enumerate(config_items, 1):  
+            if cfg.desc == option_target or key == option_target:  
+                option_idx = oidx  
+                target_config = cfg  
+                break  
+  
+    if not target_config:  
+        options = ', '.join(f"{i}.{cfg.desc}" for i, (_, cfg) in enumerate(config_items, 1))  
+        return f"未找到选项【{option_target}】\n可用: {options}"  
+  
+    ctype = target_config.config_type  
+    current_display = target_module.get_config_display(target_config.key)  
+  
+    # 只传任务+选项：显示候选值  
+    if len(parts) == 2:  
+        try:  
+            candidates = target_config.candidates  
+        except Exception:  
+            candidates = []  
+  
+        if ctype == 'text':  
+            return (  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n"  
+                f"类型: 文本，直接输入内容\n"  
+                f"设置: #定时设置 {mod_idx} {option_idx} 你的文本"  
+            )  
+        elif ctype == 'time':  
+            return (  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n"  
+                f"类型: 时间，格式 HH:MM\n"  
+                f"设置: #定时设置 {mod_idx} {option_idx} 05:30"  
+            )  
+        elif ctype == 'bool':  
+            return (  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n"  
+                f"可选: 开启 / 关闭\n"  
+                f"设置: #定时设置 {mod_idx} {option_idx} 开启"  
+            )  
+  
+        if not candidates:  
+            return (  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n"  
+                f"无预设候选值，直接输入值"  
+            )  
+  
+        # 构建候选值列表  
+        current_value = target_config.get_value()  
+        lines = [  
+            f"【{target_module.name}】{option_idx}.{target_config.desc}",  
+            f"当前: {current_display}",  
+            ""  
+        ]  
+        for c in candidates[:50]:  
+            display = str(target_config.candidate_display(c))  
+            if ctype in ('multi', 'multi_search'):  
+                selected = " [已选]" if (isinstance(current_value, list) and c in current_value) else ""  
+            else:  
+                selected = " [当前]" if c == current_value else ""  
+            lines.append(f"  {display}{selected}")  
+  
+        if len(candidates) > 50:  
+            lines.append(f"  ...共{len(candidates)}项，建议去网页配置")  
+  
+        if ctype in ('multi', 'multi_search'):  
+            hint = f"多选用逗号分隔: #定时设置 {mod_idx} {option_idx} 值1,值2"  
+        elif ctype == 'int':  
+            hint = f"直接输入数字: #定时设置 {mod_idx} {option_idx} {candidates[0]}"  
+        else:  
+            hint = f"输入候选值: #定时设置 {mod_idx} {option_idx} {str(target_config.candidate_display(candidates[0]))}"  
+  
+        lines.append("")  
+        lines.append(hint)  
+        return "\n".join(lines)  
+  
+    # 设置值  
+    value_str = ' '.join(parts[2:])  
+  
+    # 特殊关键词：清空  
+    if value_str in ('清空', '空', 'clear', 'none', '无'):  
+        if ctype in ('multi', 'multi_search'):  
+            final_value = []  
+        elif ctype == 'text':  
+            final_value = ""  
+        elif ctype == 'bool':  
+            final_value = False  
+        else:  
+            final_value = target_config.default  
+  
+        mgr.data.config[target_config.key] = final_value  
+  
+        if isinstance(final_value, list):  
+            display_val = '(空)' if not final_value else ', '.join(  
+                str(target_config.candidate_display(v)) for v in final_value  
+            )  
+        else:  
+            display_val = str(target_config.candidate_display(final_value)) if final_value is not None else '(空)'  
+  
+        return f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}"  
+  
+    try:  
+        candidates = target_config.candidates  
+    except Exception:  
+        candidates = []  
+  
+    final_value = None  
+  
+    if ctype == 'text':  
+        final_value = value_str  
+  
+    elif ctype == 'time':  
+        tp = value_str.replace('：', ':').split(':')  
+        if len(tp) != 2:  
+            tp = value_str.split()  
+        if len(tp) != 2:  
+            return "时间格式错误，请输入 HH:MM，如 05:30"  
+        try:  
+            h, m = int(tp[0]), int(tp[1])  
+            if not (0 <= h < 24 and 0 <= m < 60):  
+                return "时间范围错误，小时0-23，分钟0-59"  
+        except ValueError:  
+            return "时间格式错误，请输入数字 HH:MM"  
+        final_value = tp  
+  
+    elif ctype == 'bool':  
+        true_vals = {'开启', '开', 'true', '是', '1', 'on'}  
+        false_vals = {'关闭', '关', 'false', '否', '0', 'off'}  
+        if value_str.lower() in true_vals:  
+            final_value = True  
+        elif value_str.lower() in false_vals:  
+            final_value = False  
+        else:  
+            return "请输入: 开启 或 关闭"  
+  
+    elif ctype in ('multi', 'multi_search'):  
+        vals = [p.strip() for p in value_str.replace('，', ',').split(',')]  
+        final_value = []  
+        for p in vals:  
+            matched_c = None  
+            for c in candidates:  
+                if str(target_config.candidate_display(c)) == p:  
+                    matched_c = c  
+                    break  
+            if matched_c is None:  
+                for c in candidates:  
+                    if str(c) == p:  
+                        matched_c = c  
+                        break  
+            if matched_c is not None:  
+                final_value.append(matched_c)  
+            else:  
+                displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
+                return f"值【{p}】不在候选范围\n可选: {', '.join(displays)}"  
+  
+    elif ctype == 'int':  
+        try:  
+            num = int(value_str)  
+        except ValueError:  
+            return f"请输入整数，可选: {', '.join(str(c) for c in candidates[:30])}"  
+        if candidates and num not in candidates:  
+            return f"值 {num} 不在可选范围\n可选: {', '.join(str(c) for c in candidates[:30])}"  
+        final_value = num  
+  
+    elif ctype == 'single':  
+        for c in candidates:  
+            if str(target_config.candidate_display(c)) == value_str:  
+                final_value = c  
+                break  
+        if final_value is None:  
+            for c in candidates:  
+                if str(c) == value_str:  
+                    final_value = c  
+                    break  
+        if final_value is None and candidates:  
+            try:  
+                converted = type(candidates[0])(value_str)  
+                if converted in candidates:  
+                    final_value = converted  
+            except (ValueError, TypeError):  
+                pass  
+        if final_value is None:  
+            displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
+            return f"值【{value_str}】不在候选范围\n可选: {', '.join(displays)}"  
+  
+    else:  
+        final_value = value_str  
+  
+    if final_value is None:  
+        return "值解析失败"  
+  
+    mgr.data.config[target_config.key] = final_value  
+  
+    if isinstance(final_value, list):  
+        if ctype == 'time':  
+            display_val = f"{final_value[0]}:{final_value[1]}"  
+        else:  
+            display_val = ', '.join(str(target_config.candidate_display(v)) for v in final_value)  
+    else:  
+        display_val = str(target_config.candidate_display(final_value))  
+  
+    return f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}"    
   
 def _get_daily_modules(acc):  
     """获取已实现的日常模块列表（带序号），返回 [(idx, module), ...]"""  
@@ -748,4 +1148,8 @@ SPECIAL_HANDLERS: Dict[str, Callable[..., Awaitable[str]]] = {
     "清日常排序": handle_daily_reorder,  
     "清日常": handle_clean_daily,  
     "卡池": handle_gacha_current,  
+    "定时面板": handle_cron_panel,  
+    "定时详情": handle_cron_detail,  
+    "定时开关": handle_cron_toggle,  
+    "定时设置": handle_cron_set_config,
 }

@@ -227,6 +227,10 @@ sv_help = f"""
 - {prefix}日常开启 [昵称] 模块名/序号 开启指定日常功能  
 - {prefix}日常关闭 [昵称] 模块名/序号 关闭指定日常功能  
 - {prefix}日常设置 [昵称] 模块序号 选项序号 值       设置模块子选项
+- {prefix}定时面板 [昵称] 查看定时任务开关及时间  
+- {prefix}定时详情 [昵称] 序号 查看定时任务详细配置和可选值  
+- {prefix}定时开关 [昵称] 序号 切换定时任务开启/关闭  
+- {prefix}定时设置 [昵称] 任务序号 选项序号 值   设置定时任务子选项
 - {prefix}保存ex状态 保存当前所有角色的普通EX装备穿戴状态
 - {prefix}恢复ex状态 恢复之前保存的普通EX装备穿戴状态
 - {prefix}黎明界刷开局 公会名
@@ -3417,7 +3421,376 @@ async def daily_reorder(botev: BotEvent, accmgr: AccountManager):
     async with accmgr.load(alias, force_use_all=(alias == BATCHINFO)) as acc:  
         ok, text = _compute_daily_reorder(acc, list(msg))  
     await botev.finish(text)
-    
+
+def _get_cron_modules(acc):  
+    """获取定时(cron)模块列表（带序号），返回 [(idx, module), ...]"""  
+    modules = acc.modules_list.get_modules_list('cron')  
+    return [(i + 1, m) for i, m in enumerate(modules)]
+
+@sv.on_prefix(f"{prefix}定时面板")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def cron_panel(botev: BotEvent, acc: Account):  
+    alias = escape(acc.alias)  
+    indexed_modules = _get_cron_modules(acc)  
+    if not indexed_modules:  
+        await botev.finish("未找到定时任务")  
+  
+    lines = [f"【{alias}】定时面板", ""]  
+    lines.append(f"{'序号':>4}  {'任务':<12}  {'时间':<7}  状态")  
+    lines.append("-" * 40)  
+    for idx, m in indexed_modules:  
+        enabled = acc.data.config.get(m.key, m.default)  
+        status = "开启" if enabled else "关闭"  
+        name = m.name or m.key  
+        try:  
+            time_val = m.get_config_display(f"time_{m.key}")  
+        except Exception:  
+            time_val = "-"  
+        lines.append(f"{idx:>4}  {name:<12}  {time_val:<7}  {status}")  
+    lines.append("")  
+    lines.append(f"详情: {prefix}定时详情 序号")  
+    lines.append(f"开关: {prefix}定时开关 序号")  
+    await botev.send("\n".join(lines))  
+  
+  
+@sv.on_prefix(f"{prefix}定时详情")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def cron_detail(botev: BotEvent, acc: Account):  
+    alias = escape(acc.alias)  
+    msg = await botev.message()  
+    if not msg:  
+        await botev.finish(  
+            f"请指定定时任务序号或名称\n"  
+            f"示例：{prefix}定时详情 1\n"  
+            f"发送 {prefix}定时面板 查看任务序号"  
+        )  
+  
+    indexed_modules = _get_cron_modules(acc)  
+    success, failed = _match_modules([msg[0]], indexed_modules)  
+    if failed:  
+        await botev.finish(f"任务匹配失败: {failed[0]}")  
+    mod_idx, target_module = success[0]  
+  
+    enabled = acc.data.config.get(target_module.key, target_module.default)  
+    config_items = list(target_module.config.items())  
+  
+    desc = f"\n说明: {target_module.description}" if target_module.description else ""  
+    lines = [  
+        f"【{alias}】{mod_idx}.{target_module.name}({target_module.key}) "  
+        f"当前:{'开启' if enabled else '关闭'}{desc}",  
+        ""  
+    ]  
+    for oidx, (key, cfg) in enumerate(config_items, 1):  
+        try:  
+            display = target_module.get_config_display(key)  
+            ctype = cfg.config_type  
+            type_label = {  
+                'bool': '布尔', 'int': '整数', 'single': '单选',  
+                'multi': '多选', 'multi_search': '多选搜索',  
+                'text': '文本', 'time': '时间',  
+            }.get(ctype, ctype)  
+            if ctype == 'bool':  
+                candidates_str = "开启 / 关闭"  
+            elif ctype in ('text', 'time'):  
+                candidates_str = "自由输入"  
+            else:  
+                try:  
+                    cands = cfg.candidates  
+                    if cands:  
+                        displays = [str(cfg.candidate_display(c)) for c in cands]  
+                        if len(displays) <= 8:  
+                            candidates_str = ', '.join(displays)  
+                        else:  
+                            candidates_str = ', '.join(displays[:6]) + f'...共{len(cands)}项'  
+                    else:  
+                        candidates_str = "-"  
+                except Exception:  
+                    candidates_str = "-"  
+            lines.append(f"  {oidx}. {cfg.desc}")  
+            lines.append(f"     当前: {display}  类型: {type_label}")  
+            lines.append(f"     可选: {candidates_str}")  
+        except Exception:  
+            lines.append(f"  {oidx}. {cfg.desc} (读取失败)")  
+    lines.append("")  
+    lines.append(f"设置选项: {prefix}定时设置 {mod_idx} 选项序号 值")  
+    lines.append(f"开关任务: {prefix}定时开关 {mod_idx}")  
+    await botev.send("\n".join(lines))  
+  
+  
+@sv.on_prefix(f"{prefix}定时开关")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def cron_toggle(botev: BotEvent, acc: Account):  
+    alias = escape(acc.alias)  
+    msg = await botev.message()  
+    if not msg:  
+        await botev.finish(  
+            f"请指定序号或任务名，多个用空格分隔\n"  
+            f"示例：{prefix}定时开关 1 3\n"  
+            f"发送 {prefix}定时面板 查看序号"  
+        )  
+  
+    indexed_modules = _get_cron_modules(acc)  
+    success, failed = _match_modules(msg, indexed_modules)  
+  
+    enabled_list = []  
+    disabled_list = []  
+    for idx, m in success:  
+        current = acc.data.config.get(m.key, m.default)  
+        new_val = not current  
+        acc.data.config[m.key] = new_val  
+        if new_val:  
+            enabled_list.append(f"{idx}.{m.name}")  
+        else:  
+            disabled_list.append(f"{idx}.{m.name}")  
+  
+    lines = []  
+    if enabled_list:  
+        lines.append("已开启: " + ", ".join(enabled_list))  
+    if disabled_list:  
+        lines.append("已关闭: " + ", ".join(disabled_list))  
+    if failed:  
+        lines.append("跳过: " + ", ".join(failed))  
+    await botev.send(f"【{alias}】\n" + "\n".join(lines))  
+  
+  
+@sv.on_prefix(f"{prefix}定时设置")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def cron_set_config(botev: BotEvent, acc: Account):  
+    alias = escape(acc.alias)  
+    msg = await botev.message()  
+  
+    if not msg:  
+        await botev.finish(  
+            f"格式：\n"  
+            f"  {prefix}定时设置 任务序号          查看选项\n"  
+            f"  {prefix}定时设置 任务序号 选项序号      查看可选值\n"  
+            f"  {prefix}定时设置 任务序号 选项序号 值    设置\n"  
+            f"发送 {prefix}定时面板 查看任务序号"  
+        )  
+  
+    indexed_modules = _get_cron_modules(acc)  
+    success, failed = _match_modules([msg[0]], indexed_modules)  
+    if failed:  
+        await botev.finish(f"任务匹配失败: {failed[0]}")  
+    mod_idx, target_module = success[0]  
+  
+    config_items = list(target_module.config.items())  
+  
+    # 只传任务：显示选项列表  
+    if len(msg) == 1:  
+        enabled = acc.data.config.get(target_module.key, target_module.default)  
+        status = "开启" if enabled else "关闭"  
+        lines = [f"【{alias}】{mod_idx}.{target_module.name} (当前:{status})", ""]  
+        for oidx, (key, cfg) in enumerate(config_items, 1):  
+            try:  
+                display = target_module.get_config_display(key)  
+                type_label = {  
+                    'bool': '布尔', 'int': '整数', 'single': '单选',  
+                    'multi': '多选', 'multi_search': '多选搜索',  
+                    'text': '文本', 'time': '时间',  
+                }.get(cfg.config_type, cfg.config_type)  
+                lines.append(f"  {oidx}. {cfg.desc}: {display} ({type_label})")  
+            except Exception:  
+                lines.append(f"  {oidx}. {cfg.desc}: ? (?)")  
+        lines.append("")  
+        lines.append(f"查看可选值: {prefix}定时设置 {mod_idx} 选项序号")  
+        lines.append(f"直接设置: {prefix}定时设置 {mod_idx} 选项序号 值")  
+        await botev.finish("\n".join(lines))  
+  
+    # 匹配选项  
+    option_target = msg[1]  
+    target_config = None  
+    option_idx = None  
+    if option_target.isdigit():  
+        oidx = int(option_target)  
+        if 1 <= oidx <= len(config_items):  
+            option_idx = oidx  
+            target_config = config_items[oidx - 1][1]  
+    if not target_config:  
+        for oidx, (key, cfg) in enumerate(config_items, 1):  
+            if cfg.desc == option_target or key == option_target:  
+                option_idx = oidx  
+                target_config = cfg  
+                break  
+    if not target_config:  
+        options = ', '.join(f"{i}.{cfg.desc}" for i, (_, cfg) in enumerate(config_items, 1))  
+        await botev.finish(f"未找到选项【{option_target}】\n可用: {options}")  
+  
+    ctype = target_config.config_type  
+    current_display = target_module.get_config_display(target_config.key)  
+  
+    # 只传任务+选项：显示候选值  
+    if len(msg) == 2:  
+        try:  
+            candidates = target_config.candidates  
+        except Exception:  
+            candidates = []  
+        if ctype == 'text':  
+            await botev.finish(  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n类型: 文本，直接输入内容\n"  
+                f"设置: {prefix}定时设置 {mod_idx} {option_idx} 你的文本"  
+            )  
+        elif ctype == 'time':  
+            await botev.finish(  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n类型: 时间，格式 HH:MM\n"  
+                f"设置: {prefix}定时设置 {mod_idx} {option_idx} 05:30"  
+            )  
+        elif ctype == 'bool':  
+            await botev.finish(  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n可选: 开启 / 关闭\n"  
+                f"设置: {prefix}定时设置 {mod_idx} {option_idx} 开启"  
+            )  
+        if not candidates:  
+            await botev.finish(  
+                f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
+                f"当前: {current_display}\n无预设候选值，直接输入值"  
+            )  
+        current_value = target_config.get_value()  
+        lines = [f"【{target_module.name}】{option_idx}.{target_config.desc}",  
+                 f"当前: {current_display}", ""]  
+        for c in candidates[:50]:  
+            display = str(target_config.candidate_display(c))  
+            if ctype in ('multi', 'multi_search'):  
+                selected = " [已选]" if (isinstance(current_value, list) and c in current_value) else ""  
+            else:  
+                selected = " [当前]" if c == current_value else ""  
+            lines.append(f"  {display}{selected}")  
+        if len(candidates) > 50:  
+            lines.append(f"  ...共{len(candidates)}项，建议去网页配置")  
+        if ctype in ('multi', 'multi_search'):  
+            hint = f"多选用逗号分隔: {prefix}定时设置 {mod_idx} {option_idx} 值1,值2"  
+        elif ctype == 'int':  
+            hint = f"直接输入数字: {prefix}定时设置 {mod_idx} {option_idx} {candidates[0]}"  
+        else:  
+            hint = f"输入候选值: {prefix}定时设置 {mod_idx} {option_idx} {str(target_config.candidate_display(candidates[0]))}"  
+        lines.append("")  
+        lines.append(hint)  
+        await botev.finish("\n".join(lines))  
+  
+    # 设置值  
+    value_str = ' '.join(msg[2:])  
+    if value_str in ('清空', '空', 'clear', 'none', '无'):  
+        if ctype in ('multi', 'multi_search'):  
+            final_value = []  
+        elif ctype == 'text':  
+            final_value = ""  
+        elif ctype == 'bool':  
+            final_value = False  
+        else:  
+            final_value = target_config.default  
+        acc.data.config[target_config.key] = final_value  
+        if isinstance(final_value, list):  
+            display_val = '(空)' if not final_value else ', '.join(  
+                str(target_config.candidate_display(v)) for v in final_value)  
+        else:  
+            display_val = str(target_config.candidate_display(final_value)) if final_value is not None else '(空)'  
+        await botev.finish(f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}")  
+  
+    try:  
+        candidates = target_config.candidates  
+    except Exception:  
+        candidates = []  
+    final_value = None  
+  
+    if ctype == 'text':  
+        final_value = value_str  
+    elif ctype == 'time':  
+        tp = value_str.replace('：', ':').split(':')  
+        if len(tp) != 2:  
+            tp = value_str.split()  
+        if len(tp) != 2:  
+            await botev.finish("时间格式错误，请输入 HH:MM，如 05:30")  
+        try:  
+            h, m = int(tp[0]), int(tp[1])  
+            if not (0 <= h < 24 and 0 <= m < 60):  
+                await botev.finish("时间范围错误，小时0-23，分钟0-59")  
+        except ValueError:  
+            await botev.finish("时间格式错误，请输入数字 HH:MM")  
+        final_value = tp  
+    elif ctype == 'bool':  
+        true_vals = {'开启', '开', 'true', '是', '1', 'on'}  
+        false_vals = {'关闭', '关', 'false', '否', '0', 'off'}  
+        if value_str.lower() in true_vals:  
+            final_value = True  
+        elif value_str.lower() in false_vals:  
+            final_value = False  
+        else:  
+            await botev.finish("请输入: 开启 或 关闭")  
+    elif ctype in ('multi', 'multi_search'):  
+        vals = [p.strip() for p in value_str.replace('，', ',').split(',')]  
+        final_value = []  
+        for p in vals:  
+            matched_c = None  
+            for c in candidates:  
+                if str(target_config.candidate_display(c)) == p:  
+                    matched_c = c  
+                    break  
+            if matched_c is None:  
+                for c in candidates:  
+                    if str(c) == p:  
+                        matched_c = c  
+                        break  
+            if matched_c is not None:  
+                final_value.append(matched_c)  
+            else:  
+                displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
+                await botev.finish(f"值【{p}】不在候选范围\n可选: {', '.join(displays)}")  
+    elif ctype == 'int':  
+        try:  
+            num = int(value_str)  
+        except ValueError:  
+            await botev.finish(f"请输入整数，可选: {', '.join(str(c) for c in candidates[:30])}")  
+        if candidates and num not in candidates:  
+            await botev.finish(f"值 {num} 不在可选范围\n可选: {', '.join(str(c) for c in candidates[:30])}")  
+        final_value = num  
+    elif ctype == 'single':  
+        for c in candidates:  
+            if str(target_config.candidate_display(c)) == value_str:  
+                final_value = c  
+                break  
+        if final_value is None:  
+            for c in candidates:  
+                if str(c) == value_str:  
+                    final_value = c  
+                    break  
+        if final_value is None and candidates:  
+            try:  
+                converted = type(candidates[0])(value_str)  
+                if converted in candidates:  
+                    final_value = converted  
+            except (ValueError, TypeError):  
+                pass  
+        if final_value is None:  
+            displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
+            await botev.finish(f"值【{value_str}】不在候选范围\n可选: {', '.join(displays)}")  
+    else:  
+        final_value = value_str  
+  
+    if final_value is None:  
+        await botev.finish("值解析失败")  
+  
+    acc.data.config[target_config.key] = final_value  
+  
+    if isinstance(final_value, list):  
+        if ctype == 'time':  
+            display_val = f"{final_value[0]}:{final_value[1]}"  
+        else:  
+            display_val = ', '.join(str(target_config.candidate_display(v)) for v in final_value)  
+    else:  
+        display_val = str(target_config.candidate_display(final_value))  
+  
+    await botev.send(f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}")    
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
