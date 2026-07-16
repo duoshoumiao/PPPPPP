@@ -235,6 +235,7 @@ sv_help = f"""
 - {prefix}恢复ex状态 恢复之前保存的普通EX装备穿戴状态
 - {prefix}黎明界刷开局 公会名
 - {prefix}清日常排序 5 1 3  (把1、3挪到5后面)
+- {prefix}黎明界积分 查询黎明界累计积分/强化点数
 """.strip()
 
 if address is None:
@@ -3319,6 +3320,11 @@ async def labyrinth_start_reroll(botev: BotEvent):
             "labyrinth_reroll_guild_id": guild_id,
     }
 
+@register_tool("黎明界积分", "labyrinth_point_query")  
+async def labyrinth_point_query(botev: BotEvent):  
+    await botev.send("请稍等")  
+    return {}
+
 def _compute_daily_reorder(acc: Account, args: list):  
     """对单个真实账号计算并写入清日常顺序，返回 (是否更新, 提示文本)。不做任何 botev 交互。"""  
     alias = escape(acc.alias)  
@@ -3791,6 +3797,7 @@ async def cron_set_config(botev: BotEvent, acc: Account):
         display_val = str(target_config.candidate_display(final_value))  
   
     await botev.send(f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}")    
+
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}

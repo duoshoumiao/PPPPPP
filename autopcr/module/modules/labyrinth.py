@@ -222,7 +222,7 @@ class labyrinth_start_reroll(Module):
         area5_bosses: Set[int] = set(self.get_config('labyrinth_reroll_area5_boss'))
         third_block_type: str = self.get_config('labyrinth_reroll_third_block_type')
         perfect_start: bool = self.get_config('labyrinth_reroll_perfect_start')
-        max_count: int = 9999
+        max_count: int = 300
 
         top = await client.labyrinth_top()
         max_unlocked_difficulty = self._max_unlocked_difficulty(top)
@@ -250,3 +250,18 @@ class labyrinth_start_reroll(Module):
             await client.labyrinth_top()
 
         raise AbortError(f"重开{max_count}次仍未刷到目标路线，最后失败原因：{last_reason}")
+        
+@description('查询黎明界当前累计积分（黎明界点数）、强化点数，以及各公会已通关的最高难度。')  
+@name('黎明界积分查询')  
+class labyrinth_point_query(Module):  
+    async def do_task(self, client: pcrclient):  
+        top = await client.labyrinth_top()  
+        self._log(f"黎明界积分（点数）：{top.labyrinth_point or 0}")  
+        self._log(f"已领取奖励积分：{top.labyrinth_reward_received_point or 0}")  
+        self._log(f"强化点数：{top.labyrinth_enhance_point or 0}")  
+        cleared = top.guild_cleared_difficulty_list or []  
+        if cleared:  
+            for info in cleared:  
+                self._log(f"公会{info.guild_id} 已通关最高难度：{info.difficulty}")  
+        else:  
+            self._log("暂无公会通关记录")                

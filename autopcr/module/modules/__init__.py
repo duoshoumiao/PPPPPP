@@ -228,6 +228,7 @@ tool_modules = ModuleList(
     'tool',
     [
         labyrinth_start_reroll,
+        labyrinth_point_query,
         add_friend,
         search_ex_equip_id,
         ex_equip_rainbow_enchance,
