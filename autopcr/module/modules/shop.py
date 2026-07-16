@@ -264,7 +264,7 @@ class master_shop_buyer(Module):
         msg = await client.serlize_reward(ret.purchase_list)
         self._log(f"花费{cost}大师币购买了:\n{msg}")
 
-@singlechoice('master_shop_buy_memory_count_limit', "记忆碎片盈余值", 0, [0, 10, 20, 40, 120 ,300])
+@singlechoice('master_shop_buy_memory_count_limit', "记忆碎片盈余值", 0, [0, 10, 20, 40, 120 ,320])
 @LimitUnitListConfig('master_shop_buy_memory_ids', "记忆碎片")
 @description('购买大师币商店的指定记忆碎片，直到碎片盈余超过阈值')
 @name('大师币商店记忆碎片购买')

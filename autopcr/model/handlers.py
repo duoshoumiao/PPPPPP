@@ -51,9 +51,18 @@ class CaravanTopResponse(responses.CaravanTopResponse):
                 mgr.update_inventory(item)
         if self.reset_reward:
             for item in self.reset_reward:
-                mgr.update_inventory(item)
-
-@handles
+                mgr.update_inventory(item)  
+  
+@handles  
+class LabyrinthTopResponse(responses.LabyrinthTopResponse):  
+    async def update(self, mgr: datamgr, request):  
+        mgr.labyrinth_point = self.labyrinth_point or 0  
+        mgr.labyrinth_enhance_point = self.labyrinth_enhance_point or 0  
+        mgr.labyrinth_reward_received_point = self.labyrinth_reward_received_point or 0  
+        mgr.labyrinth_guild_cleared_difficulty_list = self.guild_cleared_difficulty_list or []  
+        mgr.labyrinth_cached = True  
+  
+@handles  
 class TravelResultRoundEventResponse(responses.TravelResultRoundEventResponse):
     async def update(self, mgr: datamgr, request):
         if self.current_round_result and self.current_round_result.reward_list:

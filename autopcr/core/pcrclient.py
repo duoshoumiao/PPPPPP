@@ -1794,13 +1794,18 @@ class pcrclient(apiclient):
 
         return result, clear_count, no_stamina
 
-    async def refresh(self):
-        req = HomeIndexRequest()
-        req.message_id = 1
-        req.gold_history = 0
-        req.is_first = 0
-        req.tips_id_list = []
-        await self.request(req)
+    async def refresh(self):  
+        req = HomeIndexRequest()  
+        req.message_id = 1  
+        req.gold_history = 0  
+        req.is_first = 0  
+        req.tips_id_list = []  
+        await self.request(req)  
+        # 新增：刷新 box 时顺带更新黎明界缓存；未解锁/异常时忽略  
+        try:  
+            await self.labyrinth_top()  
+        except Exception:  
+            pass  
         self.need_refresh = False
     
     async def reset_dungeon(self):

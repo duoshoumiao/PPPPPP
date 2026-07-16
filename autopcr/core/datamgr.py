@@ -61,7 +61,7 @@ class datamgr(BaseModel, Component[apiclient]):
     cleared_byway_quest_id_set: Set[int] = set({})
     return_fes_info_list: List[ReturnFesInfo] = None
     data_time: int = 0
-    version: int = 7
+    version: int = 8
     caravan_dishes: typing.Counter[int] = Counter()
     user_clan_battle_ex_equip_restriction: Dict[int, RestrictionExtraEquip] = {}
     talent_quest_area_info: Dict[int, TalentQuestAreaInfo] = {}
@@ -72,7 +72,14 @@ class datamgr(BaseModel, Component[apiclient]):
     abyss_quest_info: Dict[int, AbyssDailyClearCountList] = {}
     alces_appear_story_flag: int = 0
     alces_receive_tutorial_item_flag: int = 0
-    unit_role_gacha_exec_count: int = 0
+    unit_role_gacha_exec_count: int = 0  
+    # 新增：黎明界（迷宫）缓存  
+    labyrinth_point: int = 0  
+    labyrinth_enhance_point: int = 0  
+    labyrinth_reward_received_point: int = 0  
+    labyrinth_guild_cleared_difficulty_list: List[LabyrinthGuildClearedDifficultyInfo] = []  
+    labyrinth_cached: bool = False   # 标记是否已缓存过黎明界数据（区分「未解锁」和「没查过」）
+    
 
     @staticmethod
     async def try_update_database(ver: int):

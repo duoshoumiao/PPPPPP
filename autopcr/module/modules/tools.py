@@ -1058,7 +1058,7 @@ class get_need_sp_memory(Module):
             type_desc = UniqueEquip1SPMemory.typeName[_type]
             for unit in UniqueEquip1SPMemory.get_unit_demand(_type):
                 token = (eInventoryType.Item, db.unit_to_memory[unit])
-                target[token] += 300
+                target[token] += 320
                 need_list.append((token, target[token] + memory_gap[token]))
 
                 token_name = f"{db.get_inventory_name_san(token)}({type_desc})"
