@@ -255,13 +255,40 @@ class labyrinth_start_reroll(Module):
 @name('黎明界积分查询')  
 class labyrinth_point_query(Module):  
     async def do_task(self, client: pcrclient):  
-        top = await client.labyrinth_top()  
+        try:  
+            top = await client.labyrinth_top()  
+        except SkipError:  
+            data = {  
+                "黎明界点数": "未解锁",  
+                "已领取积分": "未解锁",  
+                "剩余强化点数": "未解锁",  
+                "持有通行证": "未解锁",  
+                "公会最高难度": "未解锁",  
+            }  
+            self._log("迷宫未解锁")  
+            self._table_header(list(data.keys()))  
+            self._table(data)  
+            return  
+      
+        pass_num = client.data.get_inventory((eInventoryType.Item, 99013))  
+      
         self._log(f"黎明界积分（点数）：{top.labyrinth_point or 0}")  
         self._log(f"已领取奖励积分：{top.labyrinth_reward_received_point or 0}")  
         self._log(f"强化点数：{top.labyrinth_enhance_point or 0}")  
+        self._log(f"持有通行证：{pass_num}/99")  
         cleared = top.guild_cleared_difficulty_list or []  
         if cleared:  
             for info in cleared:  
                 self._log(f"公会{info.guild_id} 已通关最高难度：{info.difficulty}")  
         else:  
-            self._log("暂无公会通关记录")                
+            self._log("暂无公会通关记录")  
+      
+        data = {  
+            "黎明界点数": str(top.labyrinth_point or 0),  
+            "已领取积分": str(top.labyrinth_reward_received_point or 0),  
+            "强化点数": str(top.labyrinth_enhance_point or 0),  
+            "持有通行证": f"{pass_num}/99",  
+            "公会最高难度": (" / ".join(f"公会{i.guild_id}:{i.difficulty}" for i in cleared) if cleared else "无"),  
+        }  
+        self._table_header(list(data.keys()))  
+        self._table(data)        
