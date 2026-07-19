@@ -682,6 +682,13 @@ class HatsuneBossBattleSkipResponse(responses.HatsuneBossBattleSkipResponse):
         if self.user_gold:
             mgr.gold = self.user_gold
 
+@handles  
+class MusicBuyResponse(responses.MusicBuyResponse):  
+    async def update(self, mgr: datamgr, request):  
+        if self.item_data:  
+            for item in self.item_data:  
+                mgr.update_inventory(item)
+
 
 @handles
 class SevenQuestSkipMultipleResponse(responses.SevenQuestSkipMultipleResponse):
