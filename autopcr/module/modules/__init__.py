@@ -227,6 +227,7 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        daily_order_edit,
         labyrinth_start_reroll,
         labyrinth_point_query,
         add_friend,
