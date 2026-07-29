@@ -14,6 +14,7 @@ from ...model.error import *
 from ...db.database import db
 from ...model.enums import *
 from ...util.arena import instance as ArenaQuery
+from ...constants import DAILY_ORDER_KEY  
 
 import random
 import itertools
@@ -2075,4 +2076,76 @@ class add_friend(Module):
                 raise AbortError(f"好友数量已达上限，无法发送申请")  
             else:  
                 self._log(f"发送好友申请失败: {e}")  
-                raise AbortError(f"无法向玩家 {viewer_id} 发送好友申请: {e}")           
+                raise AbortError(f"无法向玩家 {viewer_id} 发送好友申请: {e}")    
+
+
+  
+@texttype("daily_order_move", "要挪到其后的功能(名称/序号，空格分隔)", "")  
+@texttype("daily_order_anchor", "锚点功能(名称/序号，留空或填『重置』可恢复默认)", "")  
+@description('调整【日常】清日常顺序：把指定功能挪到锚点功能之后。与 #清日常排序 共用同一份配置。填“重置”可恢复默认。')  
+@name('调整日常顺序')  
+@notlogin()  
+@default(False)  
+class daily_order_edit(Module):  
+    def _match(self, targets, indexed):  
+        idx_map = {i: m for i, m in indexed}  
+        name_map = {m.name: m for _, m in indexed if m.name}  
+        key_map = {m.key: m for _, m in indexed}  
+        out = []  
+        for t in targets:  
+            t = t.strip()  
+            if not t:  
+                continue  
+            if t.isdigit() and int(t) in idx_map:  
+                out.append(idx_map[int(t)])  
+            elif t in key_map:  
+                out.append(key_map[t])  
+            elif t in name_map:  
+                out.append(name_map[t])  
+            else:  
+                fuzzy = [m for _, m in indexed if m.name and t in m.name]  
+                if len(fuzzy) == 1:  
+                    out.append(fuzzy[0])  
+                else:  
+                    self._warn(f"{t}（未匹配到唯一功能，已跳过）")  
+        return out  
+  
+    async def do_task(self, client: pcrclient):  
+        acc = self._parent                     
+        anchor_raw = self.get_config("daily_order_anchor").strip()  
+        moves_raw = self.get_config("daily_order_move").strip()  
+  
+        modules = acc.modules_list.get_modules_list('daily')  
+        indexed = [(i + 1, m) for i, m in enumerate(m for m in modules if m.implmented)]  
+  
+        # 重置  
+        if anchor_raw in ("重置", "reset", "默认") or (not anchor_raw and not moves_raw):  
+            acc.data.config.pop(DAILY_ORDER_KEY, None)  
+            self._log("已恢复默认清日常顺序")  
+            return  
+  
+        anchor = self._match([anchor_raw], indexed)  
+        if not anchor:  
+            raise AbortError(f"锚点功能匹配失败: {anchor_raw}")  
+        anchor = anchor[0]  
+  
+        moves = self._match(moves_raw.split(), indexed)  
+        move_keys = []  
+        for m in moves:  
+            if m.key != anchor.key and m.key not in move_keys:  
+                move_keys.append(m.key)  
+        if not move_keys:  
+            raise AbortError("要挪动的功能不能为空，且不能与锚点相同")  
+  
+        order = []  
+        for _, m in indexed:  
+            if m.key in move_keys:  
+                continue  
+            order.append(m.key)  
+            if m.key == anchor.key:  
+                order.extend(move_keys)  
+  
+        acc.data.config[DAILY_ORDER_KEY] = order   
+  
+        moved = ", ".join(acc.modules_list.get_module_from_key(k).name for k in move_keys)  
+        self._log(f"已将 [{moved}] 挪到 [{anchor.name}] 之后，清日常顺序已更新")                
