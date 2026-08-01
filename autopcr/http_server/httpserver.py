@@ -21,7 +21,7 @@ from ..util.logger import instance as logger
 from .command_relay import FinishSignal, RelayBotEvent, SPECIAL_HANDLERS   # ← 新增
 
 APP_VERSION_MAJOR = 1
-APP_VERSION_MINOR = 7
+APP_VERSION_MINOR = 8
 
 CACHE_HTTP_DIR = os.path.join(CACHE_DIR)
 
