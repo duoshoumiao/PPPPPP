@@ -495,6 +495,40 @@ def register_tool(name: str, key: str):
         inner.__name__ = func.__name__
         return inner
     return wrapper
+    
+# ===== 全局禁用指令功能 =====  
+import json  
+  
+# 禁用列表持久化文件（跟随进程重启保留）  
+_disabled_tools_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "disabled_tools.json")  
+  
+# 禁用/启用指令本身的名字，禁止被禁用（自我保护）  
+DISABLE_CMD = "禁用"  
+ENABLE_CMD = "启用"  
+DISABLE_LIST_CMD = "禁用列表"  
+  
+def _load_disabled_tools() -> dict:  
+    try:  
+        with open(_disabled_tools_path, "r", encoding="utf-8") as f:  
+            data = json.load(f)  
+        # 兼容旧格式（list/set）：无留言，原因置空  
+        if isinstance(data, list):  
+            return {name: "" for name in data}  
+        if isinstance(data, dict):  
+            return {str(k): str(v) for k, v in data.items()}  
+        return {}  
+    except Exception:  
+        return {}  
+  
+def _save_disabled_tools(d: dict):  
+    try:  
+        with open(_disabled_tools_path, "w", encoding="utf-8") as f:  
+            json.dump(d, f, ensure_ascii=False)  
+    except Exception as e:  
+        logger.error(f"保存禁用列表失败: {e}")  
+  
+# 内存缓存，启动时加载一次：{功能名: 禁用原因}  
+disabled_tools: dict = _load_disabled_tools() 
 
 def wrap_accountmgr(func):
     async def wrapper(botev: BotEvent, *args, **kwargs):
@@ -581,23 +615,31 @@ def wrap_group(func):
     wrapper.__name__ = func.__name__
     return wrapper
 
-def wrap_tool(func):
-    async def wrapper(botev: BotEvent, *args, **kwargs):
-        msg = await botev.message()
-        tool = msg[0] if msg else ""
-
-        for tool_name in tool_info:
-            if tool.startswith(tool_name):
-                tool = tool_name
-                msg[0] = msg[0].lstrip(tool_name)
-                if not msg[0]:
-                    del msg[0]
-                break
-        else:
-            await botev.finish(f"未找到工具【{tool}，请发送#帮助】")
-
-        tool = tool_info[tool]
-
+def wrap_tool(func):  
+    async def wrapper(botev: BotEvent, *args, **kwargs):  
+        msg = await botev.message()  
+        tool = msg[0] if msg else ""  
+  
+        for tool_name in tool_info:  
+            if tool.startswith(tool_name):  
+                tool = tool_name  
+                msg[0] = msg[0].lstrip(tool_name)  
+                if not msg[0]:  
+                    del msg[0]  
+                break  
+        else:  
+            await botev.finish(f"未找到工具【{tool}，请发送#帮助】")  
+  
+        # 禁用拦截：被管理员全局禁用的功能，直接返回提示（含留言原因）  
+        if tool in disabled_tools:  
+            reason = disabled_tools.get(tool, "")  
+            if reason:  
+                await botev.finish(f"功能【{tool}】已被管理员禁用\n原因：{reason}")  
+            else:  
+                await botev.finish(f"功能【{tool}】已被管理员禁用")
+                
+        tool = tool_info[tool]  
+  
         await func(botev = botev, tool = tool, *args, **kwargs)
 
     wrapper.__name__ = func.__name__
@@ -727,6 +769,62 @@ async def clean_ghost(botev: BotEvent):
             usermgr.delete(qq)
         msg = [f"已清除{len(msg)}个内鬼:"] + msg
     await botev.finish(" ".join(msg))
+
+@sv.on_prefix(f"{prefix}禁用")  
+@wrap_hoshino_event  
+async def disable_tool(botev: BotEvent):  
+    if not await botev.is_admin():  
+        await botev.finish("仅管理员可以调用")  
+  
+    msg = await botev.message()  
+    name = msg[0] if msg else ""  
+    # 第一个参数之后的内容作为禁用留言原因  
+    reason = " ".join(msg[1:]).strip() if len(msg) > 1 else ""  
+  
+    # #禁用列表 / #禁用（无参数）：查看当前禁用的功能及原因  
+    if not name or name == "列表":  
+        if disabled_tools:  
+            lines = []  
+            for t in sorted(disabled_tools):  
+                r = disabled_tools[t]  
+                lines.append(f"{t}（原因：{r}）" if r else t)  
+            await botev.finish("当前已禁用的功能：\n" + "\n".join(lines))  
+        else:  
+            await botev.finish("当前没有被禁用的功能")  
+  
+    # 自我保护：禁止禁用本指令  
+    if name in (DISABLE_CMD, ENABLE_CMD, DISABLE_LIST_CMD):  
+        await botev.finish(f"不能禁用本指令【{name}】")  
+  
+    # 校验功能名是否存在  
+    if name not in tool_info:  
+        await botev.finish(f"未找到功能【{name}】，请发送#帮助查看功能名")  
+  
+    disabled_tools[name] = reason  
+    _save_disabled_tools(disabled_tools)  
+    if reason:  
+        await botev.finish(f"已全局禁用功能【{name}】\n留言：{reason}")  
+    else:  
+        await botev.finish(f"已全局禁用功能【{name}】")
+  
+@sv.on_prefix(f"{prefix}启用")  
+@wrap_hoshino_event  
+async def enable_tool(botev: BotEvent):  
+    if not await botev.is_admin():  
+        await botev.finish("仅管理员可以调用")  
+  
+    msg = await botev.message()  
+    name = msg[0] if msg else ""  
+  
+    if not name:  
+        await botev.finish("请指定要启用的功能名，例如：#启用 清日常")  
+  
+    if name not in disabled_tools:  
+        await botev.finish(f"功能【{name}】当前未被禁用")  
+  
+    disabled_tools.pop(name, None)  
+    _save_disabled_tools(disabled_tools)  
+    await botev.finish(f"已恢复功能【{name}】")
 
 @sv.on_prefix(f"{prefix}清日常")
 @wrap_hoshino_event
