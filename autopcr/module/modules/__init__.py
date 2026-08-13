@@ -204,8 +204,8 @@ clan_modules = ModuleList(
     '公会',
     'clan',
     [
-        unit_promote_batch,
-        unit_memory_buy_batch,
+        # unit_promote_batch,
+        # unit_memory_buy_batch,
         set_my_party,
         get_box_table,
     ],
