@@ -85,7 +85,7 @@ class datamgr(BaseModel, Component[apiclient]):
     async def try_update_database(ver: int):
         async with _data_lck:
             if not assetmgr.ver or assetmgr.ver < ver:
-                await assetmgr.init(ver)
+                assetmgr.set_version(ver)
             if not dbmgr.ver or dbmgr.ver < assetmgr.ver: 
                 await dbmgr.update_db(assetmgr)
                 db.update(dbmgr)
