@@ -543,6 +543,10 @@ class LoadIndexResponse(responses.LoadIndexResponse):
         mgr.dispatch_units = self.dispatch_units
         mgr.princess_knight_info = self.princess_knight_info
         mgr.unit_role_list = self.unit_role_list
+        if self.receive_labyrinth_passport_count:
+            num = mgr.get_inventory(db.labyrinth_ticket)
+            mgr.set_inventory(db.labyrinth_ticket, num + self.receive_labyrinth_passport_count)
+
 
 @handles
 class HomeIndexResponse(responses.HomeIndexResponse):

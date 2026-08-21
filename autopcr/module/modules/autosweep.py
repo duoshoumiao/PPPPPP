@@ -484,16 +484,16 @@ class UniqueEquip1SPMemory():
         (109201, Type.Sweep), # 安
         (109301, Type.Sweep), # 露
         (109401, Type.Sweep), # 龙女
-        (100201, Type.Sweep), # UE
-        (104201, Type.NormalShop), # 千歌
-        (104001, Type.Sweep), # 碧
-        (105201, Type.Sweep), # 羊驼
-        (101801, Type.NormalShop), # 老师
-        (103001, Type.Sweep), # 扇子
-        (108101, Type.MasterShop), # 瓜忍
-        (108301, Type.MasterShop), # 瓜眼
-        (108401, Type.MasterShop), # 圣千
-        (108601, Type.MasterShop), # 圣锤
+        (100201, Type.Present),  # ue 送515
+        (104201, Type.NormalShop),  # 千歌
+        (104001, Type.Sweep),  # 香菜弓
+        (105201, Type.Sweep),  # 羊驼
+        (101801, Type.Present),  # 老师 送515
+        (103001, Type.Sweep),  # 扇子
+        (108101, Type.MasterShop),  # 瓜忍
+        (108301, Type.MasterShop),  # 瓜眼
+        (108401, Type.MasterShop),  # 圣千
+        (108601, Type.MasterShop),  # 圣锤
     ]
 
     @staticmethod

@@ -235,12 +235,18 @@ class assetmgr:
         self._loaded_ver = ver
 
     async def ensure_loaded(self, ver=None):
-        # 在锁内取版本号，避免等锁期间版本切换导致按旧版本多做一次重载
+        target_ver = self.ver if ver is None else ver
+        if target_ver is None:
+            raise RuntimeError('asset manifest version is not set')
+
+        # 稳态无锁快路径：其原子性依赖"此检查与调用方读取 registries 之间没有 await 点"，
+        # registries 与 _loaded_ver 在 _ensure_loaded_locked 中也是无挂起点地成对更新
+        if self._loaded_ver == target_ver:
+            return
+
+        # 在锁内重取版本号，避免等锁期间版本切换导致按旧版本多做一次重载
         async with self._manifest_lock:
             target_ver = self.ver if ver is None else ver
-            if target_ver is None:
-                raise RuntimeError('asset manifest version is not set')
-
             await self._ensure_loaded_locked(target_ver)
 
     async def init(self, ver):
@@ -248,13 +254,8 @@ class assetmgr:
         await self.ensure_loaded(ver)
 
     async def _resolve_asset(self, url: str) -> AssetEntry:
-        async with self._manifest_lock:
-            target_ver = self.ver
-            if target_ver is None:
-                raise RuntimeError('asset manifest version is not set')
-
-            await self._ensure_loaded_locked(target_ver)
-            return self.registries[url]
+        await self.ensure_loaded()
+        return self.registries[url]
 
     async def download(self, url: str) -> bytes:
         logger.info(f"resolving {url}...")

@@ -326,6 +326,13 @@ class labyrinth_sweep(Module):
             raise SkipError(f'当前黎明界票数为{ticket_count}，不超过保留数量{ticket_hold}')
 
         top = await client.labyrinth_top()
+
+        if top.enter_id:
+            self._log("检测到已有黎明界开局，先撤退。")
+            await client.labyrinth_retire(top.enter_id)
+            top = await client.labyrinth_top()
+            ticket_count = client.data.get_inventory(db.labyrinth_ticket)
+            
         difficulty = self._max_cleared_difficulty(top, guild_id)
         if difficulty is None:
             raise AbortError(f'公会{guild_id}尚未通关黎明界，无法扫荡！')
