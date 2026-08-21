@@ -25,8 +25,8 @@ LABYRINTH_BLOCK_TYPE_NAME = {
 @LabyrinthBossConfig('labyrinth_reroll_area3_boss', '区域3Boss', 3, [301206, 312505, 319604])
 @singlechoice('labyrinth_reroll_third_block_type', '区域3/5第3格', '事件', ['遗物', '事件', '任意'])
 @singlechoice('labyrinth_reroll_second_block_type', '区域2第4格', '遗物', ['遗物', '商店', '任意'])
-@singlechoice('labyrinth_reroll_max_count', '重开上限', 300, [300, 500, 1000, 2000])
-@booltype('labyrinth_reroll_perfect_start', '完美开局', True)
+@singlechoice('labyrinth_reroll_max_count', '重开上限', 100, [100, 500, 1000, 2000])
+@booltype('labyrinth_reroll_perfect_start', '完美开局', False)
 @LabyrinthGuildConfig('labyrinth_reroll_guild_id', '公会', 5)
 @singlechoice('labyrinth_reroll_difficulty', '难度', 5, [1, 2, 3, 4, 5])
 class labyrinth_start_reroll(Module):
@@ -253,14 +253,9 @@ class labyrinth_start_reroll(Module):
         third_block_type: str = self.get_config('labyrinth_reroll_third_block_type')
         second_block_type: str = self.get_config('labyrinth_reroll_second_block_type')
         perfect_start: bool = self.get_config('labyrinth_reroll_perfect_start')
+        max_count: int = self.get_config('labyrinth_reroll_max_count')
+        expected_block_types = self._build_expected_block_types(third_block_type, second_block_type)
 
-        max_count: int = 300
-
-        max_count: int = self.get_config('labyrinth_reroll_max_count')  
-        expected_block_types = self._build_expected_block_types(third_block_type, second_block_type)  
-  
-        last_reason = ""   # 新增：初始化，避免循环走到上限时未定义  
-  
         top = await client.labyrinth_top()
         max_unlocked_difficulty = self._max_unlocked_difficulty(top)
         if difficulty > max_unlocked_difficulty:
@@ -272,24 +267,10 @@ class labyrinth_start_reroll(Module):
             await client.labyrinth_retire(top.enter_id)
 
         for attempt in range(1, max_count + 1):
-            if attempt % 10 == 0:
-                print(f"【黎明界刷开局】第 {attempt}/{max_count} 次尝试中...", flush=True)
-
             enter = await client.labyrinth_enter(guild_id, difficulty)
-            routes, last_reason = self._find_routes(enter.map_list or [], difficulty, area3_bosses, area5_bosses, perfect_start, expected_block_types)
+            routes, _ = self._find_routes(enter.map_list or [], difficulty, area3_bosses, area5_bosses, perfect_start, expected_block_types)
             if routes:
-                print(f"✅ 成功刷到{'完美' if perfect_start else '目标'}路线！总共尝试 {attempt} 次", flush=True)
                 self._log(f"刷到{'完美' if perfect_start else ''}路线，总尝试次数：{attempt}")
-
-                try:
-                    import winsound
-                    winsound.Beep(800, 200)
-                    winsound.Beep(1000, 150)
-                    winsound.Beep(1200, 300)
-                except:
-                    print("🔔 刷取完成！（音效不可用）", flush=True)                
-
-
                 for area in sorted(routes):
                     self._log(self._format_route(area, routes[area], enter.map_list or [], area3_bosses, area5_bosses))
                 return
@@ -298,9 +279,7 @@ class labyrinth_start_reroll(Module):
                 await client.labyrinth_retire(enter.enter_id)
             await client.labyrinth_top()
 
-        print(f"❌ 重开 {max_count} 次仍未刷到目标路线，最后失败原因：{last_reason}", flush=True)
-        raise AbortError(f"重开{max_count}次仍未刷到目标路线，最后失败原因：{last_reason}")
-
+        raise AbortError(f"重开{max_count}次仍未刷到目标路线")
 
 
 @description('当黎明界通行证超过保留数量时，使用超出的通行证扫荡。难度自动使用所选公会已通关的最高难度。')
@@ -332,7 +311,7 @@ class labyrinth_sweep(Module):
             await client.labyrinth_retire(top.enter_id)
             top = await client.labyrinth_top()
             ticket_count = client.data.get_inventory(db.labyrinth_ticket)
-            
+
         difficulty = self._max_cleared_difficulty(top, guild_id)
         if difficulty is None:
             raise AbortError(f'公会{guild_id}尚未通关黎明界，无法扫荡！')
