@@ -471,6 +471,13 @@ class LabyrinthGuildConfig(SingleChoiceConfig):
     def candidate_display(self, guild_id: int):
         return db.labyrinth_enter_guild[guild_id].guild_name
 
+#新增代码标记
+class FreeGachaSelectConfig(MultiChoiceConfig):  
+    def get_display(self) -> str:  
+        value = self.get_value()  
+        if isinstance(value, list):  
+            return '\n'.join([str(self.candidate_display(v)) for v in value])  
+        return str(self.candidate_display(value))
 # Compatible with the old version
 def booltype(key: str, desc: str, default: bool):
     return BoolConfig(key, desc, default)
@@ -481,9 +488,13 @@ def inttype(key: str, desc: str, default: int, candidates: Union[List, Callable]
 def singlechoice(key: str, desc: str, default, candidates: Union[List, Callable]):
     return SingleChoiceConfig(key, desc, default, candidates)
 
-def multichoice(key: str, desc: str, default, candidates: Union[List, Callable]):
-    return MultiChoiceConfig(key, desc, default, candidates)
-
+def multichoice(key: str, desc: str, default, candidates: Union[List, Callable]):  
+    return MultiChoiceConfig(key, desc, default, candidates)  
+  
+#新增代码标记 
+def free_gacha_select(key: str, desc: str, default, candidates: Union[List, Callable]):  
+    return FreeGachaSelectConfig(key, desc, default, candidates)  
+  
 def timetype(key: str, desc: str, default):
     return TimeConfig(key, desc, default)
 

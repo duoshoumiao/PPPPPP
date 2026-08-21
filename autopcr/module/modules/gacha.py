@@ -71,7 +71,7 @@ class monthly_gacha(Module):
 @booltype('today_end_gacha_no_do', "当日切卡池前不抽取", True)
 @booltype('free_gacha_start_auto_select_pickup_min_first', "PickUp编号小优先", False)
 @booltype('free_gacha_auto_select_pickup', "智能pickup", True)
-@multichoice('free_gacha_select_ids', "抽取卡池", db.free_gacha_ids_candidate, db.free_gacha_ids_candidate)
+@free_gacha_select('free_gacha_select_ids', "抽取卡池", db.free_gacha_ids_candidate, db.free_gacha_ids_candidate)
 @default(False)
 class free_gacha(Module):
     async def do_task(self, client: pcrclient):
