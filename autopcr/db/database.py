@@ -1,4 +1,4 @@
-from typing import List, Dict, Set, Tuple, Union, Optional
+from typing import Callable, List, Dict, Set, Tuple, Union, Optional
 import typing
 import asyncio
 from ..model.enums import eCampaignCategory, eParamType
@@ -71,6 +71,7 @@ class database():
     ex_rainbow_enhance_pt: ItemType = (eInventoryType.Item, 26202)
     ex_rainbow_enhance_ball: ItemType = (eInventoryType.Item, 26203)
     unit_role_gach_ticket: ItemType = (eInventoryType.Item, 23003)
+    labyrinth_ticket: ItemType = (eInventoryType.Item, 99013)
 
     def __init__(self):
         self.dbmgr: Optional[dbmgr] = None
@@ -212,7 +213,6 @@ class database():
             area: dict(sorted(area_info.items()))
             for area, area_info in boss_info.items()
         }
-
 
     @lazy_property
     def redeem_unit(self) -> Dict[int, Dict[int, RedeemUnit]]:
@@ -851,6 +851,25 @@ class database():
                 .concat(AbyssQuestDatum.query(db))
                 .to_dict(lambda x: x.quest_id, lambda x: x)
             )
+
+    def _get_current_investigation_quests(self, quest_filter: Callable[[int], bool], reward_id: int) -> List[QuestDatum]:
+        now = apiclient.datetime
+        return sorted(
+            [quest for quest in self.quest_info.values()
+             if quest_filter(quest.quest_id)
+             and quest.reward_image_1 == reward_id
+             and self.parse_time(quest.start_time) <= now < self.parse_time(quest.end_time)],
+            key=lambda quest: quest.quest_id,
+            reverse=True,
+        )
+
+    @lazy_property
+    def heart_piece_quest(self) -> List[QuestDatum]:
+        return self._get_current_investigation_quests(self.is_heart_piece_quest, self.xinsui[1])
+
+    @lazy_property
+    def star_cup_quest(self) -> List[QuestDatum]:
+        return self._get_current_investigation_quests(self.is_star_cup_quest, self.xingqiubei[1])
 
     @lazy_property
     def abyss_quest_info(self) -> Dict[int, List[AbyssQuestDatum]]:
@@ -1529,7 +1548,7 @@ class database():
                 MusicList.query(db)  
                 .to_dict(lambda x: x.music_id, lambda x: x)  
             )
-    
+
     @lazy_property
     def abd_story_data(self) -> Dict[int, AbdStoryDatum]:
         with self.dbmgr.session() as db:
@@ -2464,13 +2483,11 @@ class database():
         tomorrow = now + datetime.timedelta(days = 1)
         half_day = datetime.timedelta(hours = 7)
         n3 = (flow(self.campaign_schedule.values())
-                # .where(lambda x: self.is_normal_quest_campaign(x.id) and x.value >= 6000 and self.is_level_effective_scope_in_campaign(level, x.id)) # TODO change 3000 when stop speed up
                 .where(lambda x: self.is_normal_quest_campaign(x.id) and x.value >= 3000 and self.is_level_effective_scope_in_campaign(level, x.id))
                 .select(lambda x: (db.parse_time(x.start_time), db.parse_time(x.end_time)))
                 .to_list()
               )
         h3 = (flow(self.campaign_schedule.values())
-                # .where(lambda x: self.is_hard_quest_campaign(x.id) and x.value >= 6000) # TODO change 3000 when stop speed up
                 .where(lambda x: self.is_hard_quest_campaign(x.id) and x.value >= 3000)
                 .select(lambda x: (db.parse_time(x.start_time), db.parse_time(x.end_time)))
                 .to_list()
@@ -2944,7 +2961,7 @@ class database():
         )
 
     def unlock_unit_condition_candidate(self) -> List[int]:
-        return list(self.unlock_unit_condition)
+        return self.unlock_unit_condition
 
     def limit_unit_condition_candidate(self) -> List[int]:
         return [x for x in self.unlock_unit_condition if self.unit_data[x].is_limited]
