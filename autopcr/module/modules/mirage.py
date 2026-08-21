@@ -50,11 +50,15 @@ class mirage_nemesis_sweep(Module):
 
             boss_info = db.mirage_nemesis_quest[nemesis_id]
             max_level = max(boss_info.keys())
-            if boss.periodic_clear_count < setting.challenge_count_max:
-                to_skip.append((boss_info[boss.area_level].quest_id, setting.challenge_count_max - boss.periodic_clear_count))
-            elif boss.area_level < max_level and not_max_stop:  
-                self._log(f"最高等级{db.get_quest_name(boss_info[max_level].quest_id)}未通关，不扫荡\n如欲扫荡已通关的，请关闭「非最高不扫荡」")  
-                continue
+            if boss.periodic_clear_count >= setting.challenge_count_max:  
+                continue  
+            if boss.periodic_clear_count >= setting.challenge_count_max:  
+                continue  
+            if boss.area_level < max_level and not_max_stop:  
+                self._warn(f"最高等级{db.get_quest_name(boss_info[max_level].quest_id)}未通关，不扫荡\n如欲扫荡已通关的，请关闭「非最高不扫荡」")  
+                continue  
+            to_skip.append((boss_info[boss.area_level].quest_id, setting.challenge_count_max - boss.periodic_clear_count))
+            
         if not to_skip:
             if not self.log:
                 raise SkipError("本周追忆战・霸已扫荡")
