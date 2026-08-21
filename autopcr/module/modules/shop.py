@@ -253,8 +253,8 @@ class master_shop_buyer(Module):
         items = self.get_buy_items(master_shop, client)
         cost = sum((item.stock_count - item.purchase_count) * item.price.currency_num for item in items)
         golds = client.data.get_shop_gold(shop_id)
-        if cost > golds:
-            raise AbortError(f"大师币不足{golds}<{cost}")
+        if cost > golds:  
+            raise SkipError(f"大师币不足{golds}<{cost}")
 
         buy = Counter({item.slot_id: item.stock_count - item.purchase_count
             for item in items
