@@ -206,7 +206,7 @@ sv_help = f"""
 - {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
-- {prefix}拉角色练度 1 1 1 1 1 1 -1 -1 -1 -1 -1 -1 0 0 可可萝     #代表 等级 品级 ub s1 s2 ex 装备星级 专武1 专武2 角色名（不输入则全选）
+- {prefix}拉角色练度 1 1 1 1 1 1 0 0 可可萝     #代表 等级 品级 ub s1 s2 ex 专武1 专武2 角色名（不输入则全选）
 - {prefix}大富翁 [保留的骰子数量] [搬空商店为止|不止搬空商店] [到达次数]运行大富翁游戏，支持设置保留骰子数量和是否搬空商店后停止
   示例：{prefix}大富翁 30 不止搬空商店 0 | {prefix}大富翁所有 0 搬空商店为止  0（需要去批量运行里保存账号）
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
@@ -2027,17 +2027,17 @@ async def unit_promote(botev: BotEvent):
         pass  
   
     # 解析6个装备星级（左上到右下）  
-    equip_slots = ["unit_promote_equip_0", "unit_promote_equip_1",  
-                   "unit_promote_equip_2", "unit_promote_equip_3",  
-                   "unit_promote_equip_4", "unit_promote_equip_5"]  
-    for slot in equip_slots:  
-        try:  
-            val = int(msg[0])  
-            if val in [-1, 0, 1, 2, 3, 4, 5]:  
-                config[slot] = val  
-            del msg[0]  
-        except:  
-            pass  
+    # equip_slots = ["unit_promote_equip_0", "unit_promote_equip_1",  
+                   # "unit_promote_equip_2", "unit_promote_equip_3",  
+                   # "unit_promote_equip_4", "unit_promote_equip_5"]  
+    # for slot in equip_slots:  
+        # try:  
+            # val = int(msg[0])  
+            # if val in [-1, 0, 1, 2, 3, 4, 5]:  
+                # config[slot] = val  
+            # del msg[0]  
+        # except:  
+            # pass  
   
     # 专武1等级  
     try:  
