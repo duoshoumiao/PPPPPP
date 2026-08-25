@@ -295,6 +295,7 @@ def _star_cup_book_candidates() -> List[int]:
 @inttype('xinsui_sweep_no_campaign_books', '无庆典刷前几本', 2, _heart_book_candidates)
 @inttype('xinsui_sweep_2x_campaign_books', '2倍庆典刷前几本', 2, _heart_book_candidates)
 @inttype('xinsui_sweep_3x_campaign_books', '3倍及以上庆典刷前几本', 2, _heart_book_candidates)
+@singlechoice('xinsui_sweep_reserve_per_unit', '每个专武角色额外屯心碎', 0, [0, 5, 10, 20])
 @default(False)
 @tag_stamina_consume
 class xinsui_sweep(investigate_sweep):
@@ -304,8 +305,10 @@ class xinsui_sweep(investigate_sweep):
     def campaign_times(self, client: pcrclient) -> int:
         return client.data.get_heart_piece_campaign_times()
 
-    def required_count(self, client: pcrclient) -> int:
-        return client.data.get_suixin_demand()[1]
+    def required_count(self, client: pcrclient) -> int:  
+        reserve = self.get_config('xinsui_sweep_reserve_per_unit')  
+        unit_count = sum(1 for unit_id in client.data.unit if unit_id in db.unit_unique_equip[1])  
+        return client.data.get_suixin_demand()[1] + reserve * unit_count
 
     def stored_count(self, client: pcrclient) -> int:
         return client.data.get_inventory(db.xinsui) + client.data.get_inventory(db.heart) * 10
