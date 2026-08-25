@@ -22,8 +22,6 @@ from ...util.format_number import format_number
 @inttype('sweep_recover_stamina_times_h3', "h3以上氪体数", 0, [i for i in range(41)])
 @inttype('sweep_recover_stamina_times_vh2', "vh2氪体数", 0, [i for i in range(41)])
 @inttype('sweep_recover_stamina_times_vh3', "vh3以上氪体数", 0, [i for i in range(41)])
-@conditional_not_execution("force_stop_heart_sweep", [], desc="不刷心碎庆典", check=False)
-@conditional_not_execution("force_stop_star_cup_sweep", [], desc="不刷星球杯庆典", check=False)
 @conditional_execution2('stamina_relative_not_run_campaign_before_one_day', [], desc='禅模式', check=False)
 class global_config(Module):
     async def do_task(self, client: pcrclient): # stamina TODO
@@ -52,18 +50,7 @@ class global_config(Module):
         self._log(f"今日" + '，'.join([desc for _, desc in stamina_hit]) + f"氪体数{today_recover_stamina}")
         client.set_stamina_recover_cnt(today_recover_stamina)
 
-        force_stop_star_cup_sweep = self.get_config_instance('force_stop_star_cup_sweep')
-        ok, msg = await force_stop_star_cup_sweep.do_check(client)
-        if not ok:
-            client.set_star_cup_sweep_not_run()
-            self._log(msg + "星球杯扫荡")
-
-        force_stop_heart_sweep = self.get_config_instance('force_stop_heart_sweep')
-        ok, msg = await force_stop_heart_sweep.do_check(client)
-        if not ok:
-            client.set_heart_sweep_not_run()
-            self._log(msg + "心碎扫荡")
-
+        
         if client.is_stamina_get_not_run():
             self._log("体力获取不执行")
         elif client.is_stamina_consume_not_run():

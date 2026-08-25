@@ -54,7 +54,6 @@ class ExEquipmentDatum(models.ExEquipmentDatum):
                 ret += a
         return ret
 
-
 @method
 class EquipmentDatum(models.EquipmentDatum):
     def get_unit_attribute(self) -> UnitAttribute:
