@@ -122,10 +122,14 @@ class Config:
         # Base implementation that can be overridden
         return value
     
-    def validate_value(self, value):
-        """Validate the value against the constraints of this configuration."""
-        # Base implementation with no constraints
-        return value if value in self.candidates else None
+    #修改过的部分
+    def validate_value(self, value):  
+        """Validate the value against the constraints of this configuration."""  
+        # Base implementation with no constraints  
+        try:  
+            return value if value in self.candidates else None  
+        except TypeError:  
+            return None
     
     async def do_check(self, client: Optional[pcrclient] = None) -> Tuple[bool, str]:
         """Check if this configuration meets certain conditions."""
