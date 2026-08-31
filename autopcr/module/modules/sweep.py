@@ -295,7 +295,7 @@ def _star_cup_book_candidates() -> List[int]:
 @inttype('xinsui_sweep_no_campaign_books', '无庆典刷前几本', 2, _heart_book_candidates)
 @inttype('xinsui_sweep_2x_campaign_books', '2倍庆典刷前几本', 2, _heart_book_candidates)
 @inttype('xinsui_sweep_3x_campaign_books', '3倍及以上庆典刷前几本', 2, _heart_book_candidates)
-@singlechoice('xinsui_sweep_reserve_per_unit', '每个专武角色额外屯心碎', 0, [0, 5, 10, 20])
+@singlechoice('xinsui_sweep_reserve_per_unit', '每个专武角色额外屯心碎', 0, [0, 5, 10, 20,100])
 @default(False)
 @tag_stamina_consume
 class xinsui_sweep(investigate_sweep):
