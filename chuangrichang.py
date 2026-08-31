@@ -1,6 +1,8 @@
 import os
 import re
-import json
+import json  
+import random          # 新增  
+import string          # 新增
 import shutil
 import traceback
 import requests
@@ -11,10 +13,11 @@ from nonebot import on_command, CommandSession
 sv = Service(
     '清日常创建', 
     enable_on_default=False,
-    help_='发送"清日常创建"初始化日常配置（自动导入桌面账号文件）\n'
-          '或发送"清日常创建 账号 密码 用户名"设置账号密码及文件名\n'
-          '发送"清日常禁用 文件夹名1 [文件夹名2...]"禁用指定文件夹的日常任务\n'
-          '发送"清日常解禁 文件夹名1 [文件夹名2...]"解禁指定文件夹的日常任务'
+    help_='发送"清日常创建"初始化日常配置（自动导入桌面账号文件）\n'  
+          '或发送"清日常创建 账号 密码 用户名"设置账号密码及文件名\n'  
+          '发送"清日常禁用 文件夹名1 [文件夹名2...]"禁用指定文件夹的日常任务\n'  
+          '发送"清日常解禁 文件夹名1 [文件夹名2...]"解禁指定文件夹的日常任务\n'  
+          '发送"清日常重置密码"将登录密码重置为随机密码'
 )
 
 def get_public_ip():
@@ -218,6 +221,23 @@ def reset_secret_password(secret_file):
     except Exception as e:
         raise Exception(f"重置secret密码和默认账号清空失败: {str(e)}")
 
+def generate_random_password(length=12):  
+    chars = string.ascii_letters + string.digits  
+    return ''.join(random.choices(chars, k=length))  
+
+def reset_secret_password_random(secret_file):  
+    try:  
+        with open(secret_file, 'r', encoding='utf-8') as f:  
+            content = f.read()  
+        secret_data = json.loads(content)  
+        new_password = generate_random_password()  
+        secret_data['password'] = new_password  
+        with open(secret_file, 'w', encoding='utf-8') as f:  
+            json.dump(secret_data, f, ensure_ascii=True, separators=(',', ':'))  # 改这里  
+        return new_password  
+    except Exception as e:  
+        raise Exception(f"重置secret随机密码失败: {str(e)}")
+
 async def create_daily_config(user_id, username=None, password=None, filename=None):
     try:
         hoshino_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -345,6 +365,24 @@ async def create_daily_file(bot, ev: CQEvent):
     result = await create_daily_config(user_id, username=None, password=None, filename=filename)
     await bot.send(ev, result)
 
+# 群聊 - 清日常重置密码  
+@sv.on_prefix('清日常重置密码')  
+async def reset_daily_password(bot, ev: CQEvent):  
+    user_id = str(ev.user_id)  
+    hoshino_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  
+    base_dir = os.path.join(hoshino_dir, 'modules', 'autopcr', 'cache', 'http_server')  
+    user_dir = os.path.join(base_dir, user_id)  
+    secret_file = os.path.join(user_dir, 'secret')  
+  
+    if not os.path.exists(secret_file):  
+        await bot.send(ev, "❌ 未找到你的清日常配置，请先发送“清日常创建”")  
+        return  
+    try:  
+        new_pwd = reset_secret_password_random(secret_file)  
+        await bot.send(ev, f"✅ 密码已重置为随机密码：{new_pwd}\n请尽快用它登录网站并修改。")  
+    except Exception as e:  
+        await bot.send(ev, f"❌ 重置失败：{str(e)}")
+
 # 群聊 - 清日常禁用
 @sv.on_prefix('清日常禁用')
 async def disable_daily(bot, ev: CQEvent):
@@ -448,3 +486,21 @@ async def private_enable_daily(session: CommandSession):
         msg += f"❌ 解禁失败：\n" + "\n".join([f"  - {item}" for item in result["failed"]])
     
     await session.send(msg)
+    
+# 私聊 - 清日常重置密码  
+@on_command('清日常重置密码', aliases=('重置清日常密码',), permission=priv.NORMAL)  
+async def private_reset_daily_password(session: CommandSession):  
+    user_id = str(session.event.user_id)  
+    hoshino_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))  
+    base_dir = os.path.join(hoshino_dir, 'modules', 'autopcr', 'cache', 'http_server')  
+    user_dir = os.path.join(base_dir, user_id)  
+    secret_file = os.path.join(user_dir, 'secret')  
+  
+    if not os.path.exists(secret_file):  
+        await session.send("❌ 未找到你的清日常配置，请先发送“清日常创建”")  
+        return  
+    try:  
+        new_pwd = reset_secret_password_random(secret_file)  
+        await session.send(f"✅ 密码已重置为随机密码：{new_pwd}\n请尽快用它登录网站并修改。")  
+    except Exception as e:  
+        await session.send(f"❌ 重置失败：{str(e)}")    
