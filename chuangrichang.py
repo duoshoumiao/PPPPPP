@@ -284,13 +284,13 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
             with open(secret_file, 'w', encoding='utf-8') as f:
                 json.dump(default_config, f, ensure_ascii=False, separators=(',', ':'))
             file_msg = "✅ 初始secret配置已创建（单行格式），密码已重置为123456789，默认账号已置空"
-        else:
-            # 文件存在时重置密码和default_account，保留其他配置
-            try:
-                reset_secret_password(secret_file)
-                file_msg = "✅ secret文件已存在，密码已重置为123456789，默认账号已置空（其他配置保留）"
-            except Exception as e:
-                file_msg = f"✅ secret文件已存在，⚠️ 密码和默认账号重置失败: {str(e)}"
+        else:  
+            # 文件已存在（重复发送者）：不重置密码，只返回地址和修改密码提示  
+            public_ip = get_public_ip()  
+            login_url = f"http://{public_ip}:8040/daily/login" if public_ip else "无法获取公网IP，请手动配置"  
+            return f'''【清日常配置已存在】  
+🌐 清日常地址: {login_url}  
+🔑 如需修改密码，请发送：清日常重置密码'''
         
         # ========== 修复3：移除错误的文件夹创建判断，直接处理文件复制 ==========
         # 1. 检查桌面是否有账号文件
