@@ -2148,4 +2148,69 @@ class daily_order_edit(Module):
         acc.data.config[DAILY_ORDER_KEY] = order   
   
         moved = ", ".join(acc.modules_list.get_module_from_key(k).name for k in move_keys)  
-        self._log(f"已将 [{moved}] 挪到 [{anchor.name}] 之后，清日常顺序已更新")                
+        self._log(f"已将 [{moved}] 挪到 [{anchor.name}] 之后，清日常顺序已更新")          
+
+@name('我的支援')  
+@default(True)  
+@description('显示地下城/会战/好友三类支援位当前挂载的角色及其穿戴的EX装备')  
+class get_my_support(Module):  
+    def _log_ex(self, client: pcrclient, slots):  
+        has_any = False  
+        for ex_slot in (slots or []):  
+            if not ex_slot.serial_id:  
+                continue  
+            ex = client.data.ex_equips[ex_slot.serial_id]  
+            star = db.get_ex_equip_star_from_pt(ex.ex_equipment_id, ex.enhancement_pt)  
+            name = db.get_ex_equip_name(ex.ex_equipment_id)  
+            self._log(f"[ex:{ex.ex_equipment_id}]{name}★{star}")  
+            has_any = True  
+        if not has_any:  
+            self._log("无EX装备")  
+  
+    def _log_unit(self, client: pcrclient, unit_id, cb=False):  
+        self._log(f"[unit:{unit_id}]")   # 只带ID，draw.py自行转头像与取名  
+        if unit_id not in client.data.unit:  
+            return  
+        unit = client.data.unit[unit_id]  
+        slots = unit.cb_ex_equip_slot if cb else unit.ex_equip_slot  
+        self._log_ex(client, slots)  
+  
+    async def do_task(self, client: pcrclient):  
+        support_info = await client.support_unit_get_setting()  
+  
+        dungeon_positions = {eClanSupportMemberType.DUNGEON_SUPPORT_UNIT_1,  
+                             eClanSupportMemberType.DUNGEON_SUPPORT_UNIT_2}  
+        cb_positions = {eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_1,  
+                        eClanSupportMemberType.CLAN_BATTLE_SUPPORT_UNIT_2}  
+        friend_positions = {1, 2}  
+  
+        dungeon_list, cb_list, friend_list = [], [], []  
+  
+        for support in (support_info.clan_support_units or []):  
+            if support.unit_id and support.unit_id != 0:  
+                if support.position in dungeon_positions:  
+                    dungeon_list.append(support)  
+                elif support.position in cb_positions:  
+                    cb_list.append(support)  
+  
+        for support in (support_info.friend_support_units or []):  
+            if support.unit_id and support.unit_id != 0 and support.position in friend_positions:  
+                friend_list.append(support)  
+  
+        self._log("【地下城·追忆的战场】")  
+        if not dungeon_list:  
+            self._log("无")  
+        for support in dungeon_list:  
+            self._log_unit(client, support.unit_id, cb=False)  
+  
+        self._log("【团队战·露娜塔】")  
+        if not cb_list:  
+            self._log("无")  
+        for support in cb_list:  
+            self._log_unit(client, support.unit_id, cb=True)  
+  
+        self._log("【关卡·活动(好友)】")  
+        if not friend_list:  
+            self._log("无")  
+        for support in friend_list:  
+            self._log_unit(client, support.unit_id, cb=False)

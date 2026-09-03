@@ -76,9 +76,12 @@ class Drawer():
         return img  
   
     async def draw_task_result(self, data: "ModuleResult") -> Image.Image:  
+        # 「我的支援」：日志同时含 [unit: 和 [ex:，必须先判断 [unit:  
+        if '[unit:' in data.log:  
+            return await self.draw_my_support_result(data)  
         # 检测是否包含EX装备图标标记  
         if '[ex:' in data.log:  
-            return await self.draw_ex_equip_result(data)  
+            return await self.draw_ex_equip_result(data)
         if data.table and data.table.data and len(data.table.data) > 1:  
             return await self.draw_task_table(data)  
         content = [["配置", data.config.strip()], ["状态", f"#{data.status.value}"], ["结果", data.log.strip()]]  
@@ -202,6 +205,169 @@ class Drawer():
   
         return canvas  
   
+    async def draw_my_support_result(self, data: "ModuleResult") -> Image.Image:  
+        """我的支援：同类角色横向并列，角色直接转头像，下面纵向列出其EX装备"""  
+        colors = self.color()  
+        font = self.font  
+        name_font = ImageFont.truetype(self.font_path, size=22)  
+        ex_font = ImageFont.truetype(self.font_path, size=22)  
+  
+        AVATAR_SIZE = 96  
+        EX_ICON_SIZE = 56  
+        EX_TEXT_GAP = 6  
+        EX_LINE_HEIGHT = EX_ICON_SIZE + 6  
+        CARD_PADDING = 12  
+        CARD_GAP = 16  
+        CAT_TITLE_HEIGHT = 46  
+        NAME_HEIGHT = 30  
+        TOP_MARGIN = 12  
+        LEFT_MARGIN = 16  
+        ROW_GAP = 18  
+  
+        cat_pattern = re.compile(r'^【(.*)】$')  
+        unit_pattern = re.compile(r'^\[unit:(\d+)\](.*)')  
+        ex_pattern = re.compile(r'^\[ex:(\d+)\](.*)')  
+  
+        # 解析成 分类 -> 角色 -> EX 三层结构  
+        categories = []  
+        cur_cat = None  
+        cur_char = None  
+        for raw in data.log.strip().split('\n'):  
+            line = raw.strip()  
+            if not line:  
+                continue  
+            mc = cat_pattern.match(line)  
+            mu = unit_pattern.match(line)  
+            me = ex_pattern.match(line)  
+            if mc:  
+                cur_cat = {"title": mc.group(1), "chars": [], "empty": None}  
+                categories.append(cur_cat)  
+                cur_char = None  
+            elif mu:  
+                cur_char = {"unit_id": int(mu.group(1)), "exs": []}  
+                if cur_cat is not None:  
+                    cur_cat["chars"].append(cur_char)  
+            elif me:  
+                if cur_char is not None:  
+                    cur_char["exs"].append((int(me.group(1)), me.group(2).strip()))  
+            else:  
+                if cur_cat is not None and not cur_cat["chars"]:  
+                    cur_cat["empty"] = line  
+  
+        # 从 db 取角色名（不依赖日志文本）  
+        from ..db.database import db  
+  
+        # 预加载头像与EX图标  
+        unit_icons, ex_icons = {}, {}  
+        for cat in categories:  
+            for ch in cat["chars"]:  
+                uid = ch["unit_id"]  
+                if uid not in unit_icons:  
+                    try:  
+                        ic = await imgmgr.unit_icon(uid)  
+                        if ic:  
+                            unit_icons[uid] = ic  
+                    except Exception:  
+                        pass  
+                for ex_id, _ in ch["exs"]:  
+                    if ex_id not in ex_icons:  
+                        try:  
+                            ic = await imgmgr.ex_equip_icon(ex_id)  
+                            if ic:  
+                                ex_icons[ex_id] = ic  
+                        except Exception:  
+                            pass  
+  
+        dummy = ImageDraw.Draw(Image.new('RGB', (1, 1)))  
+        def text_w(txt, f):  
+            b = dummy.textbbox((0, 0), txt, font=f)  
+            return b[2] - b[0]  
+  
+        def card_size(ch):  
+            name = db.get_unit_name(ch["unit_id"])  
+            max_ex_text = 0  
+            for _, t in ch["exs"]:  
+                max_ex_text = max(max_ex_text, text_w(t, ex_font))  
+            content_w = max(AVATAR_SIZE, text_w(name, name_font),  
+                            EX_ICON_SIZE + EX_TEXT_GAP + max_ex_text)  
+            w = CARD_PADDING * 2 + content_w  
+            ex_h = max(1, len(ch["exs"])) * EX_LINE_HEIGHT  
+            h = CARD_PADDING * 2 + AVATAR_SIZE + NAME_HEIGHT + ex_h  
+            return w, h  
+  
+        # 布局计算  
+        canvas_width = 220  
+        row_infos = []  
+        for cat in categories:  
+            if cat["chars"]:  
+                widths, row_h = [], 0  
+                for ch in cat["chars"]:  
+                    w, h = card_size(ch)  
+                    widths.append(w)  
+                    row_h = max(row_h, h)  
+                row_w = LEFT_MARGIN * 2 + sum(widths) + CARD_GAP * (len(widths) - 1)  
+                canvas_width = max(canvas_width, row_w)  
+                row_infos.append((cat, row_h, widths))  
+            else:  
+                row_infos.append((cat, 44, []))  
+            canvas_width = max(canvas_width, LEFT_MARGIN * 2 + text_w(f"【{cat['title']}】", font))  
+  
+        canvas_height = TOP_MARGIN  
+        for (_, row_h, _) in row_infos:  
+            canvas_height += CAT_TITLE_HEIGHT + row_h + ROW_GAP  
+  
+        canvas = Image.new('RGB', (int(canvas_width), int(canvas_height)), colors['bg'])  
+        draw = ImageDraw.Draw(canvas)  
+        font_color = colors['font']  
+        resample = Image.LANCZOS if hasattr(Image, 'LANCZOS') else Image.ANTIALIAS  
+  
+        y = TOP_MARGIN  
+        for (cat, row_h, widths) in row_infos:  
+            draw.text((LEFT_MARGIN, y + 6), f"【{cat['title']}】", font=font, fill=font_color)  
+            y += CAT_TITLE_HEIGHT  
+            if not cat["chars"]:  
+                draw.text((LEFT_MARGIN + 12, y), cat["empty"] or "无", font=name_font, fill=font_color)  
+                y += row_h + ROW_GAP  
+                continue  
+            x = LEFT_MARGIN  
+            for ch, cw in zip(cat["chars"], widths):  
+                # 头像（直接由 unit_id 转）  
+                av = unit_icons.get(ch["unit_id"])  
+                av_x = x + (cw - AVATAR_SIZE) // 2  
+                if av:  
+                    r = av.copy().resize((AVATAR_SIZE, AVATAR_SIZE), resample)  
+                    if r.mode == 'RGBA':  
+                        canvas.paste(r, (av_x, y + CARD_PADDING), r)  
+                    else:  
+                        canvas.paste(r, (av_x, y + CARD_PADDING))  
+                # 角色名（db 取，画在头像下方）  
+                name = db.get_unit_name(ch["unit_id"])  
+                name_y = y + CARD_PADDING + AVATAR_SIZE + 2  
+                nx = x + (cw - text_w(name, name_font)) // 2  
+                draw.text((nx, name_y), name, font=name_font, fill=font_color)  
+                # EX 装备（图标+文字，纵向）  
+                ex_y = name_y + NAME_HEIGHT  
+                ex_x = x + CARD_PADDING  
+                if not ch["exs"]:  
+                    draw.text((ex_x, ex_y), "无EX装备", font=ex_font, fill=font_color)  
+                for ex_id, t in ch["exs"]:  
+                    icon = ex_icons.get(ex_id)  
+                    if icon:  
+                        ri = icon.copy().resize((EX_ICON_SIZE, EX_ICON_SIZE), resample)  
+                        if ri.mode == 'RGBA':  
+                            canvas.paste(ri, (ex_x, ex_y), ri)  
+                        else:  
+                            canvas.paste(ri, (ex_x, ex_y))  
+                    tb = draw.textbbox((0, 0), t, font=ex_font)  
+                    th = tb[3] - tb[1]  
+                    draw.text((ex_x + EX_ICON_SIZE + EX_TEXT_GAP, ex_y + (EX_ICON_SIZE - th) // 2),  
+                              t, font=ex_font, fill=font_color)  
+                    ex_y += EX_LINE_HEIGHT  
+                x += cw + CARD_GAP  
+            y += row_h + ROW_GAP  
+  
+        return canvas
+    
     async def draw_task_table(self, data: "ModuleResult") -> Image.Image:  
         content = data.table.data  
         header = data.table.header  

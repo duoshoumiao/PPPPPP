@@ -246,7 +246,8 @@ tool_modules = ModuleList(
         ex_equip_info,      
         travel_team_view,
         missing_emblem,
-        get_clan_support_unit,
+        get_clan_support_unit,  
+        get_my_support,          # 新增：我的支援  
         clear_my_party,
         remove_cb_ex_equip,
         save_ex_state,        # 新增  
