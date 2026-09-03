@@ -329,11 +329,15 @@ class Drawer():
                 draw.text((LEFT_MARGIN + 12, y), cat["empty"] or "无", font=name_font, fill=font_color)  
                 y += row_h + ROW_GAP  
                 continue  
-            x = LEFT_MARGIN  
-            for ch, cw in zip(cat["chars"], widths):  
-                # 头像（直接由 unit_id 转）  
+            # 每个分类按角色数等分成 N 个等宽格子，卡片在各自格子内居中  
+            n = len(cat["chars"])  
+            cell_w = canvas_width // n  
+            for i, (ch, cw) in enumerate(zip(cat["chars"], widths)):  
+                cell_x = i * cell_w  
+                card_x = cell_x + (cell_w - cw) // 2   # 卡片在格子内居中  
+                # 头像（在卡片内居中）  
                 av = unit_icons.get(ch["unit_id"])  
-                av_x = x + (cw - AVATAR_SIZE) // 2  
+                av_x = card_x + (cw - AVATAR_SIZE) // 2  
                 if av:  
                     r = av.copy().resize((AVATAR_SIZE, AVATAR_SIZE), resample)  
                     if r.mode == 'RGBA':  
@@ -343,11 +347,11 @@ class Drawer():
                 # 角色名（db 取，画在头像下方）  
                 name = db.get_unit_name(ch["unit_id"])  
                 name_y = y + CARD_PADDING + AVATAR_SIZE + 2  
-                nx = x + (cw - text_w(name, name_font)) // 2  
+                nx = card_x + (cw - text_w(name, name_font)) // 2  
                 draw.text((nx, name_y), name, font=name_font, fill=font_color)  
                 # EX 装备（图标+文字，纵向）  
                 ex_y = name_y + NAME_HEIGHT  
-                ex_x = x + CARD_PADDING  
+                ex_x = card_x + CARD_PADDING  
                 if not ch["exs"]:  
                     draw.text((ex_x, ex_y), "无EX装备", font=ex_font, fill=font_color)  
                 for ex_id, t in ch["exs"]:  
@@ -363,8 +367,7 @@ class Drawer():
                     draw.text((ex_x + EX_ICON_SIZE + EX_TEXT_GAP, ex_y + (EX_ICON_SIZE - th) // 2),  
                               t, font=ex_font, fill=font_color)  
                     ex_y += EX_LINE_HEIGHT  
-                x += cw + CARD_GAP  
-            y += row_h + ROW_GAP  
+            y += row_h + ROW_GAP
   
         return canvas
     
