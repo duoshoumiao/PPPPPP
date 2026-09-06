@@ -250,35 +250,65 @@ class investigate_sweep(Module):
         rewards = []
         clear_count = 0
         no_stamina = False
-        for index in range(planned_count):
-            if self.stored_count(client) >= self.required_count(client):
-                break
-
-            quest = quests[index % len(quests)]
-            daily_limit = max(1, quest.daily_limit)
-            target_count[quest.quest_id] = target_count.get(quest.quest_id, 0) + daily_limit
-            try:
-                result, current_clear_count, no_stamina = await client.quest_skip_aware(
-                    quest.quest_id,
-                    target_count[quest.quest_id],
-                    recover=True,
-                    is_total=True,
-                )
-            except SkipError:
-                continue
-
-            rewards.extend(result)
-            clear_count += current_clear_count
-            if no_stamina:
-                break
-
-        if not clear_count:
-            if no_stamina:
-                raise SkipError(f"{self.material_name()}关卡体力不足")
-            raise SkipError(f"没有可扫荡的{self.material_name()}关卡次数")
-
-        msg = await client.serialize_reward_summary(rewards)
-        self._log(f"按高到低扫荡{planned_count}本（含重置轮次），实际刷取{clear_count}次，获得了{msg}")
+        remaining = planned_count  
+  
+        # 阶段1：按高→低把每本的免费日常次数各刷一遍  
+        for quest in quests:  
+            if remaining <= 0:  
+                break  
+            if self.stored_count(client) >= self.required_count(client):  
+                break  
+  
+            daily_limit = max(1, quest.daily_limit)  
+            target_count[quest.quest_id] = target_count.get(quest.quest_id, 0) + daily_limit  
+            try:  
+                result, current_clear_count, no_stamina = await client.quest_skip_aware(  
+                    quest.quest_id,  
+                    target_count[quest.quest_id],  
+                    recover=True,  
+                    is_total=True,  
+                )  
+            except SkipError:  
+                continue  
+  
+            rewards.extend(result)  
+            clear_count += current_clear_count  
+            remaining -= 1  
+            if no_stamina:  
+                break  
+  
+        # 阶段2：回到最高本，反复重置刷取直到该本达到最大重置次数，再降到下一本  
+        if not no_stamina:  
+            for quest in quests:  
+                if remaining <= 0:  
+                    break  
+                if self.stored_count(client) >= self.required_count(client):  
+                    break  
+  
+                daily_limit = max(1, quest.daily_limit)  
+                while remaining > 0:  
+                    if self.stored_count(client) >= self.required_count(client):  
+                        break  
+  
+                    target_count[quest.quest_id] = target_count.get(quest.quest_id, 0) + daily_limit  
+                    try:  
+                        result, current_clear_count, no_stamina = await client.quest_skip_aware(  
+                            quest.quest_id,  
+                            target_count[quest.quest_id],  
+                            recover=True,  
+                            is_total=True,  
+                        )  
+                    except SkipError:  
+                        break  # 该本已达最大重置次数，换下一本  
+  
+                    rewards.extend(result)  
+                    clear_count += current_clear_count  
+                    remaining -= 1  
+                    if no_stamina:  
+                        break  
+  
+                if no_stamina:  
+                    break
 
 
 def _heart_book_candidates() -> List[int]:
