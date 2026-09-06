@@ -61,7 +61,8 @@ class Drawer():
         img = json2img(records, titles, colors=self.color(), font=self.font, stock=True)  
         return img  
   
-    async def draw_tasks_result(self, data: "TaskResult") -> Image.Image:  
+    #过滤了跳过的内容
+    async def draw_tasks_result(self, data: "TaskResult", skip_skipped: bool = False) -> Image.Image:  
         content = []  
         header = ["序号", "名字","配置","状态","结果"]  
         result = data.result  
@@ -70,10 +71,12 @@ class Drawer():
             value = result[key]  
             if value.log == "功能未启用":  
                 continue  
+            if skip_skipped and value.status.value == "跳过":  
+                continue  
             cnt += 1  
             content.append([str(cnt), value.name.strip(), value.config.strip(), "#"+value.status.value, value.log.strip()])  
         img = await self.draw(header, content)  
-        return img  
+        return img
   
     async def draw_task_result(self, data: "ModuleResult") -> Image.Image:  
         # 「我的支援」：日志同时含 [unit: 和 [ex:，必须先判断 [unit:  

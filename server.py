@@ -236,6 +236,7 @@ sv_help = f"""
 - {prefix}黎明界刷开局 公会名
 - {prefix}清日常排序 5 1 3  (把1、3挪到5后面)
 - {prefix}黎明界积分 查询黎明界累计积分/强化点数
+- {prefix}我的支援 查询支援情况
 """.strip()
 
 if address is None:
@@ -868,7 +869,7 @@ async def clean_daily_result(botev: BotEvent, acc: Account):
     resp = await acc.get_daily_result_from_id(result_id)
     if not resp:
         await botev.finish("未找到日常报告")
-    img = await drawer.draw_tasks_result(resp)
+    img = await drawer.draw_tasks_result(resp, skip_skipped=True)
     await botev.finish(outp_b64(img))
 
 @sv.on_prefix(f"{prefix}日常记录")
@@ -1185,7 +1186,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc, export: b
             await upload_excel(botev, data, f"{tool.name}_{alias}_{timestamp}.xlsx", 'autopcr')
         else:
             # 仅对查公会深域进度工具生成图片
-            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest", "one_click_ex_equip", "labyrinth_point_query"]:
+            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest", "one_click_ex_equip", "labyrinth_point_query", "get_my_support"]:
                 # 生成深域进度图片
                 img = await drawer.draw_task_result(resp)
                 msg = f"{alias}"
@@ -1678,6 +1679,11 @@ async def search_unit(botev: BotEvent):
         await botev.finish(f"未知昵称{unit_name}")
 
 @register_tool("刷新box", "refresh_box")
+async def refresh_box(botev: BotEvent):
+    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    return {}
+
+@register_tool("我的支援", "get_my_support")
 async def refresh_box(botev: BotEvent):
     await botev.send("请稍等1-8分钟，过整点需要重新发送")
     return {}

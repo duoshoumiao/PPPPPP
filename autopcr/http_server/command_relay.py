@@ -1030,7 +1030,7 @@ async def handle_daily_report(mgr, parts: List[str]) -> dict:
         return "未找到日常报告"  
   
     from ..util.draw import instance as drawer  
-    img = await drawer.draw_tasks_result(resp)  
+    img = await drawer.draw_tasks_result(resp, skip_skipped=True)
     buf = io.BytesIO()  
     img.save(buf, format='PNG')  
     image_b64 = base64.b64encode(buf.getvalue()).decode()  
