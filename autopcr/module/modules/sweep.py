@@ -246,13 +246,13 @@ class investigate_sweep(Module):
         if planned_count < book_count:
             self._log(f"当前只有{len(quests)}本已通关，扫荡本数由{book_count}调整为{planned_count}")
 
-        target_count = {}
-        rewards = []
-        clear_count = 0
-        no_stamina = False
+        target_count = {}  
+        rewards = []  
+        clear_count = 0  
+        no_stamina = False  
         remaining = planned_count  
   
-        # 阶段1：按高→低把每本的免费日常次数各刷一遍  
+        # 阶段1（不变）：按高→低把每本各刷一次日常次数  
         for quest in quests:  
             if remaining <= 0:  
                 break  
@@ -277,7 +277,7 @@ class investigate_sweep(Module):
             if no_stamina:  
                 break  
   
-        # 阶段2：回到最高本，反复重置刷取直到该本达到最大重置次数，再降到下一本  
+        # 阶段2（改动）：回到最高本，把该本反复重置刷到用尽，再降到下一本  
         if not no_stamina:  
             for quest in quests:  
                 if remaining <= 0:  
@@ -310,6 +310,14 @@ class investigate_sweep(Module):
                 if no_stamina:  
                     break
 
+        if not clear_count:
+            if no_stamina:
+                raise SkipError(f"{self.material_name()}关卡体力不足")
+            raise SkipError(f"没有可扫荡的{self.material_name()}关卡次数")
+
+        msg = await client.serialize_reward_summary(rewards)
+        self._log(f"按高到低扫荡{planned_count}本（含重置轮次），实际刷取{clear_count}次，获得了{msg}")
+
 
 def _heart_book_candidates() -> List[int]:
     return list(range(len(db.heart_piece_quest) * 4 + 1))
@@ -337,7 +345,10 @@ class xinsui_sweep(investigate_sweep):
 
     def required_count(self, client: pcrclient) -> int:  
         reserve = self.get_config('xinsui_sweep_reserve_per_unit')  
-        unit_count = sum(1 for unit_id in client.data.unit if unit_id in db.unit_unique_equip[1])  
+        unit_count = sum(  
+            1 for unit in client.data.unit.values()  
+            if unit.unique_equip_slot and unit.unique_equip_slot[0].is_slot  
+        )  
         return client.data.get_suixin_demand()[1] + reserve * unit_count
 
     def stored_count(self, client: pcrclient) -> int:
