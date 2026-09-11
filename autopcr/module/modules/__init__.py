@@ -62,6 +62,7 @@ daily_modules = ModuleList(
     [
         global_config,
         chara_fortune,
+        caravan_play,
         mission_receive_first,
         clan_like,
         room_like_back,
@@ -240,7 +241,6 @@ tool_modules = ModuleList(
         ex_equip_rank_up,
         ex_equip_enhance_up,
         half_schedule,
-        caravan_play,
         caravan_shop_buy,
         clan_battle_knive,        
         ex_equip_info,      
