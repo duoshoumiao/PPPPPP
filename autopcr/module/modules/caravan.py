@@ -1110,27 +1110,42 @@ class CaravanGame:
 
 @name('大富翁')    
 @default(True)    
-@description("将运行直至骰子耗尽或可搬空商店或骰子数低于阈值，料理能用则用。可搬空商店停止指商店币可购买所有限定商品后停止，到达终点次数指达到终点的次数满足后停止，骰子保留指当骰子数小于等于该值时停止")    
-@inttype('caravan_play_goal_num', '到达终点次数', 0, list(range(0, 10)))    
-@inttype('caravan_play_dice_hold_num', '骰子保留', 0, list(range(0, 100)))    
-@booltype('caravan_play_until_shop_empty', '可搬空商店停止', True)    
-@booltype('caravan_play_auto_shop_buy', '结束后自动购买商店', True)    
+@description("将持续摇骰子赚里程币直到搬空当前赛季商店；搬空后保留97个骰子，仅当骰子数超过97时自动使用超出部分；检测到新赛季/新商店后再次自动搬空。")  
+@booltype('caravan_play_auto_shop_buy', '结束后自动购买商店', True)
 class caravan_play(Module):    
-    async def do_task(self, client: pcrclient):    
-        game = CaravanGame(client, self)    
-        caravan_play_until_shop_empty = self.get_config('caravan_play_until_shop_empty')    
-        caravan_play_dice_hold_num = self.get_config('caravan_play_dice_hold_num')    
-        caravan_play_goal_num = self.get_config('caravan_play_goal_num')    
-        await game.init(caravan_play_until_shop_empty, caravan_play_dice_hold_num, caravan_play_goal_num)    
+    async def do_task(self, client: pcrclient):  
+        DICE_HOLD = 97  
   
-        initial_dice = game.dice_point  
+        # 第一阶段：不保留骰子，尽量摇骰子赚里程币以搬空商店  
+        game = CaravanGame(client, self)  
+        await game.init(0, 0)  
         game.silent = True  
-        while not game.stop():    
-            await game.step()    
+        while not game.stop():  
+            await game.step()  
         game.silent = False  
   
-        dice_used = initial_dice - game.dice_point  
-        self._log(f"使用了 {dice_used} 个骰子，剩余 {game.dice_point} 个，到达终点 {game.caravan_play_goal_num} 次")  
+        # 搬空商店  
+        emptied = True  
+        if self.get_config('caravan_play_auto_shop_buy'):  
+            emptied = await self._do_shop_buy(client)  
+  
+        # 不搬空不保留：未搬空则直接结束  
+        if not emptied:  
+            self._log("未搬空商店，结束")  
+            return  
+  
+        # 第二阶段：搬空达标后，骰子超过97则自动使用超出部分，保留97个  
+        if game.dice_point <= DICE_HOLD:  
+            self._log(f"商店已搬空，骰子数{game.dice_point} <= {DICE_HOLD}，保留骰子等待新赛季")  
+            return  
+  
+        self._log(f"商店已搬空，骰子数{game.dice_point} > {DICE_HOLD}，使用超出部分")  
+        game2 = CaravanGame(client, self)  
+        await game2.init(DICE_HOLD, 0)  
+        game2.silent = True  
+        while not game2.stop():  
+            await game2.step()  
+        game2.silent = False
   
         if self.get_config('caravan_play_auto_shop_buy'):    
             await self._do_shop_buy(client)    
