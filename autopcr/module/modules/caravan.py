@@ -1116,11 +1116,21 @@ class caravan_play(Module):
     async def do_task(self, client: pcrclient):  
         DICE_HOLD = 97  
   
-        # 先用原来的搬空判定：商店是否已搬空（不消耗骰子）  
-        emptied = await self._is_shop_emptied(client)  
+        # 先用原判定检查商店是否已搬空（不消耗骰子、不购买）  
+        top = await client.caravan_top()  
+        season_id = top.season_id  
+        emptied = False  
+        if (not (top.action_bit_flag & eFlag.IS_PROGRESS_TURN)  
+                and season_id in db.caravan_schedule  
+                and client.datetime <= db.parse_time(db.caravan_schedule[season_id].shop_close_time)):  
+            items_list = db.caravan_coin_shop_lineup[season_id]  
+            have_bought = Counter({item.slot_id: item.purchase_count for item in top.coin_shop_list or [] if item.season_id == season_id})  
+            limit_items_list = [item for item in items_list if item.stock > 0]  
+            limit_expend_items = [item for item in limit_items_list for _ in range(item.stock - have_bought[item.slot_id])]  
+            emptied = len(limit_expend_items) == 0  
   
         if not emptied:  
-            # 未搬空 -> 不保留骰子，摇到耗尽赚里程币，然后搬空商店  
+            # 未搬空 -> 摇到耗尽赚里程币再搬空  
             game = CaravanGame(client, self)  
             await game.init(0, 0)  
             initial_dice = game.dice_point  
@@ -1129,16 +1139,15 @@ class caravan_play(Module):
                 await game.step()  
             game.silent = False  
             self._log(f"使用了 {initial_dice - game.dice_point} 个骰子，剩余 {game.dice_point} 个")  
-  
             if self.get_config('caravan_play_auto_shop_buy'):  
                 await self._do_shop_buy(client)  
         else:  
-            # 已搬空 -> 不搬空不保留，已搬空才保留97；仅当骰子>97时用掉超出部分  
+            # 已搬空 -> 始终保留97个，超过97的部分用掉  
             game = CaravanGame(client, self)  
             if game.dice_point <= DICE_HOLD:  
                 self._log(f"商店已搬空，骰子数{game.dice_point} <= {DICE_HOLD}，保留骰子等待新赛季")  
                 return  
-            self._log(f"商店已搬空，骰子数{game.dice_point} > {DICE_HOLD}，使用超出部分")  
+            self._log(f"商店已搬空，骰子数{game.dice_point} > {DICE_HOLD}，使用超出部分，保留{DICE_HOLD}个")  
             await game.init(DICE_HOLD, 0)  
             game.silent = True  
             while not game.stop():  
@@ -1147,23 +1156,6 @@ class caravan_play(Module):
   
         if self.get_config('caravan_play_auto_shop_buy'):    
             await self._do_shop_buy(client)    
-  
-    async def _is_shop_emptied(self, client: pcrclient) -> bool:  
-        """用原来的判定逻辑检查当前赛季商店限量商品是否已全部购买（已搬空），不消耗骰子、不购买。"""  
-        top = await client.caravan_top()  
-        season_id = top.season_id  
-        if top.action_bit_flag & eFlag.IS_PROGRESS_TURN:  
-            return False  
-        if season_id not in db.caravan_schedule:  
-            return False  
-        if client.datetime > db.parse_time(db.caravan_schedule[season_id].shop_close_time):  
-            return False  
-  
-        items_list = db.caravan_coin_shop_lineup[season_id]  
-        have_bought = Counter({item.slot_id: item.purchase_count for item in top.coin_shop_list or [] if item.season_id == season_id})  
-        limit_items_list = [item for item in items_list if item.stock > 0]  
-        limit_expend_items = [item for item in limit_items_list for _ in range(item.stock - have_bought[item.slot_id])]  
-        return len(limit_expend_items) == 0
         
     async def _do_shop_buy(self, client: pcrclient):    
         """Auto shop buy after caravan play, reusing caravan_shop_buy logic."""    
