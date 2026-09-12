@@ -1148,7 +1148,7 @@ class caravan_play(Module):
                 self._log(f"商店已搬空，骰子数{game.dice_point} <= {DICE_HOLD}，保留骰子等待新赛季")  
                 return  
             self._log(f"商店已搬空，骰子数{game.dice_point} > {DICE_HOLD}，使用超出部分，保留{DICE_HOLD}个")  
-            await game.init(DICE_HOLD, 0)  
+            await game.init(False, DICE_HOLD)
             game.silent = True  
             while not game.stop():  
                 await game.step()  
