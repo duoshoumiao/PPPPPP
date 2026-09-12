@@ -1109,7 +1109,7 @@ class CaravanGame:
         return self.state == eState.STOP
 
 @name('大富翁')    
-@default(False)    
+@default(True)    
 @description("先判断当前赛季商店是否已搬空：未搬空则持续摇骰子赚里程币直到搬空；已搬空则不再摇骰子，仅当骰子数超过97时自动使用超出部分。新赛季会带来新商店，下次运行时自动再次搬空。")  
 @booltype('caravan_play_auto_shop_buy', '结束后自动购买商店', True)
 class caravan_play(Module):    
@@ -1132,7 +1132,7 @@ class caravan_play(Module):
         if not emptied:  
             # 未搬空 -> 摇到耗尽赚里程币再搬空  
             game = CaravanGame(client, self)  
-            await game.init(0, 0)  
+            await game.init(True, 0) 
             initial_dice = game.dice_point  
             game.silent = True  
             while not game.stop():  
