@@ -340,7 +340,6 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
 2. 上去按指示点击圆点[CQ:image,file=https://docimg4.docs.qq.com/image/AgAACIUgb5qLsZ3QKA9Ntb683ojPeN-P.png?w=323&h=251]再点击配置填账号密码，[CQ:image,file=https://docimg5.docs.qq.com/image/AgAACIUgb5rXOV9adwdE6ai5YP1EccG_.png?w=667&h=554]再进入【日常】页面修改需求
 3. [CQ:image,file=https://docimg3.docs.qq.com/image/AgAACIUgb5q18BAEbbFKL72SgBXRIu_R.png?w=452&h=174]平时可使用【#配置日常】召唤网站
 🌐🌐 访问地址: {login_url}
-安卓教程：https://docs.qq.com/aio/DYUt2WHRFdGFZbEZR?p=fPQSBKKVHAkZcAzvFUdq7d
 '''
         
     except Exception as e:
