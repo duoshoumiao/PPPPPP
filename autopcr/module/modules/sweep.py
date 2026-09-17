@@ -250,7 +250,20 @@ class investigate_sweep(Module):
         rewards = []  
         clear_count = 0  
         no_stamina = False  
-        remaining = planned_count  
+  
+        # 统计今日各关卡已刷次数，换算成已刷本数（跨运行累计，避免重复刷满）  
+        already_books = 0  
+        for quest in quests:  
+            qinfo = client.data.quest_dict.get(quest.quest_id)  
+            done = qinfo.daily_clear_count if qinfo else 0  
+            if done > 0:  
+                daily_limit = max(1, quest.daily_limit)  
+                target_count[quest.quest_id] = done  
+                already_books += (done + daily_limit - 1) // daily_limit  
+  
+        remaining = max(0, planned_count - already_books)  
+        if remaining <= 0:  
+            raise SkipError(f"今日{self.material_name()}扫荡本数已达标（已刷{already_books}本）")
   
         # 阶段1（不变）：按高→低把每本各刷一次日常次数  
         for quest in quests:  
