@@ -1096,7 +1096,7 @@ class CaravanGame:
         return self.state == eState.STOP
 
 @name('大富翁')  
-@default(True)  
+@default(False)  
 @description("固定运行至可搬空商店（商店币足够购买所有限定商品）或骰子耗尽为止，料理能用则用。当骰子数超过97时无视搬空商店停止条件，继续投骰把多余骰子消耗到97及以下")
 class caravan_play(Module):  
     async def do_task(self, client: pcrclient):  
