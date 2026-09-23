@@ -62,7 +62,6 @@ daily_modules = ModuleList(
     [
         global_config,
         chara_fortune,
-        caravan_play,
         mission_receive_first,
         clan_like,
         room_like_back,
@@ -141,7 +140,8 @@ daily_modules = ModuleList(
         unit_story_reading,
         birthday_story_reading,
         room_upper_all,
-        music_buy_all,  # 新增  
+        music_buy_all,  # 新增
+        caravan_play,
         user_info,
     ]
 )
