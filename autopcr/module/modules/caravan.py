@@ -685,8 +685,7 @@ class CaravanGame:
 
         elif self.state == eState.ROLL_DICE:
             if not self.action_bit_flag & eFlag.DICE_USED:
-                roll_num = self.dish_effect_manager.get_effect_influence_value(eDishEffectType.MULTI_DICE) or 1  
-                roll_num = min(roll_num, self.dice_point)   # ← 新增（插入在第 688 行后）  
+                roll_num = self.dish_effect_manager.get_effect_influence_value(eDishEffectType.MULTI_DICE) or 1 
   
                 self._log(f"当前骰子数{self.dice_point}, 掷出骰子{roll_num}个")
                 resp = await self.client.caravan_dice_roll(
@@ -694,7 +693,7 @@ class CaravanGame:
                     current_num=self.dice_point,
                     roll_num=roll_num
                 )
-                self.client.data.set_inventory(db.dice, self.dice_point - roll_num) # only pcr can do
+                self.client.data.set_inventory(db.dice, self.dice_point - 1)
                 self.spots_list = resp.spots_list or []
                 extra_spots = self.dish_effect_manager.get_effect_influence_value(eDishEffectType.ADD_MOVE_COUNT) or 0 # feature in spot choice
                 self.spots_choices_1 = (resp.spots_choices_1 or 0) - extra_spots
