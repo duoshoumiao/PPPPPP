@@ -425,7 +425,7 @@ class CaravanGame:
     def __init__(self, client: pcrclient, module: Module):
         self.client = client
         self.module = module
-
+        self.silent = False
         self.state: eState = eState.INIT
 
         self.season_id: int = 0
@@ -440,8 +440,9 @@ class CaravanGame:
 
         self.candidate_shop_lineup: List[CaravanShopBlockLineup] = []
 
-    def _log(self, msg):
-        self.module._log(f"[回合 {self.turn_count:02d}] [{self.state}] {msg}")
+    def _log(self, msg):  
+        if not self.silent:  
+            self.module._log(f"[回合 {self.turn_count:02d}] [{self.state}] {msg}")
 
     def _warn(self, msg):
         self.module._warn(msg)
@@ -450,6 +451,10 @@ class CaravanGame:
     def dice_point(self) -> int:
         return self.client.data.get_inventory(db.dice)
 
+    @property  
+    def dice_used(self) -> int:  
+        return self.initial_dice - self.dice_point
+        
     @property
     def licheng_point(self) -> int:
         return self.client.data.get_inventory(db.licheng_point)
@@ -466,12 +471,13 @@ class CaravanGame:
     def dish_cnt(self) -> int:
         return sum(dish for dish in self.candidate_dishes.values())
 
-    async def init(self, caravan_play_until_shop_empty: bool = False, caravan_dice_hold_num: int = 0, caravan_play_goal_num: int = 0):
+    async def init(self):
         """
         第一次调用，用于拉取 top 接口，把 season_id、地图初始信息、dice_point 等都初始化好
         """
         resp = await self.client.caravan_top()
-
+        self.initial_dice = self.dice_point
+        
         # 从 resp 里提取必要字段
         self.season_id = resp.season_id
         self.current_block_id = resp.block_id
@@ -480,9 +486,7 @@ class CaravanGame:
         self.last_response: Union[CaravanTopResponse, CaravanMoveResponse] = resp
         self.spots = 0
         self.mini_game_id = 0
-        self.caravan_play_until_shop_empty = caravan_play_until_shop_empty
-        self.caravan_play_dice_hold_num = caravan_dice_hold_num
-        self.caravan_play_goal_target = caravan_play_goal_num
+        self.caravan_play_until_shop_empty = True  
         self.caravan_play_goal_num = 0
         self.spots_choices_1 = resp.spots_choices_1
         self.spots_choices_2 = resp.spots_choices_2
@@ -653,18 +657,8 @@ class CaravanGame:
                 self.state = eState.STOP
                 return
 
-            if self.caravan_play_until_shop_empty and self.client.data.get_inventory(self.coin_token) >= self.total_coin:
+            if self.dice_point <= 97 and self.caravan_play_until_shop_empty and self.client.data.get_inventory(self.coin_token) >= self.total_coin:
                 self._log(f"商店币{self.client.data.get_inventory(self.coin_token)} > {self.total_coin}，足够搬空商店 -> STOP")
-                self.state = eState.STOP
-                return
-
-            if self.caravan_play_dice_hold_num >= self.dice_point:
-                self._log(f"骰子数{self.dice_point} <= {self.caravan_play_dice_hold_num}，小于阈值 -> STOP")
-                self.state = eState.STOP
-                return
-
-            if self.caravan_play_goal_target and self.caravan_play_goal_num >= self.caravan_play_goal_target:
-                self._log(f"达终点次数{self.caravan_play_goal_num} >= {self.caravan_play_goal_target} -> STOP")
                 self.state = eState.STOP
                 return
 
@@ -678,14 +672,14 @@ class CaravanGame:
 
         elif self.state == eState.ROLL_DICE:
             if not self.action_bit_flag & eFlag.DICE_USED:
-                roll_num = self.dish_effect_manager.get_effect_influence_value(eDishEffectType.MULTI_DICE) or 1
-
-                self._log(f"当前骰子数{self.dice_point}, 掷出骰子{roll_num}个")
-                resp = await self.client.caravan_dice_roll(
-                    season_id=self.season_id,
-                    current_num=self.dice_point,
-                    roll_num=roll_num
-                )
+                roll_num = self.dish_effect_manager.get_effect_influence_value(eDishEffectType.MULTI_DICE) or 1  
+  
+                self._log(f"当前骰子数{self.dice_point}, 掷出骰子{roll_num}个")  
+                resp = await self.client.caravan_dice_roll(  
+                    season_id=self.season_id,  
+                    current_num=self.dice_point,  
+                    roll_num=roll_num  
+                )  
                 self.client.data.set_inventory(db.dice, self.dice_point - 1) # only pcr can do
                 self.spots_list = resp.spots_list or []
                 extra_spots = self.dish_effect_manager.get_effect_influence_value(eDishEffectType.ADD_MOVE_COUNT) or 0 # feature in spot choice
@@ -1101,105 +1095,104 @@ class CaravanGame:
     def stop(self) -> bool:
         return self.state == eState.STOP
 
-@name('大富翁')
-@default(True)
-@description("将运行直至骰子耗尽或可搬空商店或骰子数低于阈值，料理能用则用。可搬空商店停止指商店币可购买所有限定商品后停止，到达终点次数指达到终点的次数满足后停止，骰子保留指当骰子数小于等于该值时停止")
-@inttype('caravan_play_goal_num', '到达终点次数', 0, list(range(0, 10)))
-@inttype('caravan_play_dice_hold_num', '骰子保留', 0, list(range(0, 100)))
-@booltype('caravan_play_until_shop_empty', '可搬空商店停止', True)
-class caravan_play(Module):
-    async def do_task(self, client: pcrclient):
-        game = CaravanGame(client, self)
-        caravan_play_until_shop_empty = self.get_config('caravan_play_until_shop_empty')
-        caravan_play_dice_hold_num = self.get_config('caravan_play_dice_hold_num')
-        caravan_play_goal_num = self.get_config('caravan_play_goal_num')
-        await game.init(caravan_play_until_shop_empty, caravan_play_dice_hold_num, caravan_play_goal_num)
-        while not game.stop():
-            await game.step()
+@name('大富翁')  
+@default(True)  
+@description("固定运行至可搬空商店（商店币足够购买所有限定商品）或骰子耗尽为止，料理能用则用。当骰子数超过97时无视搬空商店停止条件，继续投骰把多余骰子消耗到97及以下")
+class caravan_play(Module):  
+    async def do_task(self, client: pcrclient):  
+        game = CaravanGame(client, self)  
+        game.silent = True
+        await game.init()  
+        while not game.stop():    
+            await game.step()  
+        self._log(f"本次消耗骰子 {game.dice_used} 个")  
+        await _run_caravan_shop_buy(self, client, last_season=False)
 
+async def _run_caravan_shop_buy(module: Module, client: pcrclient, last_season: bool = False):  
+    top = await client.caravan_top()  
+    season_id = top.season_id  
+    if last_season:  
+        season_id -= 1  
+    if top.action_bit_flag & eFlag.IS_PROGRESS_TURN:  
+        raise AbortError("请先执行大富翁进行回合结算")  
+    if season_id not in db.caravan_schedule:  
+        raise AbortError(f"赛季 {season_id} 不存在")  
+    if client.datetime > db.parse_time(db.caravan_schedule[season_id].shop_close_time):  
+        raise AbortError(f"赛季 {season_id} 商店已关闭")  
+  
+    items_list = db.caravan_coin_shop_lineup[season_id]  
+    have_bought = Counter({item.slot_id: item.purchase_count for item in top.coin_shop_list or [] if item.season_id == season_id})  
+    cost = 0  
+    rewards = []  
+    items_list = sorted(items_list, key=lambda x: x.slot_id)  
+    limit_items_list = [item for item in items_list if item.stock > 0]  
+    unlimited_items_list = [item for item in items_list if item.stock == 0]  
+  
+    limit_expend_items = [item for item in limit_items_list for _ in range(item.stock - have_bought[item.slot_id])]  
+  
+    is_enable_buy_bulk = client.data.settings.caravan.is_enable_caravan_coin_shop_buy_bulk  
+    to_buy = Counter()  
+    for item in limit_expend_items[:]:  
+        coin = client.data.get_inventory((eInventoryType.Item, item.currency_id))  
+        if coin < cost + item.price:  
+            if not rewards:  
+                module._log(f"商店币不足{coin} < {cost + item.price}，无法购买 {db.get_inventory_name_san((item.reward_type, item.reward_id))}及以后的物品")  
+            break  
+        if not is_enable_buy_bulk:  
+            resp = await client.caravan_coin_shop_buy(  
+                season_id=top.season_id,  
+                shop_season_id=season_id,  
+                slot_id_list=[item.slot_id],  
+                current_currency_num=coin  
+            )  
+            rewards.extend(resp.purchase_list or [])  
+        else:  
+            to_buy[item.slot_id] += 1  
+        cost += item.price  
+        limit_expend_items.remove(item)  
+  
+    if is_enable_buy_bulk and to_buy:  
+        resp = await client.caravan_coin_shop_buy_bulk(  
+            season_id=top.season_id,  
+            shop_season_id=season_id,  
+            buy_item_dict=to_buy,  
+            current_currency_num=coin  
+        )  
+        rewards.extend(resp.purchase_list or [])  
+  
+    buy = len(limit_expend_items) == 0  
+    while buy:  
+        buy = False  
+        for item in unlimited_items_list:  
+            coin = client.data.get_inventory((eInventoryType.Item, item.currency_id))  
+            if item.price <= coin:  
+                if not is_enable_buy_bulk:  
+                    resp = await client.caravan_coin_shop_buy(  
+                        season_id=top.season_id,  
+                        shop_season_id=season_id,  
+                        slot_id_list=[item.slot_id],  
+                        current_currency_num=coin  
+                    )  
+                else:  
+                    resp = await client.caravan_coin_shop_buy_bulk(  
+                        season_id=top.season_id,  
+                        shop_season_id=season_id,  
+                        buy_item_dict=Counter({item.slot_id:1}),  
+                        current_currency_num=coin  
+                    )  
+                rewards.extend(resp.purchase_list or [])  
+                cost += item.price  
+                buy = True  
+  
+    if not rewards:  
+        module._log("无可购买的物品")  
+    else:  
+        module._log(f"花费了商店币 {cost}，购买了\n{await client.serlize_reward(rewards)}")
 
-@name('大富翁商店购买')
-@default(True)
-@description("默认买最新一期商店，按照商品顺序购买，直到商店币用完为止，有次数的无法购买会提示，无次数的不会提示,便于查看是否搬空商店")
-@booltype('caravan_shop_last_season', '购买上期商店', False)
-class caravan_shop_buy(Module):
-    async def do_task(self, client: pcrclient):
-        top = await client.caravan_top()
-        season_id = top.season_id
-        if self.get_config('caravan_shop_last_season'):
-            season_id -= 1
-        if top.action_bit_flag & eFlag.IS_PROGRESS_TURN:
-            raise AbortError("请先执行大富翁进行回合结算")
-        if season_id not in db.caravan_schedule:
-            raise AbortError(f"赛季 {season_id} 不存在")
-        if client.datetime > db.parse_time(db.caravan_schedule[season_id].shop_close_time):
-            raise AbortError(f"赛季 {season_id} 商店已关闭")
-
-        items_list = db.caravan_coin_shop_lineup[season_id]
-        have_bought = Counter({item.slot_id: item.purchase_count for item in top.coin_shop_list or [] if item.season_id == season_id})
-        cost = 0
-        rewards = []
-        items_list = sorted(items_list, key=lambda x: x.slot_id)
-        limit_items_list = [item for item in items_list if item.stock > 0]
-        unlimited_items_list = [item for item in items_list if item.stock == 0]
-
-        limit_expend_items = [item for item in limit_items_list for _ in range(item.stock - have_bought[item.slot_id])]
-
-        is_enable_buy_bulk = client.data.settings.caravan.is_enable_caravan_coin_shop_buy_bulk
-        to_buy = Counter()
-        for item in limit_expend_items[:]:
-            coin = client.data.get_inventory((eInventoryType.Item, item.currency_id))
-            if coin < cost + item.price:
-                if not rewards:
-                    self._log(f"商店币不足{coin} < {cost + item.price}，无法购买 {db.get_inventory_name_san((item.reward_type, item.reward_id))}及以后的物品")
-                break
-            if not is_enable_buy_bulk:
-                resp = await client.caravan_coin_shop_buy(
-                    season_id=top.season_id,
-                    shop_season_id=season_id,
-                    slot_id_list=[item.slot_id],
-                    current_currency_num=coin
-                )
-                rewards.extend(resp.purchase_list or [])
-            else:
-                to_buy[item.slot_id] += 1
-            cost += item.price
-            limit_expend_items.remove(item)
-
-        if is_enable_buy_bulk and to_buy:
-            resp = await client.caravan_coin_shop_buy_bulk(
-                season_id=top.season_id,
-                shop_season_id=season_id,
-                buy_item_dict=to_buy,
-                current_currency_num=coin
-            )
-            rewards.extend(resp.purchase_list or [])
-
-        buy = len(limit_expend_items) == 0
-        while buy:
-            buy = False
-            for item in unlimited_items_list:
-                coin = client.data.get_inventory((eInventoryType.Item, item.currency_id))
-                if item.price <= coin:
-                    if not is_enable_buy_bulk:
-                        resp = await client.caravan_coin_shop_buy(
-                            season_id=top.season_id,
-                            shop_season_id=season_id,
-                            slot_id_list=[item.slot_id],
-                            current_currency_num=coin
-                        )
-                    else:
-                        resp = await client.caravan_coin_shop_buy_bulk(
-                            season_id=top.season_id,
-                            shop_season_id=season_id,
-                            buy_item_dict=Counter({item.slot_id:1}),
-                            current_currency_num=coin
-                        )
-                    rewards.extend(resp.purchase_list or [])
-                    cost += item.price
-                    buy = True
-
-        if not rewards:
-            self._log("无可购买的物品")
-        else:
-            self._log(f"花费了商店币 {cost}，购买了\n{await client.serlize_reward(rewards)}")
+@name('大富翁商店购买')  
+@default(True)  
+@description("默认买最新一期商店，按照商品顺序购买，直到商店币用完为止，有次数的无法购买会提示，无次数的不会提示,便于查看是否搬空商店")  
+@booltype('caravan_shop_last_season', '购买上期商店', False)  
+class caravan_shop_buy(Module):  
+    async def do_task(self, client: pcrclient):  
+        await _run_caravan_shop_buy(self, client, self.get_config('caravan_shop_last_season'))
