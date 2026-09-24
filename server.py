@@ -152,7 +152,7 @@ app.secret_key = secrets.token_urlsafe(16)  # cookie expires when reboot
 app.register_blueprint(server.app)
 # 自动换防停止事件字典，key: sender_qq, value: asyncio.Event  
 _auto_def_stop_events = {}
-
+_auto_regroup_stop_events = {}
 prefix = '#'
 
 sv_help = f"""
@@ -218,6 +218,7 @@ sv_help = f"""
 - {prefix}角色升星 5 忽略盈余 升至最高 佩可  #分别代表 星级 是否保留盈余如突破碎片 升到可升最高星 角色名
 - {prefix}角色突破 忽略盈余 凯露 佩可（忽略盈余：选这个，碎片不溢出就不突破）
 - {prefix}pjjc自动换防   
+- {prefix}pjjc自动换组    需要网站设置多个队伍组 不需要队伍名   
 - {prefix}挂地下城/会战/好友支援 [星级]角色1 [[星级]角色2]  设置角色为支援，星级可选(3/4/5)，如：#挂好友支援 3水电
 - {prefix}一键穿ex +角色名 试穿/数字 1 2 3      数字0表示不改动    
 - {prefix}添加好友
@@ -1344,9 +1345,10 @@ async def ocr_team(botev: BotEvent):
             return
 
     msg = await botev.message()  
+    has_label = bool(msg)          # 记录用户是否提供了队伍名  
     team_label = "队伍"  
     if msg:  
-        team_label = msg[0]  
+        team_label = msg[0]
   
     img_urls = await botev.image()  
     if not img_urls:  
@@ -1369,10 +1371,16 @@ async def ocr_team(botev: BotEvent):
     if not result:
         await botev.finish("未识别到任何队伍！")
 
-    msg = f"{prefix}一键编队 4 1\n" + "\n".join(
-            f"{team_label}{id+1} {' '.join(db.get_unit_name(uid * 100 + 1) for uid in team)}"
-            for id, team in enumerate(result)
-    )
+    if has_label:  
+        msg = f"{prefix}一键编队 4 1\n" + "\n".join(  
+                f"{team_label}{id+1} {' '.join(db.get_unit_name(uid * 100 + 1) for uid in team)}"  
+                for id, team in enumerate(result)  
+        )  
+    else:  
+        msg = "\n".join(  
+                " ".join(db.get_unit_name(uid * 100 + 1) for uid in team)  
+                for team in result  
+        )  
     await botev.finish(msg)
 
 @register_tool("pjjc回刺", "pjjc_back")
@@ -3370,6 +3378,218 @@ async def pjjc_stop_auto_def(botev: BotEvent):
         _auto_def_stop_events[sender_qq].set()  
     else:  
         await botev.send("当前没有正在运行的自动换防任务")
+
+@sv.on_prefix(f"{prefix}pjjc自动换组")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account  
+async def pjjc_auto_regroup_switch(botev: BotEvent, acc):  
+    import random  
+    from datetime import datetime as dt  
+  
+    alias = getattr(acc, 'alias', '未知账号')  
+    sender_qq = await botev.send_qq()  
+  
+    if sender_qq in _auto_regroup_stop_events:  
+        await botev.finish(f"已有正在运行的自动换组任务，请先发送 {prefix}终止换组")  
+  
+    # 从账号配置 pjjc_rotate_teams 读取多组阵容（先用 pjjc定时轮换防守 模块配置好）  
+    text = acc.data.config.get("pjjc_rotate_teams", "") or ""  
+    blocks = [b for b in text.split("\n\n") if b.strip()]  
+    groups = []  
+    unknown = []  
+    for block in blocks:  
+        lines = [l for l in block.splitlines() if l.strip()]  
+        if len(lines) != 3:  
+            await botev.finish(f"每组必须恰好3支队伍，检测到{len(lines)}行")  
+        teams = []  
+        for line in lines:  
+            units = []  
+            for name in line.strip().split():  
+                uid = get_id_from_name(name)  
+                if uid:  
+                    units.append(uid * 100 + 1)  
+                elif name and name[0].isdigit() and get_id_from_name(name[1:]):  
+                    units.append(get_id_from_name(name[1:]) * 100 + 1)  
+                else:  
+                    unknown.append(name)  
+            teams.append(units)  
+        groups.append(teams)  
+    if unknown:  
+        await botev.finish(f"未知昵称{', '.join(unknown)}")  
+    if not groups:  
+        await botev.finish(f"未配置阵容组，请在【pjjc定时轮换防守】里填写 pjjc_rotate_teams")  
+  
+    shuffle_count = 0  
+    check_interval = 2  
+    last_group = -1  
+  
+    stop_event = asyncio.Event()  
+    _auto_regroup_stop_events[sender_qq] = stop_event  
+  
+    try:  
+        client = acc.client  
+        await client.activate()  
+  
+        from .autopcr.core.pcrclient import eLoginStatus  
+        if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+            await client.login()  
+  
+        history_resp = await client.get_grand_arena_history()  
+        known_log_ids = set()  
+        if history_resp.grand_arena_history_list:  
+            for h in history_resp.grand_arena_history_list:  
+                known_log_ids.add(h.log_id)  
+  
+        # --- 换组逻辑（替换原 do_shuffle 的错排逻辑）---  
+        async def do_regroup():  
+            nonlocal last_group  
+            from .autopcr.model.common import DeckListData  
+            from .autopcr.model.enums import ePartyType  
+  
+            info = await client.get_grand_arena_info()  
+            limit_info = info.update_deck_times_limit  
+            if limit_info.round_times == limit_info.round_max_limited_times:  
+                ok_time = db.format_time(db.parse_time(limit_info.round_end_time))  
+                return None, f"已达到换防次数上限{limit_info.round_max_limited_times}，请于{ok_time}后再试，自动换组终止"  
+            if limit_info.daily_times == limit_info.daily_max_limited_times:  
+                return None, f"已达到每日换防次数上限{limit_info.daily_max_limited_times}，自动换组终止"  
+  
+            limit_msg = ""  
+            if limit_info.round_times:  
+                limit_msg = f"{db.format_time(db.parse_time(limit_info.round_end_time))}刷新"  
+  
+            # 不与上一组重复地随机选一组  
+            candidates = [i for i in range(len(groups)) if i != last_group] or list(range(len(groups)))  
+            gi = random.choice(candidates)  
+            last_group = gi  
+  
+            deck_list = []  
+            for i in range(3):  
+                deck = DeckListData()  
+                deck.deck_number = getattr(ePartyType, f"GRAND_ARENA_DEF_{i + 1}")  
+                deck.unit_list = groups[gi][i]  
+                deck_list.append(deck)  
+            deck_list.sort(key=lambda x: x.deck_number)  
+            await client.deck_update_list(deck_list)  
+  
+            result_msg = (  
+                f"已切换到第{gi + 1}组\n"  
+                f"本轮换防次数{limit_info.round_times + 1}/{limit_info.round_max_limited_times}，{limit_msg}\n"  
+                f"今日换防次数{limit_info.daily_times + 1}/{limit_info.daily_max_limited_times}"  
+            )  
+            return gi, result_msg  
+  
+        await botev.send(  
+            f"{alias} pjjc自动换组已开启（共{len(groups)}组）\n"  
+            f"每2秒检测被刺记录，被刺立即随机换组（不重复上一组）\n"  
+            f"发送 {prefix}终止换组 可停止"  
+        )  
+  
+        while True:  
+            try:  
+                await asyncio.wait_for(stop_event.wait(), timeout=check_interval)  
+                await botev.send(f"{alias} 收到终止信号，自动换组已停止，共执行换组{shuffle_count}次")  
+                client.deactivate()  
+                return  
+            except asyncio.TimeoutError:  
+                pass  
+  
+            try:  
+                history_resp = await client.get_grand_arena_history()  
+                if history_resp.grand_arena_history_list:  
+                    new_attacks = []  
+                    for h in history_resp.grand_arena_history_list:  
+                        if h.log_id not in known_log_ids:  
+                            known_log_ids.add(h.log_id)  
+                            if not h.is_challenge:  
+                                opponent = h.opponent_user  
+                                attack_time = dt.fromtimestamp(h.versus_time)  
+                                new_attacks.append(f"{opponent.user_name}({opponent.viewer_id}) {attack_time} 被刺")  
+  
+                    if new_attacks:  
+                        attack_msg = "\n".join(new_attacks)  
+                        try:  
+                            result = await do_regroup()  
+                            if result[0] is None:  
+                                await botev.send(  
+                                    f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
+                                    f"尝试立即换组但{result[1]}"  
+                                )  
+                                break  
+                            shuffle_count += 1  
+  
+                            await botev.send(  
+                                f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
+                                f"已立即执行第{shuffle_count}次换组！\n"  
+                                f"{result[1]}\n"  
+                                f"正在下线并重新上线..."  
+                            )  
+  
+                            client.deactivate()  
+                            await client.activate()  
+                            if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+                                await client.login()  
+  
+                            known_log_ids.clear()  
+                            history_resp2 = await client.get_grand_arena_history()  
+                            if history_resp2.grand_arena_history_list:  
+                                for h2 in history_resp2.grand_arena_history_list:  
+                                    known_log_ids.add(h2.log_id)  
+  
+                            await botev.send(f"{alias} 已重新上线，继续每2秒检测被刺")  
+  
+                        except Exception as e:  
+                            logger.error(f"pjjc自动换组被刺立即换组出错: {str(e)}")  
+                            await botev.send(  
+                                f"{alias} 检测到被刺记录：\n{attack_msg}\n"  
+                                f"立即换组出错: {str(e)[:200]}\n"  
+                                f"尝试下线并重新上线..."  
+                            )  
+                            try:  
+                                client.deactivate()  
+                                await client.activate()  
+                                if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
+                                    await client.login()  
+                                known_log_ids.clear()  
+                                history_resp_err = await client.get_grand_arena_history()  
+                                if history_resp_err.grand_arena_history_list:  
+                                    for h_err in history_resp_err.grand_arena_history_list:  
+                                        known_log_ids.add(h_err.log_id)  
+                            except:  
+                                await botev.send(f"{alias} 重新登录失败，自动换组终止")  
+                                break  
+  
+            except Exception as e:  
+                logger.error(f"pjjc自动换组检查被刺出错: {str(e)}")  
+                try:  
+                    if client.logged == eLoginStatus.NOT_LOGGED:  
+                        await client.login()  
+                except:  
+                    await botev.send(f"{alias} 重新登录失败，自动换组终止")  
+                    break  
+  
+        client.deactivate()  
+        await botev.send(f"{alias} pjjc自动换组已结束，共执行换组{shuffle_count}次")  
+  
+    except Exception as e:  
+        try:  
+            client.deactivate()  
+        except:  
+            pass  
+        await botev.send(f"{alias} pjjc自动换组异常终止: {str(e)[:300]}")  
+    finally:  
+        _auto_regroup_stop_events.pop(sender_qq, None)  
+  
+  
+@sv.on_fullmatch(f"{prefix}终止换组")  
+@wrap_hoshino_event  
+async def pjjc_stop_auto_regroup(botev: BotEvent):  
+    sender_qq = await botev.send_qq()  
+    if sender_qq in _auto_regroup_stop_events:  
+        _auto_regroup_stop_events[sender_qq].set()  
+    else:  
+        await botev.send("当前没有正在运行的自动换组任务")
         
 @register_tool("黎明界刷开局", "labyrinth_start_reroll")
 async def labyrinth_start_reroll(botev: BotEvent):

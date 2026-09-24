@@ -219,6 +219,7 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        pjjc_def_rotate_team,
         daily_order_edit,
         labyrinth_start_reroll,
         labyrinth_point_query,

@@ -17,7 +17,7 @@ IMAGE_DIR = Path(CACHE_DIR) / "image"
   
 async def extract_image(bundle_url: str):  
     data = await assetmgr.download(bundle_url)  
-    UnityPy.config.FALLBACK_UNITY_VERSION = "2021.3.20f1"  
+    UnityPy.config.FALLBACK_UNITY_VERSION = "6000.0.58f2"  
     env = UnityPy.load(data)  
     for obj in env.objects:  
         if obj.type.name in ("Texture2D", "Sprite"):  

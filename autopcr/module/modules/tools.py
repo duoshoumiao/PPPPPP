@@ -1,5 +1,6 @@
 from typing import List, Set
- 
+from .cron import CronModule  
+from ...util.pcr_data import get_id_from_name
 from ...util.ilp_solver import memory_use_average
 import time
 from ...model.common import ChangeRarityUnit, DeckListData, ExtraEquipChangeSlot, ExtraEquipChangeUnit, GachaPointInfo, GrandArenaHistoryDetailInfo, GrandArenaHistoryInfo, GrandArenaSearchOpponent, ProfileUserInfo, RankingSearchOpponent, RedeemUnitInfo, RedeemUnitSlotInfo, UnitData, UnitDataLight, VersusResult, VersusResultDetail
@@ -2214,3 +2215,72 @@ class get_my_support(Module):
             self._log("无")  
         for support in friend_list:  
             self._log_unit(client, support.unit_id, cb=False)
+            
+@texttype("pjjc_rotate_teams", "轮换阵容组(每组3队,一队一行,组间空行分隔)", "")  
+@description('从多组阵容中随机选一组(尽量不重复上一组)写入pjjc防守')  
+@name('pjjc随机防守')  
+@default(False)  
+class pjjc_def_rotate_team(CronModule):  
+    async def is_cron_time(self, nhour: int, nminute: int) -> bool:  
+        return nminute % 5 == 0  
+  
+    async def is_cron_condition(self) -> bool:  
+        return True  
+  
+    def parse_groups(self) -> List[List[List[int]]]:  
+        text: str = self.get_config("pjjc_rotate_teams")  
+        blocks = [b for b in text.split("\n\n") if b.strip()]  
+        groups: List[List[List[int]]] = []  
+        unknown: List[str] = []  
+        for block in blocks:  
+            lines = [l for l in block.splitlines() if l.strip()]  
+            if len(lines) != 3:  
+                raise AbortError(f"每组必须恰好3支队伍，检测到{len(lines)}行")  
+            teams: List[List[int]] = []  
+            for line in lines:  
+                units: List[int] = []  
+                for name in line.strip().split():  
+                    uid = get_id_from_name(name)  
+                    if uid:  
+                        units.append(uid * 100 + 1)  
+                    elif name[0].isdigit() and get_id_from_name(name[1:]):  
+                        units.append(get_id_from_name(name[1:]) * 100 + 1)  
+                    else:  
+                        unknown.append(name)  
+                teams.append(units)  
+            groups.append(teams)  
+        if unknown:  
+            raise AbortError(f"未知昵称{', '.join(unknown)}")  
+        if not groups:  
+            raise AbortError("未配置任何阵容组")  
+        return groups  
+  
+    async def check_limit(self, client: pcrclient):  
+        info = await client.get_grand_arena_info()  
+        limit_info = info.update_deck_times_limit  
+        if limit_info.round_times == limit_info.round_max_limited_times:  
+            ok_time = db.format_time(db.parse_time(limit_info.round_end_time))  
+            raise AbortError(f"已达到换防次数上限{limit_info.round_max_limited_times}，请于{ok_time}后再试")  
+        if limit_info.daily_times == limit_info.daily_max_limited_times:  
+            raise AbortError(f"已达到换防次数上限{limit_info.daily_max_limited_times}，请于明日再试")  
+  
+    async def do_task(self, client: pcrclient):  
+        groups = self.parse_groups()  
+        last_group = self.find_cache("pjjc_rotate_last_group")  
+        if last_group is None:  
+            last_group = -1  
+        candidates = [i for i in range(len(groups)) if i != last_group] or list(range(len(groups)))  
+        gi = random.choice(candidates)  
+  
+        await self.check_limit(client)  
+        deck_list: List[DeckListData] = []  
+        for i in range(3):  
+            deck = DeckListData()  
+            deck.deck_number = getattr(ePartyType, f"GRAND_ARENA_DEF_{i + 1}")  
+            deck.unit_list = groups[gi][i]  
+            deck_list.append(deck)  
+        deck_list.sort(key=lambda x: x.deck_number)  
+        await client.deck_update_list(deck_list)  
+  
+        self.save_cache("pjjc_rotate_last_group", gi)  
+        self._log(f"已切换到第{gi + 1}组防守阵容")         
