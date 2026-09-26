@@ -2090,7 +2090,7 @@ async def unit_promote(botev: BotEvent):
 
 @register_tool("大富翁", "caravan_play")
 async def caravan_play(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送，搬空商店将自动保留97个骰子")
+    await botev.send("请稍等1-8分钟，过整点需要重新发送，搬空商店将自动保留X个骰子")
     return {}
 
 
