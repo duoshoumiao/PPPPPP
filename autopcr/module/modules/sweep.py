@@ -214,64 +214,49 @@ class special_underground_skip(Module):
         if not rest:
             raise SkipError("今日已扫荡特别地下城")
 
-
-class investigate_sweep(Module):
-    @abstractmethod
-    def quest_data(self) -> List[QuestDatum]: ...
-    @abstractmethod
-    def campaign_times(self, client: pcrclient) -> int: ...
-    @abstractmethod
-    def required_count(self, client: pcrclient) -> int: ...
-    @abstractmethod
-    def stored_count(self, client: pcrclient) -> int: ...
-    @abstractmethod
-    def material_name(self) -> str: ...
-    @abstractmethod
-    def config_key(self, campaign_times: int) -> str: ...
-
-    async def do_task(self, client: pcrclient):
-        book_count = self.get_config(self.config_key(self.campaign_times(client)))
-        if book_count <= 0:
-            raise SkipError(f"{self.material_name()}扫荡本数为0")
-
-        if self.stored_count(client) >= self.required_count(client):
-            raise SkipError(f"{self.material_name()}需求已满足")
-
-        quests = [quest for quest in self.quest_data() if client.data.is_quest_sweepable(quest.quest_id)]
-        if not quests:
-            raise SkipError(f"没有已通关的{self.material_name()}关卡")
-
-        max_book_count = len(quests) * 4
-        planned_count = min(book_count, max_book_count)
-        if planned_count < book_count:
-            self._log(f"当前只有{len(quests)}本已通关，扫荡本数由{book_count}调整为{planned_count}")
-
+class investigate_sweep(Module):  
+    @abstractmethod  
+    def quest_data(self) -> List[QuestDatum]: ...  
+    @abstractmethod  
+    def campaign_times(self, client: pcrclient) -> int: ...  
+    @abstractmethod  
+    def required_count(self, client: pcrclient) -> int: ...  
+    @abstractmethod  
+    def stored_count(self, client: pcrclient) -> int: ...  
+    @abstractmethod  
+    def material_name(self) -> str: ...  
+    @abstractmethod  
+    def config_key(self, campaign_times: int) -> str: ...  
+  
+    def pick_quest_index(self, quest_count: int, index: int) -> int:  
+        return index % quest_count  
+  
+    async def do_task(self, client: pcrclient):  
+        book_count = self.get_config(self.config_key(self.campaign_times(client)))  
+        if book_count <= 0:  
+            raise SkipError(f"{self.material_name()}扫荡本数为0")  
+  
+        if self.stored_count(client) >= self.required_count(client):  
+            raise SkipError(f"{self.material_name()}需求已满足")  
+  
+        quests = [quest for quest in self.quest_data() if client.data.is_quest_sweepable(quest.quest_id)]  
+        if not quests:  
+            raise SkipError(f"没有已通关的{self.material_name()}关卡")  
+  
+        max_book_count = len(quests) * 4  
+        planned_count = min(book_count, max_book_count)  
+        if planned_count < book_count:  
+            self._log(f"当前只有{len(quests)}本已通关，扫荡本数由{book_count}调整为{planned_count}")  
+  
         target_count = {}  
         rewards = []  
         clear_count = 0  
         no_stamina = False  
-  
-        # 统计今日各关卡已刷次数，换算成已刷本数（跨运行累计，避免重复刷满）  
-        already_books = 0  
-        for quest in quests:  
-            qinfo = client.data.quest_dict.get(quest.quest_id)  
-            done = qinfo.daily_clear_count if qinfo else 0  
-            if done > 0:  
-                daily_limit = max(1, quest.daily_limit)  
-                target_count[quest.quest_id] = done  
-                already_books += (done + daily_limit - 1) // daily_limit  
-  
-        remaining = max(0, planned_count - already_books)  
-        if remaining <= 0:  
-            raise SkipError(f"今日{self.material_name()}扫荡本数已达标（已刷{already_books}本）")
-  
-        # 阶段1（不变）：按高→低把每本各刷一次日常次数  
-        for quest in quests:  
-            if remaining <= 0:  
-                break  
+        for index in range(planned_count):  
             if self.stored_count(client) >= self.required_count(client):  
                 break  
   
+            quest = quests[self.pick_quest_index(len(quests), index)]  
             daily_limit = max(1, quest.daily_limit)  
             target_count[quest.quest_id] = target_count.get(quest.quest_id, 0) + daily_limit  
             try:  
@@ -286,125 +271,92 @@ class investigate_sweep(Module):
   
             rewards.extend(result)  
             clear_count += current_clear_count  
-            remaining -= 1  
             if no_stamina:  
                 break  
   
-        # 阶段2（改动）：回到最高本，把该本反复重置刷到用尽，再降到下一本  
-        if not no_stamina:  
-            for quest in quests:  
-                if remaining <= 0:  
-                    break  
-                if self.stored_count(client) >= self.required_count(client):  
-                    break  
+        if not clear_count:  
+            if no_stamina:  
+                raise SkipError(f"{self.material_name()}关卡体力不足")  
+            raise SkipError(f"没有可扫荡的{self.material_name()}关卡次数")  
   
-                daily_limit = max(1, quest.daily_limit)  
-                while remaining > 0:  
-                    if self.stored_count(client) >= self.required_count(client):  
-                        break  
+        msg = await client.serialize_reward_summary(rewards)  
+        self._log(f"按高到低扫荡{planned_count}本（含重置轮次），实际刷取{clear_count}次，获得了{msg}")  
   
-                    target_count[quest.quest_id] = target_count.get(quest.quest_id, 0) + daily_limit  
-                    try:  
-                        result, current_clear_count, no_stamina = await client.quest_skip_aware(  
-                            quest.quest_id,  
-                            target_count[quest.quest_id],  
-                            recover=True,  
-                            is_total=True,  
-                        )  
-                    except SkipError:  
-                        break  # 该本已达最大重置次数，换下一本  
   
-                    rewards.extend(result)  
-                    clear_count += current_clear_count  
-                    remaining -= 1  
-                    if no_stamina:  
-                        break  
+def _heart_book_candidates() -> List[int]:  
+    return list(range(len(db.heart_piece_quest) * 4 + 1))  
   
-                if no_stamina:  
-                    break
-
-        if not clear_count:
-            if no_stamina:
-                raise SkipError(f"{self.material_name()}关卡体力不足")
-            raise SkipError(f"没有可扫荡的{self.material_name()}关卡次数")
-
-        msg = await client.serialize_reward_summary(rewards)
-        self._log(f"按高到低扫荡{planned_count}本（含重置轮次），实际刷取{clear_count}次，获得了{msg}")
-
-
-def _heart_book_candidates() -> List[int]:
-    return list(range(len(db.heart_piece_quest) * 4 + 1))
-
-
-def _star_cup_book_candidates() -> List[int]:
-    return list(range(len(db.star_cup_quest) * 4 + 1))
-
-
-@description('按心碎关卡从高到低扫荡。配置刷取关卡数，超过当前关卡数则从最高本重置刷下一轮，需求已满足时不刷。')
-@name('心碎扫荡')
-@conditional_not_execution('force_stop_heart_sweep', [], desc='不刷心碎庆典')
-@inttype('xinsui_sweep_no_campaign_books', '无庆典刷前几本', 2, _heart_book_candidates)
-@inttype('xinsui_sweep_2x_campaign_books', '2倍庆典刷前几本', 2, _heart_book_candidates)
-@inttype('xinsui_sweep_3x_campaign_books', '3倍及以上庆典刷前几本', 2, _heart_book_candidates)
-@singlechoice('xinsui_sweep_reserve_per_unit', '每个专武角色额外屯心碎', 0, [0, 5, 10, 20,100])
-@default(False)
-@tag_stamina_consume
-class xinsui_sweep(investigate_sweep):
-    def quest_data(self) -> List[QuestDatum]:
-        return db.heart_piece_quest
-
-    def campaign_times(self, client: pcrclient) -> int:
-        return client.data.get_heart_piece_campaign_times()
-
+  
+def _star_cup_book_candidates() -> List[int]:  
+    return list(range(len(db.star_cup_quest) * 4 + 1))  
+  
+  
+@description('按心碎关卡从高到低扫荡。配置刷取关卡数，前9次从高到低轮询，超过9次优先重置当前可重置的最高本，最高本重置完才往下重置。需求已满足时不刷。')  
+@name('心碎扫荡')  
+@conditional_not_execution('force_stop_heart_sweep', [], desc='不刷心碎庆典')  
+@inttype('xinsui_sweep_no_campaign_books', '无庆典刷前几本', 2, _heart_book_candidates)  
+@inttype('xinsui_sweep_2x_campaign_books', '2倍庆典刷前几本', 2, _heart_book_candidates)  
+@inttype('xinsui_sweep_3x_campaign_books', '3倍及以上庆典刷前几本', 2, _heart_book_candidates)  
+@default(True)  
+@tag_stamina_consume  
+class xinsui_sweep(investigate_sweep):  
+    def pick_quest_index(self, quest_count: int, index: int) -> int:  
+        # 前9次按原逻辑从高到低轮询  
+        if index < 9:  
+            return index % quest_count  
+        # 超过9次的部分优先重置最高本：每本最多3次重置（共4轮），耗尽后再往下  
+        return min((index - 9) // 3, quest_count - 1)  
+  
+    def quest_data(self) -> List[QuestDatum]:  
+        return db.heart_piece_quest  
+  
+    def campaign_times(self, client: pcrclient) -> int:  
+        return client.data.get_heart_piece_campaign_times()  
+  
     def required_count(self, client: pcrclient) -> int:  
-        reserve = self.get_config('xinsui_sweep_reserve_per_unit')  
-        unit_count = sum(  
-            1 for unit in client.data.unit.values()  
-            if unit.unique_equip_slot and unit.unique_equip_slot[0].is_slot  
-        )  
-        return client.data.get_suixin_demand()[1] + reserve * unit_count
-
-    def stored_count(self, client: pcrclient) -> int:
-        return client.data.get_inventory(db.xinsui) + client.data.get_inventory(db.heart) * 10
-
-    def material_name(self) -> str:
-        return '心碎'
-
-    def config_key(self, campaign_times: int) -> str:
-        if campaign_times <= 1:
-            return 'xinsui_sweep_no_campaign_books'
-        if campaign_times == 2:
-            return 'xinsui_sweep_2x_campaign_books'
-        return 'xinsui_sweep_3x_campaign_books'
-
-
-@description('按星球杯关卡从高到低扫荡。配置值为关卡本数，超过当前本数后继续从最高本开始下一轮，最多支持3次重置。需求已满足时不刷。')
-@name('星球杯扫荡')
-@conditional_not_execution('force_stop_star_cup_sweep', [], desc='不刷星球杯庆典')
-@inttype('starcup_sweep_no_campaign_books', '无庆典刷前几本', 0, _star_cup_book_candidates)
-@inttype('starcup_sweep_2x_campaign_books', '2倍庆典刷前几本', 0, _star_cup_book_candidates)
-@inttype('starcup_sweep_3x_campaign_books', '3倍及以上庆典刷前几本', 0, _star_cup_book_candidates)
-@default(False)
-@tag_stamina_consume
-class starcup_sweep(investigate_sweep):
-    def quest_data(self) -> List[QuestDatum]:
-        return db.star_cup_quest
-
-    def campaign_times(self, client: pcrclient) -> int:
-        return client.data.get_star_cup_campaign_times()
-
-    def required_count(self, client: pcrclient) -> int:
-        return client.data.get_xingqiubei_demand()
-
-    def stored_count(self, client: pcrclient) -> int:
-        return client.data.get_inventory(db.xingqiubei)
-
-    def material_name(self) -> str:
-        return '星球杯'
-
-    def config_key(self, campaign_times: int) -> str:
-        if campaign_times <= 1:
-            return 'starcup_sweep_no_campaign_books'
-        if campaign_times == 2:
-            return 'starcup_sweep_2x_campaign_books'
+        return client.data.get_suixin_demand()[1]  
+  
+    def stored_count(self, client: pcrclient) -> int:  
+        return client.data.get_inventory(db.xinsui) + client.data.get_inventory(db.heart) * 10  
+  
+    def material_name(self) -> str:  
+        return '心碎'  
+  
+    def config_key(self, campaign_times: int) -> str:  
+        if campaign_times <= 1:  
+            return 'xinsui_sweep_no_campaign_books'  
+        if campaign_times == 2:  
+            return 'xinsui_sweep_2x_campaign_books'  
+        return 'xinsui_sweep_3x_campaign_books'  
+  
+  
+@description('按星球杯关卡从高到低扫荡。配置值为关卡本数，超过当前本数后继续从最高本开始下一轮，最多支持3次重置。需求已满足时不刷。')  
+@name('星球杯扫荡')  
+@conditional_not_execution('force_stop_star_cup_sweep', [], desc='不刷星球杯庆典')  
+@inttype('starcup_sweep_no_campaign_books', '无庆典刷前几本', 0, _star_cup_book_candidates)  
+@inttype('starcup_sweep_2x_campaign_books', '2倍庆典刷前几本', 0, _star_cup_book_candidates)  
+@inttype('starcup_sweep_3x_campaign_books', '3倍及以上庆典刷前几本', 0, _star_cup_book_candidates)  
+@default(False)  
+@tag_stamina_consume  
+class starcup_sweep(investigate_sweep):  
+    def quest_data(self) -> List[QuestDatum]:  
+        return db.star_cup_quest  
+  
+    def campaign_times(self, client: pcrclient) -> int:  
+        return client.data.get_star_cup_campaign_times()  
+  
+    def required_count(self, client: pcrclient) -> int:  
+        return client.data.get_xingqiubei_demand()  
+  
+    def stored_count(self, client: pcrclient) -> int:  
+        return client.data.get_inventory(db.xingqiubei)  
+  
+    def material_name(self) -> str:  
+        return '星球杯'  
+  
+    def config_key(self, campaign_times: int) -> str:  
+        if campaign_times <= 1:  
+            return 'starcup_sweep_no_campaign_books'  
+        if campaign_times == 2:  
+            return 'starcup_sweep_2x_campaign_books'  
         return 'starcup_sweep_3x_campaign_books'
