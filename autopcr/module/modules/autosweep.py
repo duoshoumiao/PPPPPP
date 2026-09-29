@@ -279,7 +279,7 @@ class simple_demand_sweep_base(Module):
                     raise SkipError()
 
 
-@singlechoice('hard_sweep_gap_limit', "盈余阈值", 10, [0, 5, 10])
+@singlechoice('hard_sweep_gap_limit', "盈余阈值", 10, [0, 5, 10, 20])
 @conditional_not_execution("hard_sweep_not_run_time", [])
 @conditional_execution1("hard_sweep_run_time", ["h庆典"])
 @singlechoice('hard_sweep_consider_unit_order', "刷取顺序", "缺口少优先", ["缺口少优先", "缺口大优先"])
@@ -310,7 +310,7 @@ class smart_hard_sweep(simple_demand_sweep_base):
     def get_max_times(self, client: pcrclient, quest_id: int) -> int:
         return 3
 
-@singlechoice('shiori_sweep_gap_limit', "盈余阈值", 10, [0, 5, 10])
+@singlechoice('shiori_sweep_gap_limit', "盈余阈值", 10, [0, 5, 10, 20])
 @conditional_not_execution("shiori_sweep_not_run_time", ["n3", 'n4及以上'])
 @conditional_execution1("shiori_sweep_run_time", ["无庆典"])
 @singlechoice('shiori_sweep_consider_unit_order', "刷取顺序", "缺口少优先", ["缺口少优先", "缺口大优先"])
