@@ -1186,7 +1186,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc, export: b
             await upload_excel(botev, data, f"{tool.name}_{alias}_{timestamp}.xlsx", 'autopcr')
         else:
             # 仅对查公会深域进度工具生成图片
-            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest", "one_click_ex_equip", "labyrinth_point_query", "get_my_support", "check_daily_quest_mission"]:
+            if tool.key in ["find_clan_talent_quest", "get_box_table", "search_unit", "find_talent_quest", "one_click_ex_equip", "labyrinth_point_query", "get_my_support"]:
                 # 生成深域进度图片
                 img = await drawer.draw_task_result(resp)
                 msg = f"{alias}"
@@ -4093,12 +4093,11 @@ async def cron_set_config(botev: BotEvent, acc: Account):
 @wrap_accountmgr  
 @wrap_account  
 async def check_daily_quest_mission(botev: BotEvent, acc: Account):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送") 
     from .autopcr.model.enums import eMissionStatusType  
     from .autopcr.core.pcrclient import eLoginStatus  
     from .autopcr.module.accountmgr import AccountBatch  
   
-    async def check_one(acc: Account) -> str:  
+    async def check_one(acc: Account) -> list:  
         alias = escape(acc.alias)  
         client = acc.client  
         try:  
@@ -4107,25 +4106,29 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
                 await client.login()  
             resp = await client.mission_index()  
         except Exception as e:  
-            return f"{alias} 查询失败：{e}"  
+            return [alias, "查询失败", str(e)]  
   
         m = next((m for m in resp.missions if m.mission_id == 11001050), None)  
         if m is None or m.mission_status == eMissionStatusType.NoClear:  
-            clear_num = m.clear_num if m else 0  
-            return f"{alias} 未完成（{clear_num}/20）"  
-        return f"{alias} 已完成"  
+            return [alias, "#未完成", f"未完成（{m.clear_num if m else 0}/20）"]  
+        return [alias, "#已完成", "已完成"]  
   
     if isinstance(acc, AccountBatch):  
-        lines = []  
+        content = []  
         for alias in acc.enable_account:  
             try:  
                 async with acc._parent.load(alias) as sub:  
-                    lines.append(await check_one(sub))  
+                    content.append(await check_one(sub))  
             except Exception as e:  
-                lines.append(f"{escape(alias)} 查询失败：{e}")  
-        await botev.finish("\n".join(lines) if lines else "没有可查询的账号")  
+                content.append([escape(alias), "查询失败", str(e)])  
+    else:  
+        content = [await check_one(acc)]  
   
-    await botev.finish(await check_one(acc))
+    if not content:  
+        await botev.finish("没有可查询的账号")  
+  
+    img = await drawer.draw(["昵称", "状态", "通关关卡20次任务"], content)  
+    await botev.finish(outp_b64(img))
 
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
