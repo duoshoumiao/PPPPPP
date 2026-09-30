@@ -4110,8 +4110,8 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
   
         m = next((m for m in resp.missions if m.mission_id == 11001050), None)  
         if m is None or m.mission_status == eMissionStatusType.NoClear:  
-            return [alias, "#未完成", f"未完成（{m.clear_num if m else 0}/20）"]  
-        return [alias, "#已完成", "已完成"]  
+            return [alias, "#错误", f"未完成（{m.clear_num if m else 0}/20）"]  
+        return [alias, "#成功", "已完成"]  
   
     if isinstance(acc, AccountBatch):  
         content = []  
