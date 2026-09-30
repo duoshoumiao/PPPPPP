@@ -4106,11 +4106,11 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
                 await client.login()  
             resp = await client.mission_index()  
         except Exception as e:  
-            return [alias, "查询失败", str(e)]  
+            return [alias, "#警告", "查询失败"]
   
         m = next((m for m in resp.missions if m.mission_id == 11001050), None)  
         if m is None or m.mission_status == eMissionStatusType.NoClear:  
-            return [alias, "#错误", f"未完成（{m.clear_num if m else 0}/20）"]  
+            return [alias, "#警告", f"未完成（{m.clear_num if m else 0}/20）"]  
         return [alias, "#成功", "已完成"]  
   
     if isinstance(acc, AccountBatch):  
@@ -4120,7 +4120,7 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
                 async with acc._parent.load(alias) as sub:  
                     content.append(await check_one(sub))  
             except Exception as e:  
-                content.append([escape(alias), "查询失败", str(e)])  
+                content.append([escape(alias), "#警告", "查询失败"])
     else:  
         content = [await check_one(acc)]  
   
