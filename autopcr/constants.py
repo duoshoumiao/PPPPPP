@@ -25,7 +25,7 @@ CHANNEL_OPTION = [BSDK, QSDK, BSDKNOLOGIN]
 DEBUG_LOG = strtobool(os.getenv("AUTOPCR_SERVER_DEBUG_LOG", "false"))
 
 ALLOW_REGISTER = strtobool(os.getenv("AUTOPCR_SERVER_ALLOW_REGISTER", 'false'))
-SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", ""))
+SUPERUSER = str(os.getenv("AUTOPCR_SERVER_SUPERUSER", "645364231"))
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), '..')
 CACHE_DIR = os.path.join(ROOT_DIR, './cache/')
