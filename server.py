@@ -4093,22 +4093,28 @@ async def cron_set_config(botev: BotEvent, acc: Account):
 @wrap_accountmgr  
 @wrap_account  
 async def check_daily_quest_mission(botev: BotEvent, acc: Account):  
+    await botev.send("请稍等")  
     from .autopcr.model.enums import eMissionStatusType  
-    from .autopcr.core.pcrclient import eLoginStatus  
-    from .autopcr.module.accountmgr import AccountBatch  
   
     async def check_one(acc: Account) -> list:  
         alias = escape(acc.alias)  
         client = acc.client  
+        activated = False  
         try:  
-            await client.activate()  
-            if client.logged == eLoginStatus.NOT_LOGGED or not client.data.ready:  
-                await client.login()  
-            resp = await client.mission_index()  
-        except Exception as e:  
-            return [alias, "#警告", "查询失败"]
+            await client.activate()   # 加载本地缓存的 datamgr  
+            activated = True  
+            missions = client.data.missions  
+        except Exception:  
+            logger.exception(f"{alias} 查任务失败")  
+            return [alias, "#警告", "查询失败"]  
+        finally:  
+            if activated:  
+                client.deactivate()   # 释放槽位并把 data 写回缓存  
   
-        m = next((m for m in resp.missions if m.mission_id == 11001050), None)  
+        if missions is None:  
+            return [alias, "#警告", "无缓存数据"]  
+  
+        m = next((m for m in missions if m.mission_id == 11001050), None)  
         if m is None or m.mission_status == eMissionStatusType.NoClear:  
             return [alias, "#警告", f"未完成（{m.clear_num if m else 0}/20）"]  
         return [alias, "#成功", "已完成"]  
@@ -4119,8 +4125,9 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
             try:  
                 async with acc._parent.load(alias) as sub:  
                     content.append(await check_one(sub))  
-            except Exception as e:  
-                content.append([escape(alias), "#警告", "查询失败"])
+            except Exception:  
+                logger.exception(f"{alias} 查任务失败")  
+                content.append([escape(alias), "#警告", "查询失败"])  
     else:  
         content = [await check_one(acc)]  
   
@@ -4129,7 +4136,6 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
   
     img = await drawer.draw(["昵称", "状态", "通关关卡20次任务"], content)  
     await botev.finish(outp_b64(img))
-
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
