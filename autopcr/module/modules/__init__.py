@@ -25,6 +25,7 @@ from .nbb import *
 from .mirage import *
 from .bsm import *
 from .labyrinth import *
+from .VIP import *
 
 @dataclass
 class ModuleList:
@@ -83,6 +84,7 @@ daily_modules = ModuleList(
         tower_cloister_sweep,
         smart_very_hard_sweep,
         jjc_reward,
+        role_mission_get,
         talent_sweep,
         hatsune_dear_reading,
         present_receive,

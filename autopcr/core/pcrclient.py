@@ -5,9 +5,10 @@ from .sessionmgr import sessionmgr
 from .misc import errorhandler, mutexhandler
 from .datamgr import datamgr
 from ..db.database import db
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, Optional
 import typing, math
 from collections import Counter
+from contextlib import contextmanager
 
 class eLoginStatus(Enum):
     NOT_LOGGED = 0
@@ -1071,6 +1072,17 @@ class pcrclient(apiclient):
         req = ShopItemListRequest()
         return await self.request(req)
 
+    async def profile_picture_frame_shop_index(self):
+        req = ProfilePictureFrameShopIndexRequest()
+        return await self.request(req)
+
+    async def profile_picture_frame_shop_buy(self, lineup_type: int, slot_id: int, buy_count: int):
+        req = ProfilePictureFrameShopBuyRequest()
+        req.lineup_type = lineup_type
+        req.slot_id = slot_id
+        req.buy_count = buy_count
+        return await self.request(req)
+
     async def shop_buy(self, shop_id: int, slot_id: int, number: int, total_price: int):
         req = ShopBuyRequest()
         req.system_id = shop_id
@@ -1703,6 +1715,8 @@ class pcrclient(apiclient):
         )
 
     async def quest_skip_aware(self, quest: int, times: int, recover: bool = False, is_total: bool = False) -> Tuple[List[InventoryInfo], int, bool]:
+        if self.quest_skip_remaining is not None and self.quest_skip_remaining <= 0:
+            raise AbortError("已达扫荡次数目标")
         name = db.get_quest_name(quest)
         if db.is_event_quest(quest):
             if not quest in db.quest_to_event:
@@ -1749,6 +1763,11 @@ class pcrclient(apiclient):
         elif db.is_abyss_quest(quest):
             setattr(info, 'daily_limit', self.data.settings.abyss.daily_clear_limit_count)
 
+        if info.daily_limit and is_total:
+            times -= qinfo.daily_clear_count
+        if self.quest_skip_remaining is not None:
+            times = min(times, self.quest_skip_remaining)
+
         stamina_coefficient = self.data.get_quest_stamina_half_campaign_times(quest)
         if not stamina_coefficient: stamina_coefficient = 100
         result: List[InventoryInfo] = []
@@ -1774,6 +1793,8 @@ class pcrclient(apiclient):
 
             nonlocal clear_count
             clear_count += times
+            if self.quest_skip_remaining is not None:
+                self.set_quest_skip_remaining(self.quest_skip_remaining - times)
             result = []
             if resp.quest_result_list:
                 for result_list in resp.quest_result_list:
@@ -1788,8 +1809,6 @@ class pcrclient(apiclient):
 
         no_stamina = False
         if info.daily_limit:
-            if is_total:
-                times -= qinfo.daily_clear_count
             max_times = ((self.data.recover_max_time(quest) if recover else 0) + 1) * info.daily_limit - qinfo.daily_clear_count
             times = min(times, max_times)
             if times <= 0:
@@ -1814,6 +1833,9 @@ class pcrclient(apiclient):
         else:
             no_stamina, resp = await skip(times)
             result = result + resp
+
+        if no_stamina and self.quest_skip_remaining is not None:
+            self._keys['quest_skip_no_stamina'] = True
 
         return result, clear_count, no_stamina
 
@@ -1954,6 +1976,30 @@ class pcrclient(apiclient):
 
     def _get_key(self, key, default=None):
         return self._keys.get(key, self._base_keys.get(key, default))
+
+    @contextmanager
+    def override_config(self, config: dict):
+        old_keys = self._keys.copy()
+        self._keys.update(config)
+        try:
+            yield
+        finally:
+            for key in config:
+                if key in old_keys:
+                    self._keys[key] = old_keys[key]
+                else:
+                    self._keys.pop(key, None)
+
+    @property
+    def quest_skip_remaining(self) -> Optional[int]:
+        return self._get_key('quest_skip_remaining')
+
+    def set_quest_skip_remaining(self, value: Optional[int]):
+        self._keys['quest_skip_remaining'] = value
+
+    @property
+    def quest_skip_no_stamina(self) -> bool:
+        return self._get_key('quest_skip_no_stamina', False)
     
     @property
     def stamina_recover_cnt(self) -> int:

@@ -1,5 +1,6 @@
 import os
 import secrets
+import math
 from copy import deepcopy
 from datetime import timedelta
 from typing import Callable, Coroutine, Any
@@ -22,7 +23,7 @@ from ..util.logger import instance as logger
 from .command_relay import FinishSignal, RelayBotEvent, SPECIAL_HANDLERS   # ← 新增
 
 APP_VERSION_MAJOR = 1
-APP_VERSION_MINOR = 8
+APP_VERSION_MINOR = 9
 
 CACHE_HTTP_DIR = os.path.join(CACHE_DIR)
 
@@ -44,6 +45,7 @@ class HttpServer:
         self.quart = quart.Quart(__name__)
         QuartAuth(self.quart, cookie_secure=False)
         RateLimiter(self.quart)
+        self.register_cooldowns = {}
         Compress(self.quart)
         self.quart.secret_key = secrets.token_urlsafe(16)
 
@@ -61,6 +63,14 @@ class HttpServer:
         self.app.after_request(self.log_request_info)
 
         enable_manual_validator()
+
+    def consume_register_rate_limit(self):
+        key = request.access_route[0]
+        now = asyncio.get_running_loop().time()
+        retry_after = self.register_cooldowns.get(key, now) - now
+        if retry_after > 0:
+            raise RateLimitExceeded(math.ceil(retry_after))
+        self.register_cooldowns[key] = now + timedelta(minutes=1).total_seconds()
 
     def log_request_info(self, response):
         logger.info(
