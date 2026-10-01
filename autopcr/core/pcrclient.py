@@ -58,6 +58,8 @@ class pcrclient(apiclient):
     async def labyrinth_top(self):
         if not self.data.is_quest_cleared(11065001):
             raise SkipError("迷宫未解锁")
+        if 4013001 not in self.data.read_story_ids:
+            await self.read_story(4013001)
         req = LabyrinthTopRequest()
         return await self.request(req)
 
@@ -70,6 +72,12 @@ class pcrclient(apiclient):
     async def labyrinth_retire(self, enter_id: int):
         req = LabyrinthRetireRequest()
         req.enter_id = enter_id
+        return await self.request(req)
+
+    async def labyrinth_skip(self, guild_id: int, skip_count: int):
+        req = LabyrinthSkipRequest()
+        req.skip_list = [LabyrinthSkipData(guild_id=guild_id, skip_count=skip_count)]
+        req.current_passport_num = self.data.get_inventory(db.labyrinth_ticket)
         return await self.request(req)
 
     async def unit_role_gacha_index(self):
@@ -748,7 +756,7 @@ class pcrclient(apiclient):
             raise AbortError(f"宝石{current_cost_num}不足{150 * gacha_times}")
 
         if draw_type == eGachaDrawType.Ticket and current_cost_num < 1:
-            raise AbortError(f"单抽券{current_cost_num}不足")
+            raise AbortError(f"抽卡券{current_cost_num}不足")
 
         if draw_type == eGachaDrawType.Temp_Ticket_10 and current_cost_num < 1:
             raise AbortError(f"限定十连券{current_cost_num}不足")
@@ -789,7 +797,9 @@ class pcrclient(apiclient):
             if tot:
                 self.data.jewel.jewel -= tot
         elif draw_type == eGachaDrawType.Ticket:
-            self.data.set_inventory(db.gacha_single_ticket, current_cost_num - 1)
+            self.data.set_inventory(ticket_item or db.gacha_single_ticket, current_cost_num - 1)
+        elif draw_type == eGachaDrawType.TicketMultiPull10:
+            self.data.set_inventory(ticket_item, current_cost_num - 1)
         elif draw_type == eGachaDrawType.Temp_Ticket_10:
             ticket = next((eInventoryType.Item, temp_ticket) for temp_ticket in db.get_gacha_temp_ticket() if self.data.get_inventory((eInventoryType.Item, temp_ticket)))
             self.data.set_inventory(ticket, current_cost_num - 1)
