@@ -192,10 +192,6 @@ sv_help = f"""
 - {prefix}查深域
 - {prefix}强化ex装
 - {prefix}合成ex装 
-- {prefix}穿ex彩装 角色名 彩装ID  示例：#穿ex彩装 凯露 12345  #查ex装备 看ID
-- {prefix}穿ex粉装 角色名 粉装serial_id    #查ID 看ID
-- {prefix}穿ex金装 角色名 金装serial_id    #查ID 看ID
-- {prefix}查ID 泪          ← 模糊匹配，会匹配所有名称含"泪"的装备
 - {prefix}领小屋体力
 - {prefix}公会点赞
 - {prefix}领每日体力
@@ -203,7 +199,6 @@ sv_help = f"""
 - {prefix}查公会深域进度
 - {prefix}收菜  探险续航哦
 - {prefix}一键编队 1 1 [拉满] 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 设置多队编队，一行一个队伍
-- {prefix}导入编队 第几页 第几队  如 #导入编队 1 1  ，代表第一页第一队
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
 - {prefix}拉角色练度 1 1 1 1 1 1 5 5 5 5 5 5 0 0 可可萝     #代表 等级 品级 ub s1 s2 ex 装备(左上到右下) 专武1 专武2 角色名（不输入则全选）
@@ -1209,7 +1204,7 @@ async def tool_used(botev: CQEvent, tool, config: Dict[str, str], acc, export: b
 @wrap_hoshino_event
 async def gacha_current(botev: BotEvent):
     msg = '\n'.join(db.get_mirai_gacha())
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     await botev.finish(msg)
 
 def is_args_exist(msg: List[str], key: str):
@@ -1229,7 +1224,7 @@ def recover_text_by_tokens(raw_text: str, tokens: List[str]) -> str:
 
 @register_tool("公会支援", 'get_clan_support_unit')
 async def clan_support(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("查心碎", "get_need_xinsui")
@@ -1239,7 +1234,7 @@ async def find_xinsui(botev: BotEvent):
 @register_tool("jjc回刺", "jjc_back")
 async def jjc_back(botev: BotEvent):
     msg = await botev.message()
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     opponent_jjc_rank = -1
     opponent_jjc_attack_team_id = 1
     try:
@@ -1260,7 +1255,7 @@ async def jjc_back(botev: BotEvent):
     
 @register_tool("一键编队", "set_my_party2")
 async def set_my_party_multi(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     raw_msg = await botev.message_raw()
     msg = await botev.message()
     party_start_num = 1
@@ -1295,7 +1290,7 @@ async def set_my_party_multi(botev: BotEvent):
 @register_tool("导入编队", "set_my_party")
 async def set_my_party(botev: BotEvent):
     msg = await botev.message()
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     party_start_num = 1
     tab_start_num = 1
     try:
@@ -1386,7 +1381,7 @@ async def ocr_team(botev: BotEvent):
 @register_tool("pjjc回刺", "pjjc_back")
 async def pjjc_back(botev: BotEvent):
     msg = await botev.message()
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     opponent_pjjc_rank = -1
     opponent_pjjc_attack_team_id = 1
     try:
@@ -1409,7 +1404,7 @@ async def pjjc_back(botev: BotEvent):
 async def jjc_info(botev: BotEvent):
     use_cache = True
     msg = await botev.message()
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     try:
         use_cache = not is_args_exist(msg, 'flush')
     except:
@@ -1423,7 +1418,7 @@ async def jjc_info(botev: BotEvent):
 async def pjjc_info(botev: BotEvent):
     use_cache = True
     msg = await botev.message()
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     try:
         use_cache = not is_args_exist(msg, 'flush')
     except:
@@ -1437,7 +1432,7 @@ async def pjjc_info(botev: BotEvent):
 async def find_memory(botev: BotEvent):
     memory_demand_consider_unit = '所有'
     msg = await botev.message()
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     try:
         if is_args_exist(msg, '可刷取'):
             memory_demand_consider_unit = '地图可刷取'
@@ -1452,7 +1447,7 @@ async def find_memory(botev: BotEvent):
 
 @register_tool("查纯净碎片", "get_need_pure_memory")
 async def find_pure_memory(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("查sp碎片", "get_need_sp_memory")
@@ -1466,7 +1461,7 @@ async def return_jewel(botev: BotEvent):
 @register_tool(f"来发十连", "gacha_start")
 @require_super_admin
 async def shilian(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     cc_until_get = False
     pool_id = ""
     really_do = False
@@ -1541,7 +1536,7 @@ async def shilian(botev: BotEvent):
 
 @register_tool(f"查装备", "get_need_equip")
 async def find_equip(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     like_unit_only = False
     start_rank = None
     msg = await botev.message()
@@ -1565,7 +1560,7 @@ async def find_equip(botev: BotEvent):
 
 @register_tool(f"刷图推荐", "get_normal_quest_recommand")
 async def quest_recommand(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     like_unit_only = False
     start_rank = None
     msg = await botev.message()
@@ -1588,17 +1583,17 @@ async def quest_recommand(botev: BotEvent):
 
 @register_tool("pjjc换防", "pjjc_def_shuffle_team")
 async def pjjc_def_shuffle_team(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("pjjc换攻", "pjjc_atk_shuffle_team")
 async def pjjc_atk_shuffle_team(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
     
 @register_tool("查玩家", "query_player_profile")
 async def query_player_profile(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     msg = await botev.message()
     target_viewer_id = ""
     try:
@@ -1617,17 +1612,17 @@ async def query_player_profile(botev: BotEvent):
     
 @register_tool("查缺角色", "missing_unit")
 async def find_missing_unit(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("查缺称号", "missing_emblem")
 async def find_missing_emblem(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("合成ex装", "ex_equip_rank_up")  
 async def ex_equip_rank_up(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
       
     # 解析装备种类参数  
@@ -1647,7 +1642,7 @@ async def ex_equip_rank_up(botev: BotEvent):
 
 @register_tool("强化ex装", "ex_equip_enhance_up")  
 async def ex_equip_enhance_up(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
       
     # 解析装备种类参数  
@@ -1666,7 +1661,7 @@ async def ex_equip_enhance_up(botev: BotEvent):
     return {"ex_equip_enhance_up_kind": kinds}
 @register_tool("查角色", "search_unit")
 async def search_unit(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     msg = await botev.message()
     unit = None
     unit_name = ""
@@ -1687,22 +1682,22 @@ async def search_unit(botev: BotEvent):
 
 @register_tool("刷新box", "refresh_box")
 async def refresh_box(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("我的支援", "get_my_support")
 async def refresh_box(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("查探险编队", "travel_team_view")
 async def find_travel_team_view(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("查ex装备", "ex_equip_info")
 async def ex_equip_info(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     ex_equip_info_cb_only = False
     msg = await botev.message()
     try:
@@ -1716,7 +1711,7 @@ async def ex_equip_info(botev: BotEvent):
 
 @register_tool("查兑换角色碎片", "redeem_unit_swap")
 async def redeem_unit_swap(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     really_do = False
     msg = await botev.message()
     try:
@@ -1730,13 +1725,13 @@ async def redeem_unit_swap(botev: BotEvent):
 
 @register_tool("查公会深域进度", "find_clan_talent_quest")
 async def find_clan_talent_quest(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 
 @register_tool("兑天井", "gacha_exchange_chara")
 async def gacha_exchange_chara(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     msg = await botev.message()
     gacha_id = ""
     unit_name = ""
@@ -1769,7 +1764,7 @@ async def gacha_exchange_chara(botev: BotEvent):
 @sv.on_fullmatch(f"{prefix}半月刊")  
 @wrap_hoshino_event  
 async def half_schedule_standalone(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     import importlib  
     mod = importlib.import_module('.autopcr.module.modules.nologin', __package__)  
     HalfScheduleModule = mod.half_schedule  
@@ -1844,7 +1839,7 @@ async def half_schedule_standalone(botev: BotEvent):
 
 @register_tool("查box", "get_box_table")
 async def get_box_table(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     msg = await botev.message()
     box_all_unit = False
     try:
@@ -1875,7 +1870,7 @@ async def get_box_table(botev: BotEvent):
     
 @register_tool("免费十连", "free_gacha")
 async def free_gacha(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     msg = await botev.message()
     gacha_id_input = 0  
     try:  
@@ -1897,7 +1892,7 @@ async def free_gacha(botev: BotEvent):
 
 # @register_tool("智能刷n图", "smart_normal_sweep")
 # async def smart_normal_swee(botev: BotEvent):
-    # await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    # await botev.send("请稍等")
     # msg = await botev.message()
     # config = {
         # "normal_sweep_strategy": "刷最缺",
@@ -1923,58 +1918,58 @@ async def free_gacha(botev: BotEvent):
     
 @register_tool("智能刷h图", "smart_hard_sweep")
 async def smart_hard_sweep(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("领取礼物箱", "present_receive")
 async def present_receive(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("智能刷外传", "smart_shiori_sweep")
 async def smart_shiori_sweep(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}  
 
 @register_tool("刷专二", "mirai_very_hard_sweep")
 async def mirai_very_hard_sweep(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}    
 
 @register_tool("领小屋体力", "room_accept_all")
 async def room_accept_all(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}  
 
 @register_tool("公会点赞", "clan_like")
 async def clan_like(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}  
 
 @register_tool("领每日体力", "mission_receive_first")
 async def mission_receive_first(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}  
 
 @register_tool("收菜", "travel_quest_sweep")
 async def travel_quest_sweep(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
 
 @register_tool("查深域", "find_talent_quest")
 async def find_talent_quest(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
     
 @register_tool("查刀数", "clan_battle_knive")
 async def clan_battle_knive(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
     
 
 @register_tool("拉角色练度", "unit_promote")
 async def unit_promote(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
   
     config = {  
@@ -2090,7 +2085,7 @@ async def unit_promote(botev: BotEvent):
 
 @register_tool("大富翁", "caravan_play")
 async def caravan_play(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送，搬空商店将自动保留X个骰子")
+    await botev.send("请稍等，搬空商店将自动保留X个骰子")
     return {}
 
 
@@ -2098,7 +2093,7 @@ async def caravan_play(botev: BotEvent):
 async def caravan_shop_buy(botev: BotEvent):
     msg = await botev.message()
     # 发送任务正在进行提示
-    await botev.send("购买中，请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("购买中，请稍等")
     # 默认配置：购买当期商店
     config = {
         "caravan_shop_last_season": False
@@ -2121,7 +2116,7 @@ async def caravan_shop_buy(botev: BotEvent):
 
 @register_tool("炼金", "ex_equip_rainbow_enchance")      
 async def ex_equip_rainbow_enchance_tool(botev: BotEvent):      
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")      
+    await botev.send("请稍等")      
     msg = await botev.message()  
       
     # 先解析操作类型关键词(会从msg中移除)  
@@ -2177,18 +2172,18 @@ async def ex_equip_rainbow_enchance_tool(botev: BotEvent):
   
 @register_tool("撤下会战ex装", "remove_cb_ex_equip")
 async def remove_cb_ex_equip(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}
   
 @register_tool("撤下普通ex装", "remove_normal_ex_equip")
 async def remove_normal_ex_equip(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")
+    await botev.send("请稍等")
     return {}  
 
 @register_tool("买记忆碎片", "unit_memory_buy")  
 async def buy_unit_memory(botev: BotEvent):  
     msg = await botev.message()  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
   
     # 解析角色名  
     unit_name = ""  
@@ -2236,7 +2231,7 @@ async def buy_unit_memory(botev: BotEvent):
     
 @register_tool("角色升星", "unit_evolution")  
 async def unit_evolution_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
   
     # 解析目标星级（默认5）  
@@ -2280,7 +2275,7 @@ async def unit_evolution_tool(botev: BotEvent):
 
 @register_tool("角色突破", "unit_exceed")  
 async def unit_exceed_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
   
     # 解析保留Mana下限（亿），默认10  
@@ -2324,7 +2319,7 @@ async def unit_exceed_tool(botev: BotEvent):
 @register_tool("挂会战支援", "set_cb_support")    
 async def set_cb_support(botev: BotEvent):    
     msg = await botev.message()    
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")    
+    await botev.send("请稍等")    
   
     units = []    
     stars = []    
@@ -2370,7 +2365,7 @@ async def set_cb_support(botev: BotEvent):
 @register_tool("挂地下城支援", "set_dungeon_support")    
 async def set_dungeon_support(botev: BotEvent):    
     msg = await botev.message()    
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")    
+    await botev.send("请稍等")    
   
     units = []    
     stars = []    
@@ -2415,7 +2410,7 @@ async def set_dungeon_support(botev: BotEvent):
 @register_tool("挂好友支援", "set_friend_support")    
 async def set_friend_support(botev: BotEvent):    
     msg = await botev.message()    
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")    
+    await botev.send("请稍等")    
   
     units = []    
     stars = []    
@@ -2456,107 +2451,10 @@ async def set_friend_support(botev: BotEvent):
     }    
     return config
 
-@register_tool("穿ex彩装", "equip_rainbow_ex")  
-async def equip_rainbow_ex_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
-    msg = await botev.message()  
-    unit_name = ""  
-    unit_id = None  
-    try:  
-        unit_name = msg[0]  
-        unit_id = get_id_from_name(unit_name)  
-        del msg[0]  
-    except:  
-        pass  
-    if not unit_id:  
-        await botev.finish(f"未知角色名{unit_name}")  
-    unit_id = unit_id * 100 + 1  
-    serial_id = ""  
-    try:  
-        serial_id = msg[0]  
-        del msg[0]  
-    except:  
-        await botev.finish("请输入彩装serial_id")  
-    if not serial_id.isdigit():  
-        await botev.finish(f"彩装ID必须是数字: {serial_id}")  
-    return {  
-        "equip_rainbow_unit_id": unit_id,  
-        "equip_rainbow_serial_id": serial_id,  
-    }  
-  
-  
-@register_tool("穿ex粉装", "equip_pink_ex")  
-async def equip_pink_ex_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
-    msg = await botev.message()  
-  
-    unit_name = ""  
-    unit_id = None  
-    try:  
-        unit_name = msg[0]  
-        unit_id = get_id_from_name(unit_name)  
-        del msg[0]  
-    except:  
-        pass  
-  
-    if not unit_id:  
-        await botev.finish(f"未知角色名{unit_name}，请指定角色")  
-  
-    unit_id = unit_id * 100 + 1  
-  
-    serial_id = ""  
-    try:  
-        serial_id = msg[0]  
-        del msg[0]  
-    except:  
-        await botev.finish("请输入粉装ID")  
-  
-    if not serial_id.isdigit():  
-        await botev.finish(f"粉装ID必须是数字: {serial_id}")  
-  
-    return {  
-        "equip_pink_unit_id": unit_id,  
-        "equip_pink_serial_id": serial_id,  
-    }  
-  
-  
-@register_tool("穿ex金装", "equip_gold_ex")  
-async def equip_gold_ex_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
-    msg = await botev.message()  
-  
-    unit_name = ""  
-    unit_id = None  
-    try:  
-        unit_name = msg[0]  
-        unit_id = get_id_from_name(unit_name)  
-        del msg[0]  
-    except:  
-        pass  
-  
-    if not unit_id:  
-        await botev.finish(f"未知角色名{unit_name}，请指定角色")  
-  
-    unit_id = unit_id * 100 + 1  
-  
-    serial_id = ""  
-    try:  
-        serial_id = msg[0]  
-        del msg[0]  
-    except:  
-        await botev.finish("请输入金装ID")  
-  
-    if not serial_id.isdigit():  
-        await botev.finish(f"金装ID必须是数字: {serial_id}")  
-  
-    return {  
-        "equip_gold_unit_id": unit_id,  
-        "equip_gold_serial_id": serial_id,  
-    }
 
 @register_tool("一键穿ex", "one_click_ex_equip")  
 async def one_click_ex_equip_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
   
     unit_name = ""  
@@ -2599,7 +2497,7 @@ async def one_click_ex_equip_tool(botev: BotEvent):
     
 @register_tool("查ID", "search_ex_equip_id")  
 async def search_ex_equip_id(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
     equip_name = ""  
     try:  
@@ -2614,7 +2512,7 @@ async def search_ex_equip_id(botev: BotEvent):
 @register_tool("添加好友", "add_friend")  
 async def add_friend_tool(botev: BotEvent):  
     msg = await botev.message()  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
       
     viewer_id = ""  
     try:  
@@ -3135,7 +3033,7 @@ async def daily_disable(botev: BotEvent, acc: Account):
 
 @register_tool("清除编队", "clear_my_party")  
 async def clear_my_party_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     msg = await botev.message()  
     clear_tab_start_num = 1  
     clear_party_start_num = 1  
@@ -3164,12 +3062,12 @@ async def clear_my_party_tool(botev: BotEvent):
   
 @register_tool("保存ex状态", "save_ex_state")  
 async def save_ex_state_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     return {}  
   
 @register_tool("恢复ex状态", "restore_ex_state")  
 async def restore_ex_state_tool(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     return {}  
 
 @sv.on_prefix(f"{prefix}pjjc自动换防")  
@@ -3593,7 +3491,7 @@ async def pjjc_stop_auto_regroup(botev: BotEvent):
         
 @register_tool("黎明界刷开局", "labyrinth_start_reroll")
 async def labyrinth_start_reroll(botev: BotEvent):
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     guild_id = 0
     msg = await botev.message()
     try:
@@ -3612,7 +3510,7 @@ async def labyrinth_start_reroll(botev: BotEvent):
 
 @register_tool("黎明界积分", "labyrinth_point_query")  
 async def labyrinth_point_query(botev: BotEvent):  
-    await botev.send("请稍等1-8分钟，过整点需要重新发送")  
+    await botev.send("请稍等")  
     return {}
 
 def _compute_daily_reorder(acc: Account, args: list):  
@@ -4136,6 +4034,11 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
   
     img = await drawer.draw(["昵称", "状态", "通关关卡20次任务"], content)  
     await botev.finish(outp_b64(img))
+    
+@register_tool("完成职能券任务", "role_mission_get")
+async def role_mission_get(botev: BotEvent):
+    await botev.send("请稍等")
+    return {}    
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
