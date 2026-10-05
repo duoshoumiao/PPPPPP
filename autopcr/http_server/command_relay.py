@@ -502,6 +502,10 @@ def _match_modules(targets: list, indexed_modules: list):
         if not target:  
             continue  
   
+        if target.lower() in ('all', '全部'):  
+            success.extend(indexed_modules)  
+            continue  
+  
         matched = None  
   
         if target.isdigit():  

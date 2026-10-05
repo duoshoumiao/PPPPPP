@@ -550,10 +550,21 @@ def wrap_account(func):
         alias = msg[0] if msg else ""
         all = False
 
-        if alias == '所有':
-            alias = BATCHINFO
+        if alias == '所有':  
+            del msg[0]  
+            apply = getattr(func, '_apply_all_accounts', None)  
+            if apply is not None:  
+                results = []  
+                for one_alias in accmgr.accounts():  
+                    try:  
+                        async with accmgr.load(one_alias) as acc:  
+                            results.append(await apply(acc, list(msg)))  
+                    except Exception as e:  
+                        results.append(f"【{escape(one_alias)}】失败: {e}")  
+                await botev.finish("\n".join(results) if results else "没有可操作的账号")  
+                return  
+            alias = BATCHINFO  
             all = True
-            del msg[0]
         elif alias == '批量':
             alias = BATCHINFO
             all = False
@@ -577,6 +588,13 @@ def wrap_account(func):
 
     wrapper.__name__ = func.__name__
     return wrapper
+    
+def wrap_account_iter(apply_func):  
+    """同 wrap_account，但 msg[0]=='所有' 时逐账号调用 apply_func(acc, msg)，不走 BATCH_RUNNER"""  
+    def deco(func):  
+        func._apply_all_accounts = apply_func  
+        return wrap_account(func)  
+    return deco    
 
 def wrap_export(func):
     async def wrapper(botev: BotEvent, *args, **kwargs):
@@ -2960,25 +2978,15 @@ async def daily_panel(botev: BotEvent, acc: Account):
     await botev.send(f"【{alias}】日常面板\n" + outp_b64(final_img))  
   
   
-@sv.on_prefix(f"{prefix}日常开启")  
-@wrap_hoshino_event  
-@wrap_accountmgr  
-@wrap_account  
-async def daily_enable(botev: BotEvent, acc: Account):  
+async def _daily_enable_apply(acc: Account, msg: list) -> str:  
     alias = escape(acc.alias)  
-    msg = await botev.message()  
-  
     if not msg:  
-        await botev.finish(  
-            f"请指定序号或功能名，多个用空格分隔\n"  
-            f"示例：{prefix}日常开启 1 3 5\n"  
-            f"示例：{prefix}日常开启 免费扭蛋 普通扭蛋\n"  
-            f"发送 {prefix}日常面板 查看序号"  
-        )  
-  
+        return f"【{alias}】请指定序号或功能名，多个用空格分隔"  
     indexed_modules = _get_daily_modules(acc)  
-    success, failed = _match_modules(msg, indexed_modules)  
-  
+    if msg[0].lower() in ('all', '全部'):  
+        success, failed = indexed_modules, []  
+    else:  
+        success, failed = _match_modules(msg, indexed_modules)  
     toggled = []  
     for idx, m in success:  
         current = acc.data.config.get(m.key, m.default)  
@@ -2987,34 +2995,40 @@ async def daily_enable(botev: BotEvent, acc: Account):
         else:  
             acc.data.config[m.key] = True  
             toggled.append(f"{idx}.{m.name}")  
-  
     lines = []  
     if toggled:  
         lines.append("已开启: " + ", ".join(toggled))  
     if failed:  
         lines.append("跳过: " + ", ".join(failed))  
-    await botev.send(f"【{alias}】\n" + "\n".join(lines))  
+    return f"【{alias}】\n" + "\n".join(lines)  
   
   
-@sv.on_prefix(f"{prefix}日常关闭")  
+@sv.on_prefix(f"{prefix}日常开启")  
 @wrap_hoshino_event  
 @wrap_accountmgr  
-@wrap_account  
-async def daily_disable(botev: BotEvent, acc: Account):  
-    alias = escape(acc.alias)  
+@wrap_account_iter(_daily_enable_apply)  
+async def daily_enable(botev: BotEvent, acc: Account):  
     msg = await botev.message()  
-  
     if not msg:  
         await botev.finish(  
             f"请指定序号或功能名，多个用空格分隔\n"  
-            f"示例：{prefix}日常关闭 2 4 6\n"  
-            f"示例：{prefix}日常关闭 免费扭蛋 普通扭蛋\n"  
+            f"示例：{prefix}日常开启 1 3 5\n"  
+            f"示例：{prefix}日常开启 免费扭蛋 普通扭蛋\n"  
+            f"示例：{prefix}日常开启 all\n"  
             f"发送 {prefix}日常面板 查看序号"  
         )  
+    await botev.send(await _daily_enable_apply(acc, msg)) 
   
+  
+async def _daily_disable_apply(acc: Account, msg: list) -> str:  
+    alias = escape(acc.alias)  
+    if not msg:  
+        return f"【{alias}】请指定序号或功能名，多个用空格分隔"  
     indexed_modules = _get_daily_modules(acc)  
-    success, failed = _match_modules(msg, indexed_modules)  
-  
+    if msg[0].lower() in ('all', '全部'):  
+        success, failed = indexed_modules, []  
+    else:  
+        success, failed = _match_modules(msg, indexed_modules)  
     toggled = []  
     for idx, m in success:  
         current = acc.data.config.get(m.key, m.default)  
@@ -3023,13 +3037,29 @@ async def daily_disable(botev: BotEvent, acc: Account):
         else:  
             acc.data.config[m.key] = False  
             toggled.append(f"{idx}.{m.name}")  
-  
     lines = []  
     if toggled:  
         lines.append("已关闭: " + ", ".join(toggled))  
     if failed:  
         lines.append("跳过: " + ", ".join(failed))  
-    await botev.send(f"【{alias}】\n" + "\n".join(lines))
+    return f"【{alias}】\n" + "\n".join(lines)  
+  
+  
+@sv.on_prefix(f"{prefix}日常关闭")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account_iter(_daily_disable_apply)  
+async def daily_disable(botev: BotEvent, acc: Account):  
+    msg = await botev.message()  
+    if not msg:  
+        await botev.finish(  
+            f"请指定序号或功能名，多个用空格分隔\n"  
+            f"示例：{prefix}日常关闭 2 4 6\n"  
+            f"示例：{prefix}日常关闭 免费扭蛋 普通扭蛋\n"  
+            f"示例：{prefix}日常关闭 all\n"  
+            f"发送 {prefix}日常面板 查看序号"  
+        )  
+    await botev.send(await _daily_disable_apply(acc, msg))
 
 @register_tool("清除编队", "clear_my_party")  
 async def clear_my_party_tool(botev: BotEvent):  
@@ -3715,23 +3745,15 @@ async def cron_detail(botev: BotEvent, acc: Account):
     await botev.send("\n".join(lines))  
   
   
-@sv.on_prefix(f"{prefix}定时开关")  
-@wrap_hoshino_event  
-@wrap_accountmgr  
-@wrap_account  
-async def cron_toggle(botev: BotEvent, acc: Account):  
+async def _cron_toggle_apply(acc: Account, msg: list) -> str:  
     alias = escape(acc.alias)  
-    msg = await botev.message()  
     if not msg:  
-        await botev.finish(  
-            f"请指定序号或任务名，多个用空格分隔\n"  
-            f"示例：{prefix}定时开关 1 3\n"  
-            f"发送 {prefix}定时面板 查看序号"  
-        )  
-  
+        return f"【{alias}】请指定序号或任务名，多个用空格分隔"  
     indexed_modules = _get_cron_modules(acc)  
-    success, failed = _match_modules(msg, indexed_modules)  
-  
+    if msg[0].lower() in ('all', '全部'):  
+        success, failed = indexed_modules, []  
+    else:  
+        success, failed = _match_modules(msg, indexed_modules)  
     enabled_list = []  
     disabled_list = []  
     for idx, m in success:  
@@ -3742,7 +3764,6 @@ async def cron_toggle(botev: BotEvent, acc: Account):
             enabled_list.append(f"{idx}.{m.name}")  
         else:  
             disabled_list.append(f"{idx}.{m.name}")  
-  
     lines = []  
     if enabled_list:  
         lines.append("已开启: " + ", ".join(enabled_list))  
@@ -3750,30 +3771,38 @@ async def cron_toggle(botev: BotEvent, acc: Account):
         lines.append("已关闭: " + ", ".join(disabled_list))  
     if failed:  
         lines.append("跳过: " + ", ".join(failed))  
-    await botev.send(f"【{alias}】\n" + "\n".join(lines))  
+    return f"【{alias}】\n" + "\n".join(lines)  
   
   
-@sv.on_prefix(f"{prefix}定时设置")  
+@sv.on_prefix(f"{prefix}定时开关")  
 @wrap_hoshino_event  
 @wrap_accountmgr  
-@wrap_account  
-async def cron_set_config(botev: BotEvent, acc: Account):  
-    alias = escape(acc.alias)  
+@wrap_account_iter(_cron_toggle_apply)  
+async def cron_toggle(botev: BotEvent, acc: Account):  
     msg = await botev.message()  
-  
     if not msg:  
         await botev.finish(  
-            f"格式：\n"  
+            f"请指定序号或任务名，多个用空格分隔\n"  
+            f"示例：{prefix}定时开关 1 3\n"  
+            f"示例：{prefix}定时开关 all\n"  
+            f"发送 {prefix}定时面板 查看序号"  
+        )  
+    await botev.send(await _cron_toggle_apply(acc, msg)) 
+  
+async def _cron_set_apply(acc: Account, msg: list) -> str:  
+    alias = escape(acc.alias)  
+    if not msg:  
+        return (  
+            f"【{alias}】格式：\n"  
             f"  {prefix}定时设置 任务序号          查看选项\n"  
             f"  {prefix}定时设置 任务序号 选项序号      查看可选值\n"  
             f"  {prefix}定时设置 任务序号 选项序号 值    设置\n"  
             f"发送 {prefix}定时面板 查看任务序号"  
         )  
-  
     indexed_modules = _get_cron_modules(acc)  
     success, failed = _match_modules([msg[0]], indexed_modules)  
     if failed:  
-        await botev.finish(f"任务匹配失败: {failed[0]}")  
+        return f"【{alias}】任务匹配失败: {failed[0]}"  
     mod_idx, target_module = success[0]  
   
     config_items = list(target_module.config.items())  
@@ -3797,7 +3826,7 @@ async def cron_set_config(botev: BotEvent, acc: Account):
         lines.append("")  
         lines.append(f"查看可选值: {prefix}定时设置 {mod_idx} 选项序号")  
         lines.append(f"直接设置: {prefix}定时设置 {mod_idx} 选项序号 值")  
-        await botev.finish("\n".join(lines))  
+        return "\n".join(lines)  
   
     # 匹配选项  
     option_target = msg[1]  
@@ -3816,7 +3845,7 @@ async def cron_set_config(botev: BotEvent, acc: Account):
                 break  
     if not target_config:  
         options = ', '.join(f"{i}.{cfg.desc}" for i, (_, cfg) in enumerate(config_items, 1))  
-        await botev.finish(f"未找到选项【{option_target}】\n可用: {options}")  
+        return f"未找到选项【{option_target}】\n可用: {options}"  
   
     ctype = target_config.config_type  
     current_display = target_module.get_config_display(target_config.key)  
@@ -3828,25 +3857,25 @@ async def cron_set_config(botev: BotEvent, acc: Account):
         except Exception:  
             candidates = []  
         if ctype == 'text':  
-            await botev.finish(  
+            return (  
                 f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
                 f"当前: {current_display}\n类型: 文本，直接输入内容\n"  
                 f"设置: {prefix}定时设置 {mod_idx} {option_idx} 你的文本"  
             )  
         elif ctype == 'time':  
-            await botev.finish(  
+            return (  
                 f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
                 f"当前: {current_display}\n类型: 时间，格式 HH:MM\n"  
                 f"设置: {prefix}定时设置 {mod_idx} {option_idx} 05:30"  
             )  
         elif ctype == 'bool':  
-            await botev.finish(  
+            return (  
                 f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
                 f"当前: {current_display}\n可选: 开启 / 关闭\n"  
                 f"设置: {prefix}定时设置 {mod_idx} {option_idx} 开启"  
             )  
         if not candidates:  
-            await botev.finish(  
+            return (  
                 f"【{target_module.name}】{option_idx}.{target_config.desc}\n"  
                 f"当前: {current_display}\n无预设候选值，直接输入值"  
             )  
@@ -3870,7 +3899,7 @@ async def cron_set_config(botev: BotEvent, acc: Account):
             hint = f"输入候选值: {prefix}定时设置 {mod_idx} {option_idx} {str(target_config.candidate_display(candidates[0]))}"  
         lines.append("")  
         lines.append(hint)  
-        await botev.finish("\n".join(lines))  
+        return "\n".join(lines)  
   
     # 设置值  
     value_str = ' '.join(msg[2:])  
@@ -3889,7 +3918,7 @@ async def cron_set_config(botev: BotEvent, acc: Account):
                 str(target_config.candidate_display(v)) for v in final_value)  
         else:  
             display_val = str(target_config.candidate_display(final_value)) if final_value is not None else '(空)'  
-        await botev.finish(f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}")  
+        return f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}"  
   
     try:  
         candidates = target_config.candidates  
@@ -3904,13 +3933,13 @@ async def cron_set_config(botev: BotEvent, acc: Account):
         if len(tp) != 2:  
             tp = value_str.split()  
         if len(tp) != 2:  
-            await botev.finish("时间格式错误，请输入 HH:MM，如 05:30")  
+            return "时间格式错误，请输入 HH:MM，如 05:30"  
         try:  
             h, m = int(tp[0]), int(tp[1])  
             if not (0 <= h < 24 and 0 <= m < 60):  
-                await botev.finish("时间范围错误，小时0-23，分钟0-59")  
+                return "时间范围错误，小时0-23，分钟0-59"  
         except ValueError:  
-            await botev.finish("时间格式错误，请输入数字 HH:MM")  
+            return "时间格式错误，请输入数字 HH:MM"  
         final_value = tp  
     elif ctype == 'bool':  
         true_vals = {'开启', '开', 'true', '是', '1', 'on'}  
@@ -3920,7 +3949,7 @@ async def cron_set_config(botev: BotEvent, acc: Account):
         elif value_str.lower() in false_vals:  
             final_value = False  
         else:  
-            await botev.finish("请输入: 开启 或 关闭")  
+            return "请输入: 开启 或 关闭"  
     elif ctype in ('multi', 'multi_search'):  
         vals = [p.strip() for p in value_str.replace('，', ',').split(',')]  
         final_value = []  
@@ -3939,14 +3968,14 @@ async def cron_set_config(botev: BotEvent, acc: Account):
                 final_value.append(matched_c)  
             else:  
                 displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
-                await botev.finish(f"值【{p}】不在候选范围\n可选: {', '.join(displays)}")  
+                return f"值【{p}】不在候选范围\n可选: {', '.join(displays)}"  
     elif ctype == 'int':  
         try:  
             num = int(value_str)  
         except ValueError:  
-            await botev.finish(f"请输入整数，可选: {', '.join(str(c) for c in candidates[:30])}")  
+            return f"请输入整数，可选: {', '.join(str(c) for c in candidates[:30])}"  
         if candidates and num not in candidates:  
-            await botev.finish(f"值 {num} 不在可选范围\n可选: {', '.join(str(c) for c in candidates[:30])}")  
+            return f"值 {num} 不在可选范围\n可选: {', '.join(str(c) for c in candidates[:30])}"  
         final_value = num  
     elif ctype == 'single':  
         for c in candidates:  
@@ -3967,12 +3996,12 @@ async def cron_set_config(botev: BotEvent, acc: Account):
                 pass  
         if final_value is None:  
             displays = [str(target_config.candidate_display(c)) for c in candidates[:20]]  
-            await botev.finish(f"值【{value_str}】不在候选范围\n可选: {', '.join(displays)}")  
+            return f"值【{value_str}】不在候选范围\n可选: {', '.join(displays)}"  
     else:  
         final_value = value_str  
   
     if final_value is None:  
-        await botev.finish("值解析失败")  
+        return "值解析失败"  
   
     acc.data.config[target_config.key] = final_value  
   
@@ -3984,8 +4013,25 @@ async def cron_set_config(botev: BotEvent, acc: Account):
     else:  
         display_val = str(target_config.candidate_display(final_value))  
   
-    await botev.send(f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}")    
-
+    return f"【{alias}】{target_module.name}\n{target_config.desc}: {display_val}"  
+  
+  
+@sv.on_prefix(f"{prefix}定时设置")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+@wrap_account_iter(_cron_set_apply)  
+async def cron_set_config(botev: BotEvent, acc: Account):  
+    msg = await botev.message()  
+    if not msg:  
+        await botev.finish(  
+            f"格式：\n"  
+            f"  {prefix}定时设置 任务序号          查看选项\n"  
+            f"  {prefix}定时设置 任务序号 选项序号      查看可选值\n"  
+            f"  {prefix}定时设置 任务序号 选项序号 值    设置\n"  
+            f"发送 {prefix}定时面板 查看任务序号"  
+        )  
+    await botev.send(await _cron_set_apply(acc, msg))
+    
 @sv.on_prefix(f"{prefix}查任务")  
 @wrap_hoshino_event  
 @wrap_accountmgr  
