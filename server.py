@@ -867,6 +867,34 @@ async def clean_daily_from(botev: BotEvent, acc: Account):
     except Exception as e:
         await botev.send(f'{alias}: {e}')
 
+@sv.on_prefix(f"{prefix}日常报告所有")  
+@wrap_hoshino_event  
+@wrap_accountmgr  
+async def clean_daily_result_all(botev: BotEvent, accmgr: AccountManager):  
+    header = ["昵称", "清日常结果", "状态"]  
+    content = []  
+    for alias in accmgr.accounts():  
+        async with accmgr.load(alias, readonly=True) as acc:  
+            resp = await acc.get_daily_result_from_id(0)  
+            if not resp:  
+                content.append([escape(acc.alias), "未找到日常报告", "#" + eResultStatus.SKIP.value])  
+                continue  
+            last = None  
+            for key in reversed(resp.order):  
+                r = resp.result[key]  
+                if r.log == "功能未启用":  
+                    continue  
+                if r.status.value == "跳过":  
+                    continue  
+                last = r  
+                break  
+            if last is None:  
+                content.append([escape(acc.alias), "无已启用功能记录", "#" + eResultStatus.SKIP.value])  
+                continue  
+            content.append([escape(acc.alias), last.log, "#" + last.status.value]) 
+    img = outp_b64(await drawer.draw(header, content))  
+    await botev.finish(img)
+
 @sv.on_prefix(f"{prefix}日常报告")
 @wrap_hoshino_event
 @wrap_accountmgr
