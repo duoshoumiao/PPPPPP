@@ -871,6 +871,8 @@ async def clean_daily_from(botev: BotEvent, acc: Account):
 @wrap_hoshino_event  
 @wrap_accountmgr  
 async def clean_daily_result_all(botev: BotEvent, accmgr: AccountManager):  
+    msg = await botev.message()  
+    target = ' '.join(msg).strip() if msg else ""  
     header = ["昵称", "清日常结果", "状态"]  
     content = []  
     for alias in accmgr.accounts():  
@@ -879,19 +881,24 @@ async def clean_daily_result_all(botev: BotEvent, accmgr: AccountManager):
             if not resp:  
                 content.append([escape(acc.alias), "未找到日常报告", "#" + eResultStatus.SKIP.value])  
                 continue  
-            last = None  
-            for key in reversed(resp.order):  
-                r = resp.result[key]  
-                if r.log == "功能未启用":  
-                    continue  
-                if r.status.value == "跳过":  
-                    continue  
-                last = r  
-                break  
+            if target:  
+                last = next((resp.result[k] for k in resp.order  
+                             if resp.result[k].name == target or k == target), None)  
+            else:  
+                last = None  
+                for key in reversed(resp.order):  
+                    r = resp.result[key]  
+                    if r.log == "功能未启用":  
+                        continue  
+                    if r.status.value == "跳过":  
+                        continue  
+                    last = r  
+                    break  
             if last is None:  
-                content.append([escape(acc.alias), "无已启用功能记录", "#" + eResultStatus.SKIP.value])  
+                tip = f"未找到功能【{target}】" if target else "无已启用功能记录"  
+                content.append([escape(acc.alias), tip, "#" + eResultStatus.SKIP.value])  
                 continue  
-            content.append([escape(acc.alias), last.log, "#" + last.status.value]) 
+            content.append([escape(acc.alias), last.log, "#" + last.status.value])  
     img = outp_b64(await drawer.draw(header, content))  
     await botev.finish(img)
 

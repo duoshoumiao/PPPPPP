@@ -1070,7 +1070,7 @@ class unit_exceed(UnitController):
                 continue
 
             if self.unit.exceed_stage:
-                self._warn(f"{self.unit_name}已突破，无需突破")
+                # self._warn(f"{self.unit_name}已突破，无需突破")
                 continue
             
             if self.unit.unit_rarity < 5:

@@ -1172,14 +1172,22 @@ async def caravan_buy_shop(module: Module, client: pcrclient, last_season: bool 
 @inttype('caravan_play_dice_hold_num', '骰子保留', 97, list(range(0, 100)))  
 class caravan_play(Module):  
     async def do_task(self, client: pcrclient):  
-        game = CaravanGame(client, self)  
         caravan_play_dice_hold_num = self.get_config('caravan_play_dice_hold_num')  
-        await game.init(caravan_play_dice_hold_num)  
-        while not game.stop():  
-            await game.step()  
-        consumed = game.start_dice - game.dice_point  
-        self._log(f"本次消耗骰子 {consumed} 个")  
-        await caravan_buy_shop(self, client, last_season=False)
+        last_error = None  
+        for attempt in range(1, 4):  
+            try:  
+                game = CaravanGame(client, self)  
+                await game.init(caravan_play_dice_hold_num)  
+                while not game.stop():  
+                    await game.step()  
+                consumed = game.start_dice - game.dice_point  
+                self._log(f"本次消耗骰子 {consumed} 个")  
+                await caravan_buy_shop(self, client, last_season=False)  
+                return  
+            except Exception as e:  
+                last_error = e  
+        self._warn(f"大富翁运行 3 次均失败，最后一次错误：{last_error}")  
+        raise last_error
 
 
 @name('大富翁商店购买')
