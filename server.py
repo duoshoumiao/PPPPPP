@@ -3143,7 +3143,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
     import time as _time  
     import random  
     import itertools  
-    from datetime import datetime as dt  
+    from datetime import datetime as dt, timedelta  
   
     alias = getattr(acc, 'alias', '未知账号')  
     sender_qq = await botev.send_qq()  
@@ -3156,7 +3156,12 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
     check_interval = 2        # 每2秒检查一次被刺  
   
     stop_event = asyncio.Event()  
-    _auto_def_stop_events[sender_qq] = stop_event  
+    _auto_def_stop_events[sender_qq] = stop_event 
+    # 计算下一个05:00（游戏日重置时间），到达后强制终止  
+    now = dt.now()  
+    deadline = now.replace(hour=5, minute=0, second=0, microsecond=0)  
+    if now >= deadline:  
+        deadline += timedelta(days=1)    
   
     try:  
         client = acc.client  
@@ -3222,6 +3227,7 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
             return ids, result_msg  
   
         await botev.send(  
+            f"到达05:00将自动终止\n"
             f"{alias} pjjc自动换防已开启\n"  
             f"每2秒检测被刺记录，被刺立即换防\n"  
             f"未被刺不换防\n"  
@@ -3237,6 +3243,11 @@ async def pjjc_auto_def_switch(botev: BotEvent, acc):
                 return  
             except asyncio.TimeoutError:  
                 pass  
+            # 到达05:00强制终止  
+            if dt.now() >= deadline:  
+                await botev.send(f"{alias} 已到05:00，自动换防已强制终止，共执行换防{shuffle_count}次")  
+                client.deactivate()  
+                return
   
             # 检查被刺记录  
             try:  
@@ -3348,7 +3359,7 @@ async def pjjc_stop_auto_def(botev: BotEvent):
 @wrap_account  
 async def pjjc_auto_regroup_switch(botev: BotEvent, acc):  
     import random  
-    from datetime import datetime as dt  
+    from datetime import datetime as dt, timedelta
   
     alias = getattr(acc, 'alias', '未知账号')  
     sender_qq = await botev.send_qq()  
@@ -3456,7 +3467,11 @@ async def pjjc_auto_regroup_switch(botev: BotEvent, acc):
                 client.deactivate()  
                 return  
             except asyncio.TimeoutError:  
-                pass  
+                pass
+            if dt.now() >= deadline:  
+                await botev.send(f"{alias} 已到05:00，自动换组已强制终止，共执行换组{shuffle_count}次")  
+                client.deactivate()  
+                return                
   
             try:  
                 history_resp = await client.get_grand_arena_history()  

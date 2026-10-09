@@ -475,7 +475,7 @@ class HttpServer:
         async def pjjc_auto_def_start(acc: str):  
             import random  
             import itertools  
-            from datetime import datetime as dt  
+            from datetime import datetime as dt, timedelta  
   
             qq = current_user.auth_id  
   
@@ -495,7 +495,12 @@ class HttpServer:
   
             async def auto_def_loop():  
                 shuffle_count = 0  
-                check_interval = 2  
+                check_interval = 2
+                # 计算下一个05:00（游戏日重置时间），到达后强制终止  
+                now = dt.now()  
+                deadline = now.replace(hour=5, minute=0, second=0, microsecond=0)  
+                if now >= deadline:  
+                    deadline += timedelta(days=1)                
                 try:  
                     from ..core.pcrclient import eLoginStatus  
                     from ..model.common import DeckListData  
@@ -521,7 +526,7 @@ class HttpServer:
                                 for h in history_resp.grand_arena_history_list:  
                                     known_log_ids.add(h.log_id)  
   
-                            messages.append(f"{alias} pjjc自动换防已开启，每{check_interval}秒检测被刺记录")  
+                            messages.append(f"{alias} pjjc自动换防已开启，每{check_interval}秒检测被刺记录，到达05:00将自动终止")  
   
                             async def do_shuffle():  
                                 await client.logout()  
@@ -561,15 +566,22 @@ class HttpServer:
                                 )  
                                 return ids, result_msg 
   
-                            while True:  
-                                try:  
-                                    await asyncio.wait_for(stop_event.wait(), timeout=check_interval)  
-                                    messages.append(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")  
+                            while True:    
+                                try:    
+                                    await asyncio.wait_for(stop_event.wait(), timeout=check_interval)    
+                                    messages.append(f"{alias} 收到终止信号，自动换防已停止，共执行换防{shuffle_count}次")    
+                                    client.deactivate()    
+                                    return    
+                                except asyncio.TimeoutError:    
+                                    pass    
+  
+                                # 到达05:00强制终止  
+                                if dt.now() >= deadline:  
+                                    messages.append(f"{alias} 已到05:00，自动换防已强制终止，共执行换防{shuffle_count}次")  
                                     client.deactivate()  
                                     return  
-                                except asyncio.TimeoutError:  
-                                    pass  
-  
+                                
+                                
                                 try:  
                                     history_resp = await client.get_grand_arena_history()  
                                     if history_resp.grand_arena_history_list:  
