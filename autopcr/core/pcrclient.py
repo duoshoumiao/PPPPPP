@@ -751,7 +751,7 @@ class pcrclient(apiclient):
         else:
             return False
 
-    async def exec_gacha_aware(self, target_gacha: GachaParameter, gacha_times: int, draw_type: eGachaDrawType, current_cost_num: int, campaign_id: int, last_gacha_index_time: int, auto_select_pickup: bool = True, pickup_min_first: bool = False) -> GachaReward:
+    async def exec_gacha_aware(self, target_gacha: GachaParameter, gacha_times: int, draw_type: eGachaDrawType, current_cost_num: int, campaign_id: int, last_gacha_index_time: int, auto_select_pickup: bool = True, pickup_min_first: bool = False, ticket_item: ItemType = None) -> GachaReward:
 
         if draw_type == eGachaDrawType.Payment and current_cost_num < 150 * gacha_times:
             raise AbortError(f"宝石{current_cost_num}不足{150 * gacha_times}")
