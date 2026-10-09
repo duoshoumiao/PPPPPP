@@ -3401,6 +3401,12 @@ async def pjjc_auto_regroup_switch(botev: BotEvent, acc):
     stop_event = asyncio.Event()  
     _auto_regroup_stop_events[sender_qq] = stop_event  
   
+    # 计算下一个05:00（游戏日重置时间），到达后强制终止  
+    now = dt.now()  
+    deadline = now.replace(hour=5, minute=0, second=0, microsecond=0)  
+    if now >= deadline:  
+        deadline += timedelta(days=1)  
+  
     try:  
         client = acc.client  
         await client.activate()  
