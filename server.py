@@ -11,6 +11,7 @@ from .autopcr.util.draw_table import outp_b64
 from .autopcr.http_server.httpserver import HttpServer
 from .autopcr.db.database import db
 from .autopcr.module.accountmgr import Account, AccountManager, instance as usermgr
+from .autopcr.model.requests import DomeMissionIndexRequest
 from .autopcr.db.dbstart import db_start
 from .autopcr.util.draw import instance as drawer
 from .autopcr.util.excel_export import export_excel
@@ -4141,6 +4142,65 @@ async def check_daily_quest_mission(botev: BotEvent, acc: Account):
 async def role_mission_get(botev: BotEvent):
     await botev.send("请稍等")
     return {}    
+    
+@sv.on_prefix(f"{prefix}查斗技场")
+@wrap_hoshino_event
+@wrap_accountmgr
+@wrap_account
+async def check_arena_mission(botev: BotEvent, acc: Account):
+    from .autopcr.model.requests import DomeMissionIndexRequest
+    from .autopcr.model.enums import eMissionStatusType
+
+    await botev.send("请稍等，正在查询斗技场...")
+
+    async def check_one(a: Account) -> list:
+        alias = escape(a.alias)
+        client = a.client
+        activated = False
+        try:
+            await client.activate()
+            activated = True
+            resp = await client.request(DomeMissionIndexRequest())
+        except Exception:
+            logger.exception(f"{alias} 查斗技场失败")
+            return [alias, "#警告", "查询失败"]
+        finally:
+            if activated:
+                client.deactivate()
+
+        missions = getattr(resp, 'missions', None) or []
+        if not missions:
+            return [alias, "#警告", "无斗技场数据"]
+
+        total = len(missions)
+        completed = sum(
+            1 for m in missions
+            if m.mission_status != eMissionStatusType.NoClear
+        )
+        current_stars = missions[0].clear_num or 0
+
+        if completed == total:
+            return [alias, "#成功", f"已完成（{completed}/{total}，★{current_stars}）"]
+        else:
+            return [alias, "#警告", f"未完成（{completed}/{total}，★{current_stars}）"]
+
+    if isinstance(acc, AccountBatch):
+        content = []
+        for alias in acc.enable_account:
+            try:
+                async with acc._parent.load(alias) as sub:
+                    content.append(await check_one(sub))
+            except Exception:
+                logger.exception(f"{alias} 查斗技场失败")
+                content.append([escape(alias), "#警告", "查询失败"])
+    else:
+        content = [await check_one(acc)]
+
+    if not content:
+        await botev.finish("没有可查询的账号")
+
+    img = await drawer.draw(["昵称", "状态", "斗技场进度"], content)
+    await botev.finish(outp_b64(img))
 # @register_tool("获取导入", "get_library_import_data")
 # async def get_library_import(botev: BotEvent):
     # return {}
