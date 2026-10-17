@@ -20,6 +20,20 @@ async def main():
         "star_pt": {str(r): {str(star): d.total_point  
                              for star, d in lv.items()}  
                     for r, lv in db.ex_equipment_enhance_data.items()},  
+        # group_id -> {status类型(eParamType值) -> [value_1..value_5]}  
+        # 词条各档位数值，step_value(step) = value_{step}  
+        "sub_status": {  
+            str(gid): {  
+                str(st): [s.value_1, s.value_2, s.value_3, s.value_4, s.value_5]  
+                for st, s in group.items()  
+            }  
+            for gid, group in db.ex_equipment_sub_status.items()  
+        },  
+        # ex_equipment_id -> group_id（彩装才有词条组）  
+        "sub_status_group": {  
+            str(ex_id): g.group_id  
+            for ex_id, g in db.ex_equipment_sub_status_group.items()  
+        },  
         "equips": {}  
     }  
     for ex_id, e in db.ex_equipment_data.items():  
@@ -37,6 +51,7 @@ async def main():
             "cb": e.clan_battle_equip_flag, "max_star": max_star, "attrs": attrs  
         }  
     Path("ex_meta.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")  
-    print(f"导出 {len(out['equips'])} 件EX, {len(out['unit_slots'])} 个角色槽位")  
+    print(f"导出 {len(out['equips'])} 件EX, {len(out['unit_slots'])} 个角色槽位, "  
+          f"{len(out['sub_status'])} 个词条组")  
   
 asyncio.get_event_loop().run_until_complete(main())
