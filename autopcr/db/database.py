@@ -560,6 +560,56 @@ class database():
             )
 
     @lazy_property
+    def mre_schedule(self) -> Dict[int, MreSchedule]:
+        """联动讨伐活动（mre）排期，主键为 schedule_id（如 3001）。"""
+        with self.dbmgr.session() as db:
+            return (
+                MreSchedule.query(db)
+                .to_dict(lambda x: x.schedule_id, lambda x: x)
+            )
+
+    @lazy_property
+    def mre_schedule_by_mre_id(self) -> Dict[int, MreSchedule]:
+        """联动讨伐活动排期，按活动 id（mre_id，如 30001）索引。"""
+        with self.dbmgr.session() as db:
+            return (
+                MreSchedule.query(db)
+                .to_dict(lambda x: x.mre_id, lambda x: x)
+            )
+
+    @lazy_property
+    def mre_setting(self) -> Dict[int, MreSetting]:
+        with self.dbmgr.session() as db:
+            return (
+                MreSetting.query(db)
+                .to_dict(lambda x: x.mre_id, lambda x: x)
+            )
+
+    @lazy_property
+    def mre_quest_data(self) -> Dict[int, MreQuestDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                MreQuestDatum.query(db)
+                .to_dict(lambda x: x.quest_id, lambda x: x)
+            )
+
+    @lazy_property
+    def mre_gacha_data(self) -> Dict[int, MreGachaDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                MreGachaDatum.query(db)
+                .to_dict(lambda x: x.gacha_id, lambda x: x)
+            )
+
+    @lazy_property
+    def mre_mission_data(self) -> Dict[int, MreMissionDatum]:
+        with self.dbmgr.session() as db:
+            return (
+                MreMissionDatum.query(db)
+                .to_dict(lambda x: x.id, lambda x: x)
+            )
+
+    @lazy_property
     def campaign_beginner_data(self) -> Dict[int, CampaignBeginnerDatum]:
         with self.dbmgr.session() as db:
             return (
@@ -986,6 +1036,11 @@ class database():
                 ).concat(
                     SevenEventSetting.query(db)
                     .select(lambda x: (x.event_id, x.title))
+                ).concat(
+                    # 联动讨伐（mre）没有 event_story_data 条目，名称只存在于 mre_setting，
+                    # 用 mre_id（如 30001）作为活动 id 建键，保证 db.event_name[30001] 可用
+                    MreSetting.query(db)
+                    .select(lambda x: (x.mre_id, x.title.replace('\\n', '')))
                 ).to_dict(lambda x: x[0], lambda x: x[1])
             )
 
@@ -2197,6 +2252,26 @@ class database():
     def is_seven_event(self, event_id: int) -> bool:
         return event_id in self.seven_schedule
 
+    def is_mre_event(self, event_id: int) -> bool:
+        """event_id 是否为联动讨伐活动 id（mre_id，如 30001）。"""
+        return event_id in self.mre_schedule_by_mre_id
+
+    def get_mre_schedule_id(self, event_id: int) -> int:
+        """由活动 id（mre_id）取接口所需的 schedule_id。"""
+        return self.mre_schedule_by_mre_id[event_id].schedule_id
+
+    def get_mre_quests(self, event_id: int) -> List[MreQuestDatum]:
+        quests = flow(self.mre_quest_data.values()) \
+                .where(lambda x: x.mre_id == event_id) \
+                .to_list()
+        return sorted(quests, key=lambda x: x.difficulty)
+
+    def get_mre_gacha_ticket_id(self, event_id: int) -> int:
+        return self.mre_schedule_by_mre_id[event_id].gacha_ticket_id
+
+    def get_mre_boss_ticket_id(self, event_id: int) -> int:
+        return self.mre_schedule_by_mre_id[event_id].boss_ticket_id
+
     def get_event_quest_order(self, quest: Union[HatsuneQuest, SevenQuestDatum]) -> int:
         if isinstance(quest, HatsuneQuest):
             return quest.quest_seq
@@ -2227,16 +2302,22 @@ class database():
         return quests[index - 1] if 1 <= index <= len(quests) else None
 
     def get_event_gacha_id(self, event_id: int) -> int:
+        if self.is_mre_event(event_id):
+            return self.mre_schedule_by_mre_id[event_id].gacha_id
         if self.is_seven_event(event_id):
             return self.seven_schedule[event_id].gacha_id
         return event_id
 
     def get_event_gacha_ticket_id(self, event_id: int) -> int:
+        if self.is_mre_event(event_id):
+            return self.mre_schedule_by_mre_id[event_id].gacha_ticket_id
         if self.is_seven_event(event_id):
             return self.seven_schedule[event_id].gacha_ticket_id
         return self.hatsune_item[event_id].gacha_ticket_id
 
     def get_event_schedule_id(self, event_id: int) -> int:
+        if self.is_mre_event(event_id):
+            return self.mre_schedule_by_mre_id[event_id].schedule_id
         return self.seven_schedule[event_id].schedule_id
 
     def get_seven_mission_type(self, event_id: int, mission) -> int:
@@ -2415,16 +2496,35 @@ class database():
                 .where(lambda x: now >= self.parse_time(x.start_time) and now <= self.parse_time(x.end_time)) \
                 .to_list()
 
-    def get_active_event(self) -> List[Union[HatsuneSchedule, SevenSchedule]]:
-        return self.get_active_hatsune() + self.get_active_seven()
+    def get_active_mre(self) -> List[MreSchedule]:
+        now = apiclient.datetime
+        return flow(self.mre_schedule.values()) \
+                .where(lambda x: now >= self.parse_time(x.start_time) and now <= self.parse_time(x.end_time)) \
+                .to_list()
+
+    def get_active_event(self) -> List[Union[HatsuneSchedule, SevenSchedule, MreSchedule]]:
+        return self.get_active_hatsune() + self.get_active_seven() + self.get_active_mre()
 
     def get_active_hatsune_id(self) -> List[int]:
-        active_hatsune = self.get_active_event()
-        return [event.event_id for event in active_hatsune]
+        """活动 id 列表。hatsune/seven 用 event_id，mre 用 mre_id（如 30001）。"""
+        return [self.get_event_id(event) for event in self.get_active_event()]
 
     def get_active_hatsune_name(self) -> List[str]:
         active_hatsune = self.get_active_event()
-        return [f"{event.event_id}:{db.event_name.get(event.event_id, event.event_id)}" for event in active_hatsune]
+        return [f"{self.get_event_id(event)}:{self.get_event_name(self.get_event_id(event))}" for event in active_hatsune]
+
+    @staticmethod
+    def get_event_id(event: Union[HatsuneSchedule, SevenSchedule, MreSchedule]) -> int:
+        """统一取「活动 id」：hatsune/seven 为 event_id，mre 为 mre_id。"""
+        return event.mre_id if isinstance(event, MreSchedule) else event.event_id
+
+    def get_event_name(self, event_id: int) -> str:
+        if event_id in self.mre_schedule_by_mre_id:
+            mre = self.mre_schedule_by_mre_id[event_id]
+            setting = self.mre_setting.get(mre.mre_id)
+            if setting and setting.title:
+                return setting.title.replace('\\n', '')
+        return self.event_name.get(event_id, str(event_id))
 
     def get_open_hatsune(self) -> List[HatsuneSchedule]:
         now = apiclient.datetime
@@ -2432,8 +2532,14 @@ class database():
                 .where(lambda x: now >= self.parse_time(x.start_time) and now <= self.parse_time(x.close_time)) \
                 .to_list()
 
-    def get_open_event(self) -> List[Union[HatsuneSchedule, SevenSchedule]]:
-        return self.get_open_hatsune() + self.get_active_seven()
+    def get_open_mre(self) -> List[MreSchedule]:
+        now = apiclient.datetime
+        return flow(self.mre_schedule.values()) \
+                .where(lambda x: now >= self.parse_time(x.start_time) and now <= self.parse_time(x.end_time)) \
+                .to_list()
+
+    def get_open_event(self) -> List[Union[HatsuneSchedule, SevenSchedule, MreSchedule]]:
+        return self.get_open_hatsune() + self.get_active_seven() + self.get_open_mre()
 
     def get_active_abyss(self) -> List[AbyssSchedule]:
         now = apiclient.datetime
@@ -2538,7 +2644,7 @@ class database():
         """
         from ..module.modules.nologin import (
             ClanBattlePeriod, SecretDungeonSchedule, GachaDatum, CampaignSchedule,
-            CampaignFreegacha, HatsuneSchedule, TowerSchedule, TdfSchedule,
+            CampaignFreegacha, HatsuneSchedule, MreScheduleInfo, TowerSchedule, TdfSchedule,
             ColosseumScheduleData, DomeScheduleData, AbyssSchedule, CaravanSchedule,
             CharaFortuneSchedule, LoginBonusDatum, SeasonpassFoundation,
         )
@@ -2554,6 +2660,7 @@ class database():
             (self.campaign_free_gacha, lambda x: CampaignFreegacha(x.campaign_id, x.start_time, x.end_time, "免费十连")),
             (self.hatsune_schedule, lambda x: HatsuneSchedule(x.event_id, x.start_time, x.end_time, "活动")),
             (self.seven_schedule, lambda x: HatsuneSchedule(x.event_id, x.start_time, x.end_time, "活动")),
+            (self.mre_schedule, lambda x: MreScheduleInfo(x.mre_id, x.start_time, x.end_time, "活动")),
             (self.tower_schedule, lambda x: TowerSchedule(x.start_time, x.end_time, "露娜塔")),
             (self.tdf_schedule, lambda x: TdfSchedule(x.start_time, x.end_time, "次元断层")),
             (self.chara_fortune_schedule, lambda x: CharaFortuneSchedule(x.name, x.start_time, x.end_time, "赛马")),

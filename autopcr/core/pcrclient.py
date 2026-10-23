@@ -1251,22 +1251,84 @@ class pcrclient(apiclient):
         req.event_id = event_id
         return await self.request(req)
 
+    async def get_mre_top(self, event_id: int):
+        req = MreTopRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        return await self.request(req)
+
+    async def mre_gacha_index(self, event_id: int):
+        req = MreGachaIndexRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        return await self.request(req)
+
+    async def mre_gacha_exec(self, event_id: int, gacha_times: int, current_cost_num: int):
+        req = MreGachaExecRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        req.gacha_times = gacha_times
+        req.current_cost_num = current_cost_num
+        return await self.request(req)
+
+    async def mre_gacha_exec_multiple(self, event_id: int, gacha_times: int, current_cost_num: int):
+        req = MreGachaExecMultipleRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        req.gacha_times = gacha_times
+        req.current_cost_num = current_cost_num
+        return await self.request(req)
+
+    async def mre_gacha_reset(self, event_id: int, gacha_step: int):
+        req = MreGachaResetRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        req.gacha_step = gacha_step
+        return await self.request(req)
+
+    async def mre_battle_skip(self, event_id: int, quest_id: int, times: int, boss_ticket: int):
+        req = MreBattleSkipRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        req.quest_id = quest_id
+        req.exec_skip_num = times
+        req.current_boss_ticket_num = boss_ticket
+        return await self.request(req)
+
+    async def mre_mission_index(self, event_id: int):
+        req = MreMissionIndexRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        return await self.request(req)
+
+    async def mre_mission_accept(self, event_id: int, mission_id_list: List[int]):
+        req = MreMissionAcceptRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        req.mission_id_list = mission_id_list
+        return await self.request(req)
+
+    async def mre_receive_reward_after_event(self, event_id: int):
+        req = MreReceiveRewardAfterEventRequest()
+        req.schedule_id = db.get_mre_schedule_id(event_id)
+        return await self.request(req)
+
     async def get_event_top(self, event_id: int):
+        if db.is_mre_event(event_id):
+            return await self.get_mre_top(event_id)
         if db.is_seven_event(event_id):
             return await self.get_seven_top(event_id)
         return await self.get_hatsune_top(event_id)
 
     async def get_event_quest_top(self, event_id: int):
+        # mre 没有关卡一览接口（首领战直接从 top 进入），保持与 hatsune 同形以便调用方无需分支
         if db.is_seven_event(event_id):
             return await self.get_seven_quest_top(event_id)
         return await self.get_hatsune_quest_top(event_id)
 
     async def event_mission_index(self, event_id: int):
+        if db.is_mre_event(event_id):
+            return await self.mre_mission_index(event_id)
         if db.is_seven_event(event_id):
             return await self.seven_mission_index(event_id)
         return await self.hatsune_mission_index(event_id)
 
     async def event_mission_receive(self, event_id: int, mission: Union[int, UserMissionInfo]):
+        if db.is_mre_event(event_id):
+            mission_id = mission if isinstance(mission, int) else mission.mission_id
+            return await self.mre_mission_accept(event_id, [mission_id])
         if db.is_seven_event(event_id):
             if isinstance(mission, int):
                 return await self.seven_mission_receive(event_id, mission)
@@ -1277,16 +1339,22 @@ class pcrclient(apiclient):
         return await self.hatsune_mission_receive(event_id, mission)
 
     async def get_event_gacha_index(self, event_id: int):
+        if db.is_mre_event(event_id):
+            return await self.mre_gacha_index(event_id)
         if db.is_seven_event(event_id):
             return await self.get_seven_gacha_index(event_id)
         return await self.get_hatsune_gacha_index(event_id, db.get_event_gacha_id(event_id))
 
     async def exec_event_gacha(self, event_id: int, gacha_times: int, current_cost_num: int, loop_box_multi_gacha_flag: int = 0):
+        if db.is_mre_event(event_id):
+            return await self.mre_gacha_exec(event_id, gacha_times, current_cost_num)
         if db.is_seven_event(event_id):
             return await self.exec_seven_gacha(event_id, gacha_times, current_cost_num)
         return await self.exec_hatsune_gacha(event_id, db.get_event_gacha_id(event_id), gacha_times, current_cost_num, loop_box_multi_gacha_flag)
 
     async def reset_event_gacha(self, event_id: int, gacha_step: int):
+        if db.is_mre_event(event_id):
+            return await self.mre_gacha_reset(event_id, gacha_step)
         if db.is_seven_event(event_id):
             return await self.reset_seven_gacha(event_id, gacha_step)
         return await self.reset_hatsune_gacha(event_id, db.get_event_gacha_id(event_id))

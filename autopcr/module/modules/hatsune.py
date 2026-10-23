@@ -7,11 +7,15 @@ from ...db.database import db
 from ...model.enums import *
 
 def get_event_name(event_id: int) -> str:
-    return db.event_name.get(event_id, str(event_id))
+    return db.get_event_name(event_id)
 
 async def prepare_event_quest(client: pcrclient, event_id: int):
     await client.get_event_top(event_id)
     await client.get_event_quest_top(event_id)
+
+def mre_boss_quests(event_id: int) -> List[int]:
+    """联动讨伐活动的首领关卡（按难度升序），对应 mre/quest_data。"""
+    return [quest.quest_id for quest in db.get_mre_quests(event_id)]
 
 @conditional_not_execution("hatsune_h_sweep_not_run_time", ["n3", "n4及以上"])
 @multichoice("hatsune_h_sweep_quest", "扫荡关卡", [1,2,3,4,5], [1,2,3,4,5])
@@ -30,18 +34,23 @@ class hatsune_h_sweep(Module):
         event_active = False
         for event in db.get_active_event():
             event_active = True
-            event_name = get_event_name(event.event_id)
-            self._log(f"{event.event_id}:{event_name}：")
-            if event.event_id in not_sweep_hatsune_id:
+            event_id = db.get_event_id(event)
+            event_name = get_event_name(event_id)
+            self._log(f"{event_id}:{event_name}：")
+            if event_id in not_sweep_hatsune_id:
                 self._log(f"不扫荡h本")
                 continue
-            await prepare_event_quest(client, event.event_id)
-            if db.is_seven_event(event.event_id):
-                quests = db.get_event_hard_quests(event.event_id)
+            if db.is_mre_event(event_id):
+                # 联动讨伐活动没有 h 本，首领战由 mre 专用模块处理
+                self._log(f"联动讨伐活动，跳过h本扫荡")
+                continue
+            await prepare_event_quest(client, event_id)
+            if db.is_seven_event(event_id):
+                quests = db.get_event_hard_quests(event_id)
             else:
                 quests = []
                 for i in area:
-                    quest_id = db.get_event_hard_quest(event.event_id, i)
+                    quest_id = db.get_event_hard_quest(event_id, i)
                     if not quest_id:
                         self._log(f"h本{i}不存在")
                         continue
@@ -182,6 +191,66 @@ class hatsune_hboss_sweep(Module):
         if is_abort: raise AbortError("")
         if is_skip: raise SkipError("")
 
+@description('联动讨伐活动（mre）首领扫荡，只扫高难，不消耗体力')
+@name('扫荡联动讨伐boss')
+@default(True)
+class mre_boss_sweep(Module):
+    # 联动讨伐只用讨伐券挑战，不消耗体力；固定只扫高难（difficulty=3）
+    DIFFICULTY_VERY_HARD = 3
+
+    async def do_task(self, client: pcrclient):
+        is_error = False
+        is_abort = False
+        is_skip = True
+        event_active = False
+
+        for event in db.get_active_mre():
+            event_active = True
+            event_id = event.mre_id
+            event_name = get_event_name(event_id)
+            self._log(f"{event_id}:{event_name}：")
+
+            boss_ticket_id = event.boss_ticket_id
+            ticket = client.data.get_inventory((eInventoryType.Item, boss_ticket_id))
+
+            try:
+                if ticket <= 0:
+                    raise SkipError(f"当前讨伐券{ticket}张，不足")
+
+                quests = [quest for quest in db.get_mre_quests(event_id)
+                          if quest.difficulty == self.DIFFICULTY_VERY_HARD]
+                if not quests:
+                    raise SkipError("该活动没有高难首领关卡")
+
+                quest = quests[0]
+                top = await client.get_mre_top(event_id)
+                boss_info = {info.quest_id: info for info in (top.boss_info_list or [])}
+
+                # mre 的跳过要求该难度已首通：best_damage 为 0 说明还没打过
+                info = boss_info.get(quest.quest_id)
+                if info is not None and not info.best_damage:
+                    raise AbortError(f"{quest.name}(高难)尚未通关，无法扫荡")
+
+                resp = await client.mre_battle_skip(event_id, quest.quest_id, ticket, ticket)
+                is_skip = False
+                self._log(f"{quest.quest_id}: {quest.name}(高难) 扫荡{ticket}次")
+                if resp.clear_reward_list:
+                    reward = await client.serialize_reward_summary(resp.clear_reward_list)
+                    self._log(f"获得了:\n" + reward)
+            except SkipError as e:
+                self._log(f"{str(e)}")
+            except AbortError as e:
+                is_abort = True
+                self._log(f"{str(e)}")
+            except Exception as e:
+                is_error = True
+                self._log(f"{str(e)}")
+
+        if not event_active: raise SkipError("当前无进行中的联动讨伐活动")
+        if is_error: raise ValueError("")
+        if is_abort: raise AbortError("")
+        if is_skip: raise SkipError("")
+
 # @singlechoice("hatsune_gacha_strategy", "兑换策略", "全部兑换", ["全部兑换"])
 @description('自动兑换')
 @name('讨伐证交换')
@@ -195,15 +264,47 @@ class hatsune_gacha_exchange(Module):
 
         for event in db.get_open_event():
             event_active = True
-            event_name = get_event_name(event.event_id)
-            self._log(f"{event.event_id}:{event_name}：")
+            event_id = db.get_event_id(event)
+            event_name = get_event_name(event_id)
+            self._log(f"{event_id}:{event_name}：")
 
-            await client.get_event_top(event.event_id)
-            exchange_ticket_id = db.get_event_gacha_ticket_id(event.event_id)
-            res = await client.get_event_gacha_index(event.event_id)
+            await client.get_event_top(event_id)
+            exchange_ticket_id = db.get_event_gacha_ticket_id(event_id)
+            res = await client.get_event_gacha_index(event_id)
             box_item = {item.box_set_id: item for item in res.event_gacha_info.box_set_list}
             ticket = client.data.get_inventory((eInventoryType.Item, exchange_ticket_id))
-            if db.is_seven_event(event.event_id):  
+            if db.is_mre_event(event_id):
+                # 联动讨伐抽卡：一次最多 3000 次批量抽取，轮次重置与 hatsune 一致
+                do_exchange = True
+                while ticket > 0:
+                    if res.event_gacha_info.gacha_step >= 6:
+                        exchange_times = min(
+                            client.data.settings.loop_box_multi_gacha_count,
+                            ticket
+                        )
+                        self._log(f"当前处于第六轮及以上，一键交换{exchange_times}次")
+                        await client.mre_gacha_exec_multiple(event_id, exchange_times, ticket)
+                        ticket -= exchange_times
+                    else:
+                        target_done = len([item.reward_id for item in box_item.values() if item.reset_target and item.remain_inbox_count]) == 0
+                        remain_cnt = sum(item.remain_inbox_count for item in box_item.values())
+                        if remain_cnt == 0 or (target_done and res.event_gacha_info.gacha_step <= 2 and early_stop):
+                            self._log(f"已达成重置条件，重置交换轮数")
+                            res = await client.mre_gacha_reset(event_id, res.event_gacha_info.gacha_step)
+                            box_item = {item.box_set_id: item for item in res.event_gacha_info.box_set_list}
+                            continue
+                        exchange_times = min(100, ticket, remain_cnt)
+                        self._log(f"当前处于第{res.event_gacha_info.gacha_step}轮，交换{exchange_times}次")
+                        resp = await client.mre_gacha_exec(event_id, exchange_times, ticket)
+                        ticket -= exchange_times
+                        for item in resp.draw_result:
+                            if item.box_set_id in box_item:
+                                box_item[item.box_set_id].remain_inbox_count -= item.hit_reward_count
+                    res = await client.mre_gacha_index(event_id)
+                self._log(f"已交换至" + (f"第{res.event_gacha_info.gacha_step}轮" if res.event_gacha_info.gacha_step < 6 else "第六轮及以上"))
+                client.data.set_inventory((eInventoryType.Item, exchange_ticket_id), ticket)
+                continue
+            if db.is_seven_event(event_id):  
                 if ticket == 0:  
                     self._log(f"无讨伐证，停止交换")  
                     continue  
@@ -266,27 +367,32 @@ class hatsune_mission_accept_base(Module):
         event_active = False
         for event in db.get_active_event():
             event_active = True
-            event_name = get_event_name(event.event_id)
-            self._log(f"{event.event_id}:{event_name}：")
+            event_id = db.get_event_id(event)
+            event_name = get_event_name(event_id)
+            self._log(f"{event_id}:{event_name}：")
 
             try:
-                await client.get_event_top(event.event_id)
-                resp = await client.event_mission_index(event.event_id)
+                await client.get_event_top(event_id)
+                resp = await client.event_mission_index(event_id)
                 missions = [mission for mission in resp.missions if mission.mission_status == eMissionStatusType.EnableReceive]
                 if not missions:
                     raise SkipError("没有可领取的任务奖励")
 
                 is_skip = False
-                if db.is_seven_event(event.event_id):
-                    types = sorted(set(db.get_seven_mission_type(event.event_id, mission) for mission in missions))
+                if db.is_mre_event(event_id):
+                    res = await client.mre_mission_accept(event_id, [mission.mission_id for mission in missions])
+                    reward = await client.serialize_reward_summary(res.reward_list)
+                    self._log(f"领取了任务奖励，获得了:\n" + reward)
+                elif db.is_seven_event(event_id):
+                    types = sorted(set(db.get_seven_mission_type(event_id, mission) for mission in missions))
                     for type in types:
-                        res = await client.event_mission_receive(event.event_id, type)
+                        res = await client.event_mission_receive(event_id, type)
                         reward = await client.serialize_reward_summary(res.rewards)
                         self._log(f"领取了任务奖励，获得了:\n" + reward)
                 else:
                     types = sorted(set(mission.mission_id // 10000000 - 5 for mission in missions))
                     for type in types:
-                        res = await client.event_mission_receive(event.event_id, type)
+                        res = await client.event_mission_receive(event_id, type)
                         reward = await client.serialize_reward_summary(res.rewards)
                         self._log(f"领取了任务奖励，获得了:\n" + reward)
             except SkipError as e:
@@ -329,15 +435,18 @@ class all_in_hatsune(Module):
         event_found = False
 
         for event in db.get_active_event():
-            if event.event_id != sweep_hatsune_id:
+            event_id = db.get_event_id(event)
+            if event_id != sweep_hatsune_id:
                 continue
+            if db.is_mre_event(event_id):
+                raise AbortError(f"{get_event_name(event_id)}是联动讨伐活动，没有普通关卡可刷")
 
             event_found = True
-            quest = db.get_event_normal_quest(event.event_id, target_normal_index)
+            quest = db.get_event_normal_quest(event_id, target_normal_index)
             if not quest:
-                raise AbortError(f"{get_event_name(event.event_id)}没有第{target_normal_index}个普图")
+                raise AbortError(f"{get_event_name(event_id)}没有第{target_normal_index}个普图")
 
-            await prepare_event_quest(client, event.event_id)
+            await prepare_event_quest(client, event_id)
 
             break
 

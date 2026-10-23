@@ -423,7 +423,7 @@ class ActiveHatsuneChoiceConfig(SingleChoiceConfig):
         super().__init__(key, desc, default, db.get_active_hatsune_id)
 
     def candidate_display(self, event_id: int):
-        return db.event_name[event_id] if event_id in db.event_name else str(event_id)
+        return db.get_event_name(event_id)
 
     def process_value(self, value):
         if isinstance(value, str) and ':' in value: # Compatible with the old version
@@ -438,7 +438,7 @@ class ActiveHatsuneListConfig(MultiChoiceConfig):
         super().__init__(key, desc, default, db.get_active_hatsune_id)
 
     def candidate_display(self, event_id: int):
-        return db.event_name[event_id] if event_id in db.event_name else str(event_id)
+        return db.get_event_name(event_id)
 
     def process_value(self, value: List):
         ret = []

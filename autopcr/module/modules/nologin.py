@@ -140,6 +140,15 @@ class HatsuneSchedule(ISchedule):
         event_name = db.event_name[self.event_id]
         return event_name
 
+class MreScheduleInfo(ISchedule):
+    """联动讨伐活动（mre）。event_id 用 mre_id（如 30001），接口侧需转 schedule_id。"""
+    def __init__(self, event_id: int, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.event_id = event_id
+
+    def get_description(self) -> str:
+        return db.get_event_name(self.event_id)
+
 class TowerSchedule(ISchedule):
     description = "露娜塔"
 
@@ -205,6 +214,7 @@ class half_schedule(Module):
             (db.campaign_free_gacha, lambda x: CampaignFreegacha(x.campaign_id, x.start_time, x.end_time, "免费十连")),
             (db.hatsune_schedule, lambda x: HatsuneSchedule(x.event_id, x.start_time, x.end_time, "活动")),
             (db.seven_schedule, lambda x: HatsuneSchedule(x.event_id, x.start_time, x.end_time, "活动")),
+            (db.mre_schedule, lambda x: MreScheduleInfo(x.mre_id, x.start_time, x.end_time, "活动")),
             (db.tower_schedule, lambda x: TowerSchedule(x.start_time, x.end_time, "露娜塔")),
             (db.tdf_schedule, lambda x: TdfSchedule(x.start_time, x.end_time, "次元断层")),
             (db.chara_fortune_schedule, lambda x: CharaFortuneSchedule(x.name, x.start_time, x.end_time, "赛马")),
