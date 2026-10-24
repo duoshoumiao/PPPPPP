@@ -3748,6 +3748,13 @@ class MreTopResponse(ResponseBase):
     raid_hp_reward_list: List[InventoryInfo] = None
     add_present_count: int = None
     deck_clear_flag: bool = None
+    # 讨伐券库存。服务器随 mre/top 下发（与 hatsune 的 boss_ticket_info 同形），
+    # 必须在模型里声明：全局 Config.extra = Extra.ignore 会把未声明字段直接丢弃，
+    # 导致扫荡模块读到的票数永远是进入活动前的旧值。
+    boss_ticket_info: InventoryInfo = None
+    boss_ticket_limit_num: int = None
+    today_boss_ticket_archived_num: int = None
+    is_boss_ticket_archived: int = None
 class NbbFinishResponse(ResponseBase):
     emblem_list: List[int] = None
     score_reward_list: List[InventoryInfo] = None

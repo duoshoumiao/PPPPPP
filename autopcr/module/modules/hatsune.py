@@ -211,19 +211,28 @@ class mre_boss_sweep(Module):
             self._log(f"{event_id}:{event_name}：")
 
             boss_ticket_id = event.boss_ticket_id
-            ticket = client.data.get_inventory((eInventoryType.Item, boss_ticket_id))
 
             try:
-                if ticket <= 0:
-                    raise SkipError(f"当前讨伐券{ticket}张，不足")
-
                 quests = [quest for quest in db.get_mre_quests(event_id)
                           if quest.difficulty == self.DIFFICULTY_VERY_HARD]
                 if not quests:
                     raise SkipError("该活动没有高难首领关卡")
 
                 quest = quests[0]
+
+                # 必须先进入活动（mre/top）：讨伐券库存随 top 的 boss_ticket_info 下发，
+                # 由 MreTopResponse 的 handler 回写库存，之后读到的票数才是最新的。
                 top = await client.get_mre_top(event_id)
+
+                ticket_info = top.boss_ticket_info
+                if ticket_info is not None and ticket_info.stock is not None:
+                    ticket = ticket_info.stock
+                else:
+                    # 兜底：服务器没下发票据字段时退回本地库存
+                    ticket = client.data.get_inventory((eInventoryType.Item, boss_ticket_id))
+                if ticket <= 0:
+                    raise SkipError(f"当前讨伐券{ticket}张，不足")
+
                 boss_info = {info.quest_id: info for info in (top.boss_info_list or [])}
 
                 # mre 的跳过要求该难度已首通：best_damage 为 0 说明还没打过

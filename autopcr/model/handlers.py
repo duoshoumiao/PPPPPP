@@ -666,6 +666,70 @@ class SevenTopResponse(responses.SevenTopResponse):
                 mgr.update_inventory(item)
 
 @handles
+class MreTopResponse(responses.MreTopResponse):
+    """联动讨伐活动顶部。
+
+    讨伐券库存随 mre/top 的 boss_ticket_info 下发（与 hatsune 同形），
+    必须在这里回写库存，否则扫荡模块读到的票数永远是进入活动前的旧值。
+    """
+    async def update(self, mgr: datamgr, request: MreTopRequest):
+        if self.boss_ticket_info and self.boss_ticket_info.stock is not None:
+            mgr.update_inventory(self.boss_ticket_info)
+        if self.login_bonus:
+            for item in self.login_bonus.rewards or []:
+                mgr.update_inventory(item)
+        if self.raid_hp_reward_list:
+            for item in self.raid_hp_reward_list:
+                mgr.update_inventory(item)
+        if self.mission_list and self.mission_list.missions:
+            mgr.missions = self.mission_list.missions
+        if self.unlock_story_id_list:
+            mgr.unlock_story_ids = list(dict.fromkeys((mgr.unlock_story_ids or []) + self.unlock_story_id_list))
+
+@handles
+class MreMissionIndexResponse(responses.MreMissionIndexResponse):
+    async def update(self, mgr: datamgr, request: MreMissionIndexRequest):
+        if self.missions:
+            mgr.missions = self.missions
+
+@handles
+class MreMissionAcceptResponse(responses.MreMissionAcceptResponse):
+    async def update(self, mgr: datamgr, request: MreMissionAcceptRequest):
+        if self.reward_list:
+            for item in self.reward_list:
+                mgr.update_inventory(item)
+
+@handles
+class MreReceiveRewardAfterEventResponse(responses.MreReceiveRewardAfterEventResponse):
+    async def update(self, mgr: datamgr, request: MreReceiveRewardAfterEventRequest):
+        for item in (self.gacha_reward_info_list or []) + (self.raid_hp_reward_list or []):
+            mgr.update_inventory(item)
+
+@handles
+class MreGachaExecResponse(responses.MreGachaExecResponse):
+    async def update(self, mgr: datamgr, request: MreGachaExecRequest):
+        if self.reward_info_list:
+            for item in self.reward_info_list:
+                mgr.update_inventory(item)
+
+@handles
+class MreGachaExecMultipleResponse(responses.MreGachaExecMultipleResponse):
+    async def update(self, mgr: datamgr, request: MreGachaExecMultipleRequest):
+        if self.reward_info_list:
+            for item in self.reward_info_list:
+                mgr.update_inventory(item)
+
+@handles
+class MreBattleSkipResponse(responses.MreBattleSkipResponse):
+    async def update(self, mgr: datamgr, request: MreBattleSkipRequest):
+        if self.clear_reward_list:
+            for item in self.clear_reward_list:
+                mgr.update_inventory(item)
+        if self.challenge_reward_list:
+            for item in self.challenge_reward_list:
+                mgr.update_inventory(item)
+
+@handles
 class SevenStoryTopResponse(responses.SevenStoryTopResponse):
     async def update(self, mgr: datamgr, request):
         if self.unlock_story_ids:
