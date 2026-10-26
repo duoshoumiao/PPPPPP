@@ -202,7 +202,7 @@ sv_help = f"""
 - {prefix}一键编队 1 1 [拉满] 队名1 星级角色1 星级角色2 ... 星级角色5 队名2 星级角色1 星级角色2 设置多队编队，一行一个队伍
 - {prefix}识图   用于提取图中队伍
 - {prefix}兑天井 卡池id 角色名 如 #兑天井 10283 火电  用 #卡池 获取ID  
-- {prefix}拉角色练度 1 1 1 1 1 1 5 5 5 5 5 5 0 0 可可萝     #代表 等级 品级 ub s1 s2 ex 装备(左上到右下) 专武1 专武2 角色名（不输入则全选）
+- {prefix}拉角色练度 1 1 1 1 1 1 5 5 5 5 5 5 0 0 可可萝     #代表 等级 品级 ub s1 s2 ex 装备(左上到右下) 专武1 专武2 角色名（不输入则全选）  可选开关：自动拉等级 自动拉品级 自动专武1 使用原矿 自动购买记忆碎片 等级升至上限
 - {prefix}大富翁  自动跑大富翁
 - {prefix}商店购买 [上期|当期] 购买大富翁商店物品，默认购买当期
   示例：{prefix}商店购买 上期 | {prefix}商店购买所有 当期 （需要去批量运行里保存账号）
@@ -2030,6 +2030,7 @@ async def unit_promote(botev: BotEvent):
         "unit_promote_level_when_fail_to_equip_or_skill": False,  
         "unit_promote_rank_when_fail_to_unique_equip": False,  
         "unit_promote_rank_use_raw_ore": False,  
+        "unit_promote_buy_memory_when_fail_to_unique_equip": False,  
         "unit_promote_unique2_when_fail_to_unique_equip2": False,  
         "unit_promote_to_max_level": False,  
         "unit_promote_level": 1,  
@@ -2039,7 +2040,7 @@ async def unit_promote(botev: BotEvent):
         "unit_promote_skill_s2": 1,  
         "unit_promote_skill_ex": 1,  
         "unit_promote_unique_equip1_level": 0,  
-        "unit_promote_unique_equip2_level": 0,  
+        "unit_promote_unique_equip2_level": 5,  
         "unit_promote_equip_0": -1,  
         "unit_promote_equip_1": -1,  
         "unit_promote_equip_2": -1,  
@@ -2053,6 +2054,7 @@ async def unit_promote(botev: BotEvent):
     config["unit_promote_level_when_fail_to_equip_or_skill"] = is_args_exist(msg, '自动拉等级')  
     config["unit_promote_rank_when_fail_to_unique_equip"] = is_args_exist(msg, '自动拉品级')  
     config["unit_promote_rank_use_raw_ore"] = is_args_exist(msg, '使用原矿')  
+    config["unit_promote_buy_memory_when_fail_to_unique_equip"] = is_args_exist(msg, '自动购买记忆碎片')  
     config["unit_promote_unique2_when_fail_to_unique_equip2"] = is_args_exist(msg, '自动专武1')  
     config["unit_promote_to_max_level"] = is_args_exist(msg, '等级升至上限')  
   

@@ -22,6 +22,7 @@ class UnitController(Module):
     auto_level_up : bool = True
     auto_rank_up : bool = True
     auto_unique1_slot: bool = True
+    auto_buy_memory: bool = False
     to_max_level: bool = True
     use_raw_ore : bool = True
     
@@ -352,7 +353,7 @@ class UnitController(Module):
             equip_id = db.unit_unique_equip[1][self.unit_id].equip_id
             if self.client.data.get_inventory((eInventoryType.Equip, equip_id)) == 0:
                 demand = db.get_unique_equip_material_demand(self.unit_id, 1, 0, 1)
-                bad = self.client.data.get_not_enough_item(demand)
+                bad = await self.buy_unique_equip_memory(demand)
                 if bad:
                     bad_list = ' '.join([f"{db.get_inventory_name_san(item)}缺少{cnt}片" for item, cnt in bad.items()])
                     raise AbortError(f"制作{self.unit_name}专武1所需材料不足: {bad_list}")
@@ -376,7 +377,7 @@ class UnitController(Module):
         # 先判断整个突破过程是否可行
         start_rank = self.unit.unique_equip_slot[0].rank if not limit else max(self.unit.unique_equip_slot[0].rank, limit.unique_equip_rank_1)
         demand = db.get_unique_equip_material_demand(self.unit_id, 1, start_rank, target_rank)
-        bad = self.client.data.get_not_enough_item(demand)
+        bad = await self.buy_unique_equip_memory(demand)
         if bad:
             bad_list = ','.join([f"{db.get_inventory_name_san(item)}缺少{cnt}片" for item, cnt in bad.items()])
             raise AbortError(f"{self.unit_name}专武1突破至{target_rank}品级所需材料不足: {bad_list}")
@@ -399,7 +400,7 @@ class UnitController(Module):
         else:
             current_rank = self.unit.unique_equip_slot[0].rank
             demand = db.get_unique_equip_material_demand(self.unit_id, 1, current_rank, target_rank)
-            bad = self.client.data.get_not_enough_item(demand)
+            bad = await self.buy_unique_equip_memory(demand)
             if bad:
                 bad_list = '.'.join([f"{db.get_inventory_name_san(item)}缺少{cnt}片" for item, cnt in bad.items()])
                 raise AbortError(f"{self.unit_name}专武1突破至{target_rank}品级所需材料不足: {bad_list}")
@@ -580,6 +581,26 @@ class UnitController(Module):
             if gap > 0:
                 gap = await buy_shop(gap)
         return gap
+
+    async def buy_unique_equip_memory(self, demand: Counter[ItemType]) -> Counter[ItemType]:
+        # 专武材料不足时按需购买记忆碎片，返回补买后仍然不足的材料
+        bad = self.client.data.get_not_enough_item(demand)
+        if not bad or not self.auto_buy_memory:
+            return bad
+
+        if self.unit_id not in db.unit_to_memory:
+            return bad
+
+        memory = (eInventoryType.Item, self.memory_id)
+        need = bad.get(memory, 0)
+        if need <= 0:
+            return bad
+
+        self._log(f"{self.unit_name}专武1所需{db.get_inventory_name_san(memory)}不足{need}片，先购买")
+        remain = await self.buy_memory(need)
+        if remain > 0:
+            self._warn(f"{self.unit_name}专武1所需{db.get_inventory_name_san(memory)}仍有{remain}片未购买到")
+        return self.client.data.get_not_enough_item(demand)
 
     async def promote(self, target_level: int = 1, target_star: int = 1, target_dear: int = 1, target_promote_rank: int = 1, target_equip_star: List[int] = [-1, -1, -1, -1, -1, -1], target_skill_ub_level: int = 1, target_skill_s1_level: int = 1, target_skill_s2_level: int = 1, target_skill_ex_level: int = 1, target_unique1_level: int = 0, target_unique2_level: int = -1, target_ex1_id: int = -1, target_ex1_star: int = 0, target_ex2_id: int = -1, target_ex2_star: int = 0, target_ex3_id: int = -1, target_ex3_star: int = 0, cb_ex: bool = False):
         try:
@@ -826,10 +847,12 @@ class unit_set_unique_equip_growth(UnitController):
         await self.set_unique_growth_unit()
 
 @description('支持全部角色，装备星级-1表示不穿装备，自动拉等级指当前等级不足以穿装备或提升技能等级，将会提升角色等级，自动拉品级指当前品级不足以装备专武时，会提升角色品级，自动专武1指开专武2未开专武1时自动开专武1，使用原矿指装备不足时用原矿补充'
+             '\n自动购买记忆碎片：专武1开专武/突破时记忆碎片不足，会先在大师店、女神店按需购买（仅购买该角色专武1实际缺少的数量）'
              '\n等级升至上限：在当前升级条件下，升级至角色允许的等级上限（比如未突破角色升级至突破后等级，开启该选项可以升级至最大的未突破等级，避免升级失败）')
 @name('拉角色练度')
 @booltype("unit_promote_to_max_level", "等级升至上限", False)
 @booltype("unit_promote_unique2_when_fail_to_unique_equip2", "自动专武1", False)
+@booltype("unit_promote_buy_memory_when_fail_to_unique_equip", "自动购买记忆碎片", False)
 @booltype("unit_promote_rank_when_fail_to_unique_equip", "自动拉品级", False)
 @booltype("unit_promote_level_when_fail_to_equip_or_skill", "自动拉等级", False)
 @booltype("unit_promote_rank_use_raw_ore", "使用原矿", False)
@@ -859,6 +882,7 @@ class unit_promote(UnitController):
         self.auto_rank_up = bool(self.get_config('unit_promote_rank_when_fail_to_unique_equip'))
         self.use_raw_ore = bool(self.get_config('unit_promote_rank_use_raw_ore'))
         self.auto_unique1_slot = bool(self.get_config('unit_promote_unique2_when_fail_to_unique_equip2'))
+        self.auto_buy_memory = bool(self.get_config('unit_promote_buy_memory_when_fail_to_unique_equip'))
         self.to_max_level = bool(self.get_config('unit_promote_to_max_level'))
 
         target_level = int(self.get_config('unit_promote_level'))
