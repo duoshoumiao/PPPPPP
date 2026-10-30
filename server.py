@@ -171,6 +171,7 @@ sv_help = f"""
 - 清日常创建    一切的开始
 - {prefix}配置日常  查地址
 - {prefix}清日常 [昵称] 无昵称则默认账号
+- {prefix}设置默认账号 [昵称] 设置默认账号（不填昵称=查看当前）
 - {prefix}清日常所有 清该qq号下所有号的日常
 指令格式： 命令 昵称 参数，下述省略昵称，<>表示必填，[]表示可选，|表示分割
 - {prefix}日常记录 查看清日常状态
@@ -878,6 +879,55 @@ async def clean_daily_from(botev: BotEvent, acc: Account):
         await botev.send(msg)
     except Exception as e:
         await botev.send(f'{alias}: {e}')
+
+@sv.on_prefix(f"{prefix}设置默认账号", f"{prefix}默认账号")
+@wrap_hoshino_event
+async def set_default_account_cmd(botev: BotEvent):
+    """设置/查看默认账号。
+
+    原生 autopcr 只有 Web 的 PUT /api/account 能改 default_account，但这个前端
+    并没有暴露该控件，QQ 侧也没有对应指令，导致只能手改 cache/http_server/<qq>/secret。
+    这里补一条指令，让用户自己就能设置。不填昵称 = 查看当前状态。
+    """
+    target_qq = await botev.target_qq()
+    sender_qq = await botev.send_qq()
+    if sender_qq != target_qq and not await botev.is_admin():
+        await botev.finish("只有管理员可以操作他人账号")
+        return
+    if target_qq not in usermgr.qids():
+        await botev.finish(f"未找到{target_qq}的账号，请先发送 清日常创建")
+        return
+
+    msg = await botev.message()
+    alias = msg[0].strip() if msg else ""
+
+    # 先只读看一眼当前状态，避免无谓加锁写盘
+    async with usermgr.load(target_qq, readonly=True) as accmgr:
+        accounts = list(accmgr.accounts())
+        current = accmgr.default_account
+
+    acc_str = "、".join(escape(a) for a in accounts) if accounts else "（无）"
+
+    if not alias:
+        cur_str = escape(current) if current else "（未设置）"
+        await botev.finish(
+            f"当前默认账号：【{cur_str}】\n账号列表：{acc_str}\n"
+            f"用法：{prefix}设置默认账号 昵称"
+        )
+        return
+
+    if alias not in accounts:
+        await botev.finish(f"没有找到账号【{escape(alias)}】\n账号列表：{acc_str}")
+        return
+
+    # readonly=False，__aexit__ 检测到变化后会把 secret 落盘
+    async with usermgr.load(target_qq) as accmgr:
+        accmgr.set_default_account(alias)
+
+    await botev.finish(
+        f"✅ 默认账号已设为【{escape(alias)}】\n"
+        f"以后直接发 {prefix}清日常（不带昵称）就会用它"
+    )
 
 @sv.on_prefix(f"{prefix}日常报告所有")  
 @wrap_hoshino_event  
