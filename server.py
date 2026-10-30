@@ -40,6 +40,17 @@ from typing import Optional
 import inspect  # 新增这一行
 from hoshino import log  # 确保 log 模块已导入
 logger = log.new_logger('auto_pcr')  # 初始化日志记录器
+
+# 控制台可能是 GBK(Windows)，print 里的 emoji(ℹ️⚠️❌ 等)直接写会抛
+# UnicodeEncodeError 并中断模块级代码(导致 sv 注册失败)。这里改为替换不抛。
+import sys
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, 'reconfigure'):
+        try:
+            _s.reconfigure(errors='replace')
+        except Exception:
+            pass
+
 def get_public_ip() -> str:
     """获取服务器的公网IP（多重备选方案）"""
     # 备选公网IP查询API列表
