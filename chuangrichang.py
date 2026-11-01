@@ -21,22 +21,56 @@ sv = Service(
 )
 
 def get_public_ip():
+    """获取本机公网 IPv4，失败返回 None（绝不返回内网 IP 冒充公网地址）。
+
+    优先复用 server.py 里的探测实现（含手工配置、多源并发、严格校验），
+    这样两条指令给出的地址始终一致。
+    """
+    try:
+        from .server import get_public_ip as _server_get_public_ip
+        return _server_get_public_ip()
+    except Exception:
+        pass
+    # 兜底：server 模块导入失败时，仍做一次严格探测
     try:
         services = [
-            'https://api.ipify.org',
-            'https://ident.me',
-            'https://ifconfig.me/ip'
+            'https://ip.3322.net',
+            'https://myip.ipip.net',
+            'https://api.ip.sb/ip',
+            'https://ipv4.icanhazip.com',
         ]
         for service in services:
             try:
                 response = requests.get(service, timeout=5)
                 if response.status_code == 200:
-                    return response.text.strip()
-            except:
+                    m = re.search(r'\b((?:\d{1,3}\.){3}\d{1,3})\b', response.text)
+                    if not m:
+                        continue
+                    ip = m.group(1)
+                    import ipaddress
+                    addr = ipaddress.ip_address(ip)
+                    if addr.version == 4 and addr.is_global:
+                        return ip
+            except Exception:
                 continue
-        return None
     except Exception:
-        return None
+        pass
+    return None
+
+
+def build_login_url():
+    """构造登录地址；拿不到公网 IP 时给出明确指引，而不是拼出坏链接"""
+    try:
+        from .server import address, address_ok
+        if address_ok and address:
+            return address + 'login'
+        return ('❌ 未获取到公网IP，请联系管理员在 '
+                'autopcr/cache/manual_address.txt 写入公网IP后重启机器人')
+    except Exception:
+        public_ip = get_public_ip()
+        if public_ip:
+            return f"http://{public_ip}:8040/daily/login"
+        return "无法获取公网IP，请手动配置"
 
 def update_json_file(file_path, username, password):
     """严格只更新username和password字段，其他内容原封不动"""
@@ -286,8 +320,7 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
             file_msg = "✅ 初始secret配置已创建（单行格式），密码已重置为123456789，默认账号已置空"
         else:  
             # 文件已存在（重复发送者）：不重置密码，只返回地址和修改密码提示  
-            public_ip = get_public_ip()  
-            login_url = f"http://{public_ip}:8040/daily/login" if public_ip else "无法获取公网IP，请手动配置"  
+            login_url = build_login_url()
             return f'''【清日常配置已存在】  
 🌐 清日常地址: {login_url}  
 🔑 如需修改密码，请发送：清日常重置密码'''
@@ -330,8 +363,7 @@ async def create_daily_config(user_id, username=None, password=None, filename=No
                 # 无文件且无账号密码，提示手动放入
                 file_msg += f"，⚠️ 未找到桌面上的账号文件，请手动放入：\n{user_dir}"
         
-        public_ip = get_public_ip()
-        login_url = f"http://{public_ip}:8040/daily/login" if public_ip else "无法获取公网IP，请手动配置"
+        login_url = build_login_url()
         
         return f'''【清日常配置创建完成】
 {file_msg}

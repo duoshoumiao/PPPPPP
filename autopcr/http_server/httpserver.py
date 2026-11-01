@@ -238,9 +238,15 @@ class HttpServer:
         @HttpServer.wrapaccountmgr()
         async def put_info(accountmgr: AccountManager):
             data = await request.get_json()
-            default_accont = data.get('default_account', '')
-            if default_accont:
-                accountmgr.set_default_account(default_accont)
+            # 前端"默认账号"开关在取消时发 default_account=""，必须支持清空
+            if 'default_account' in data:
+                default_accont = data.get('default_account', '') or ''
+                if default_accont in accountmgr.accounts():
+                    accountmgr.set_default_account(default_accont)
+                elif default_accont:
+                    raise AccountException('账号不存在')
+                else:
+                    accountmgr.set_default_account('')
             password = data.get('password', '')
             if password:
                 accountmgr.set_password(password)

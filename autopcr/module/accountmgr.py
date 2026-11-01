@@ -357,7 +357,7 @@ class AccountManager:
             f.write(self.secret.to_json())
 
     def set_default_account(self, account: str):
-        if account not in self.accounts():
+        if account and account not in self.accounts():
             raise AccountException('账号不存在')
         self.secret.default_account = account
 
