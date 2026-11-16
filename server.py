@@ -3718,11 +3718,13 @@ async def pjjc_auto_regroup_switch(botev: BotEvent, acc):
             gi = random.choice(candidates)  
             last_group = gi  
   
+            selected = groups[gi][:]  
+            random.shuffle(selected)  
             deck_list = []  
             for i in range(3):  
                 deck = DeckListData()  
                 deck.deck_number = getattr(ePartyType, f"GRAND_ARENA_DEF_{i + 1}")  
-                deck.unit_list = groups[gi][i]  
+                deck.unit_list = selected[i]  
                 deck_list.append(deck)  
             deck_list.sort(key=lambda x: x.deck_number)  
             await client.deck_update_list(deck_list)  
